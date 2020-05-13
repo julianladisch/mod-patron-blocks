@@ -82,7 +82,7 @@ public class APITests {
     String currentVersion = PomReader.INSTANCE.getVersion();
 
     return new TenantAttributes()
-      .withModuleFrom(format(MODULE_NAME_TEMPLATE, moduleName, "14.2.4"))
+      .withModuleFrom(format(MODULE_NAME_TEMPLATE, moduleName, "0.0.1"))
       .withModuleTo(format(MODULE_NAME_TEMPLATE, moduleName, currentVersion))
       .withParameters(Collections.singletonList(loadReferenceParameter));
   }
