@@ -1,0 +1,26 @@
+{
+  "publications": [
+  ],
+  "subscriptions": [
+    {
+      "eventType": "FF_BALANCE_CHANGED",
+      "callbackAddress": "/automated-patron-blocks/handlers/user-summary-update"
+    },
+    {
+      "eventType": "ITEM_CHECKED_OUT",
+      "callbackAddress": "/automated-patron-blocks/handlers/user-summary-update"
+    },
+    {
+      "eventType": "ITEM_CHECKED_IN",
+      "callbackAddress": "/automated-patron-blocks/handlers/user-summary-update"
+    },
+    {
+      "eventType": "ITEM_DECLARED_LOST",
+      "callbackAddress": "/automated-patron-blocks/handlers/user-summary-update"
+    },
+    {
+      "eventType": "LOAN_DUE_DATE_UPDATED",
+      "callbackAddress": "/automated-patron-blocks/handlers/user-summary-update"
+    }
+  ]
+}
