@@ -24,20 +24,18 @@ public class TenantRefAPI extends TenantAPI {
   private static final Logger log = LoggerFactory.getLogger(TenantRefAPI.class);
 
   @Override
-  public void postTenant(TenantAttributes tenantAttributes,
-                         Map<String, String> headers,
-                         Handler<AsyncResult<Response>> handler, Context context) {
+  public void postTenant(TenantAttributes tenantAttributes, Map<String, String> headers,
+    Handler<AsyncResult<Response>> handler, Context context) {
 
-    log.info("postTenant");
-    log.info("Tenant attributes: {}", JsonObject.mapFrom(tenantAttributes));
-
-    final Vertx vertx = context.owner();
+    log.info("postTenant called with tenant attributes: {}", JsonObject.mapFrom(tenantAttributes));
 
     super.postTenant(tenantAttributes, headers, res -> {
       if (res.failed()) {
         handler.handle(res);
         return;
       }
+
+      final Vertx vertx = context.owner();
 
       vertx.executeBlocking(
         promise ->
