@@ -59,7 +59,6 @@ public class APITests {
       try {
         tenantClient.postTenant(getTenantAttributes(), result -> async.complete());
       } catch (Exception e) {
-        log.error(e.getMessage());
         context.fail(e);
       }
     });
