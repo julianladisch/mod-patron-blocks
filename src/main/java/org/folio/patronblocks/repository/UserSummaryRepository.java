@@ -3,7 +3,8 @@ package org.folio.patronblocks.repository;
 import java.util.List;
 import java.util.Optional;
 
-import org.folio.rest.jaxrs.model.UserSummary;
+
+import org.folio.patronblocks.model.UserSummary;
 
 import io.vertx.core.Future;
 

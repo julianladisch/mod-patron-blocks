@@ -55,10 +55,8 @@ public class APITests {
 
     vertx.deployVerticle(RestVerticle.class.getName(), deploymentOptions, deployment -> {
       try {
-        tenantClient.postTenant(getTenantAttributes(), result -> async.complete()
-        );
+        tenantClient.postTenant(getTenantAttributes(), result -> async.complete());
       } catch (Exception e) {
-        log.error(e.getMessage());
         context.fail(e);
       }
     });

@@ -5,7 +5,7 @@ import java.util.Optional;
 
 import org.folio.cql2pgjson.CQL2PgJSON;
 import org.folio.cql2pgjson.exception.FieldException;
-import org.folio.rest.jaxrs.model.UserSummary;
+import org.folio.patronblocks.model.UserSummary;
 import org.folio.rest.persist.Criteria.Limit;
 import org.folio.rest.persist.Criteria.Offset;
 import org.folio.rest.persist.PostgresClient;
@@ -27,7 +27,9 @@ public class UserSummaryRepositoryImpl implements UserSummaryRepository {
 
   @Override
   public Future<List<UserSummary>> getUserSummaries(String query, int offset, int limit) {
+
     Promise<Results<UserSummary>> promise = Promise.promise();
+
     try {
       String[] fieldList = {"*"};
       CQLWrapper cql = getCQL(query, limit, offset);
@@ -46,16 +48,16 @@ public class UserSummaryRepositoryImpl implements UserSummaryRepository {
   }
 
   @Override
-  public Future<String> saveUserSummary(UserSummary patronBlock) {
+  public Future<String> saveUserSummary(UserSummary userSummary) {
     Promise<String> promise = Promise.promise();
-    pgClient.save(USER_SUMMARY_TABLE, patronBlock.getId(), patronBlock, promise);
+    pgClient.save(USER_SUMMARY_TABLE, userSummary.getId(), userSummary, promise);
     return promise.future();
   }
 
   @Override
-  public Future<Boolean> updateUserSummary(UserSummary patronBlock) {
+  public Future<Boolean> updateUserSummary(UserSummary userSummary) {
     Promise<UpdateResult> promise = Promise.promise();
-    pgClient.update(USER_SUMMARY_TABLE, patronBlock, patronBlock.getId(), promise);
+    pgClient.update(USER_SUMMARY_TABLE, userSummary, userSummary.getId(), promise);
     return promise.future().map(updateResult -> updateResult.getUpdated() == 1);
   }
 
