@@ -21,7 +21,7 @@ import com.fasterxml.jackson.annotation.JsonPropertyOrder;
     "balance",
     "feeFineId"
 })
-public class OpenFeesFine {
+public class OpenFeeFine {
 
     /**
      * A universally unique identifier (UUID), this is a 128-bit number used to identify a record and is shown in hex with dashes, for example 6312d172-f0cf-40f6-b27d-9fa8feaf332f; the UUID version must be from 1-5; see https://dev.folio.org/guides/uuids/
@@ -65,7 +65,7 @@ public class OpenFeesFine {
         this.accountId = accountId;
     }
 
-    public OpenFeesFine withAccountId(String accountId) {
+    public OpenFeeFine withAccountId(String accountId) {
         this.accountId = accountId;
         return this;
     }
@@ -88,7 +88,7 @@ public class OpenFeesFine {
         this.balance = balance;
     }
 
-    public OpenFeesFine withBalance(BigDecimal balance) {
+    public OpenFeeFine withBalance(BigDecimal balance) {
         this.balance = balance;
         return this;
     }
@@ -111,7 +111,7 @@ public class OpenFeesFine {
         this.feeFineId = feeFineId;
     }
 
-    public OpenFeesFine withFeeFineId(String feeFineId) {
+    public OpenFeeFine withFeeFineId(String feeFineId) {
         this.feeFineId = feeFineId;
         return this;
     }

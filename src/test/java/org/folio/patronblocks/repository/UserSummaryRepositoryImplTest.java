@@ -110,11 +110,9 @@ public class UserSummaryRepositoryImplTest extends APITests {
     userSummaryRepository.saveUserSummary(createUserSummary(userSummaryId3,
       UUID.randomUUID().toString(), new BigDecimal(4), 2, 3));
 
-    Future<List<UserSummary>> userSummaries =
-      userSummaryRepository.getUserSummaries(null, 0, 100);
     Awaitility.await()
       .atMost(1, TimeUnit.SECONDS)
-      .until(userSummaries::result, hasSize(3));
+      .until(userSummaryRepository.getUserSummaries(null, 0, 100)::result, hasSize(3));
 
     userSummaryRepository.deleteUserSummary(userSummaryId1);
     userSummaryRepository.deleteUserSummary(userSummaryId3);

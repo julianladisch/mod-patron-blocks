@@ -7,7 +7,6 @@ import java.util.List;
 
 import javax.validation.Valid;
 import javax.validation.constraints.NotNull;
-import javax.validation.constraints.Null;
 import javax.validation.constraints.Pattern;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
@@ -77,7 +76,7 @@ public class UserSummary {
     private List<OpenLoan> openLoans = new ArrayList<OpenLoan>();
     @JsonProperty("openFeesFines")
     @Valid
-    private List<OpenFeesFine> openFeesFines = new ArrayList<OpenFeesFine>();
+    private List<OpenFeeFine> openFeeFines = new ArrayList<OpenFeeFine>();
 
     /**
      * A universally unique identifier (UUID), this is a 128-bit number used to identify a record and is shown in hex with dashes, for example 6312d172-f0cf-40f6-b27d-9fa8feaf332f; the UUID version must be from 1-5; see https://dev.folio.org/guides/uuids/
@@ -212,17 +211,17 @@ public class UserSummary {
     }
 
     @JsonProperty("openFeesFines")
-    public List<OpenFeesFine> getOpenFeesFines() {
-        return openFeesFines;
+    public List<OpenFeeFine> getOpenFeeFines() {
+        return openFeeFines;
     }
 
     @JsonProperty("openFeesFines")
-    public void setOpenFeesFines(List<OpenFeesFine> openFeesFines) {
-        this.openFeesFines = openFeesFines;
+    public void setOpenFeeFines(List<OpenFeeFine> openFeeFines) {
+        this.openFeeFines = openFeeFines;
     }
 
-    public UserSummary withOpenFeesFines(List<OpenFeesFine> openFeesFines) {
-        this.openFeesFines = openFeesFines;
+    public UserSummary withOpenFeesFines(List<OpenFeeFine> openFeeFines) {
+        this.openFeeFines = openFeeFines;
         return this;
     }
 }
