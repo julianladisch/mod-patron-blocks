@@ -55,9 +55,7 @@ public class UserSummaryRepositoryImplTest extends APITests {
     Future<String> userSummaryId = userSummaryRepository.saveUserSummary(userSummary);
     Awaitility.await()
       .atMost(1, TimeUnit.SECONDS)
-      .until(userSummaryId::result, notNullValue());
-
-    assertThat(userSummaryId.result(), is(userId));
+      .until(userSummaryId::result, is(userId));
 
     Future<Optional<UserSummary>> userSummaryById =
       userSummaryRepository.getUserSummaryById(userId);
@@ -99,16 +97,24 @@ public class UserSummaryRepositoryImplTest extends APITests {
   @Test
   public void shouldDeleteUserSummary() {
     String userSummaryId1 = UUID.randomUUID().toString();
-    userSummaryRepository.saveUserSummary(createUserSummary(userSummaryId1,
-      UUID.randomUUID().toString(), new BigDecimal(2), 4, 2));
+    Future<String> savedUserSummaryId1 = userSummaryRepository.saveUserSummary(
+      createUserSummary(userSummaryId1, UUID.randomUUID().toString(),
+        new BigDecimal(2), 4, 2));
 
     UserSummary userSummary = createUserSummary(
       UUID.randomUUID().toString(), UUID.randomUUID().toString(), new BigDecimal("3.25"), 3, 1);
-    userSummaryRepository.saveUserSummary(userSummary);
+    Future<String> savedUserSummaryId2 = userSummaryRepository.saveUserSummary(userSummary);
 
     String userSummaryId3 = UUID.randomUUID().toString();
-    userSummaryRepository.saveUserSummary(createUserSummary(userSummaryId3,
-      UUID.randomUUID().toString(), new BigDecimal(4), 2, 3));
+    Future<String> savedUserSummaryId3 = userSummaryRepository.saveUserSummary(
+      createUserSummary(userSummaryId3, UUID.randomUUID().toString(),
+        new BigDecimal(4), 2, 3));
+
+    Awaitility.await()
+      .atMost(1, TimeUnit.SECONDS)
+      .until(() -> savedUserSummaryId1.isComplete()
+        && savedUserSummaryId2.isComplete()
+        && savedUserSummaryId3.isComplete());
 
     Awaitility.await()
       .atMost(1, TimeUnit.SECONDS)
