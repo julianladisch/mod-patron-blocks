@@ -1,0 +1,14 @@
+{
+  "tables": [
+    {
+      "tableName": "user_summary",
+      "withMetadata": true,
+      "uniqueIndex": [
+        {
+          "fieldName": "userId",
+          "tOps": "ADD"
+        }
+      ]
+    }
+  ]
+}
