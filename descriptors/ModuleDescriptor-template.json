@@ -1,8 +1,61 @@
 {
   "id": "${artifactId}-${version}",
   "name": "Patron Blocks Module",
-  "requires": [],
+  "requires": [
+    {
+      "id": "pubsub-event-types",
+      "version": "0.1"
+    },
+    {
+      "id": "pubsub-publishers",
+      "version": "0.1"
+    },
+    {
+      "id": "pubsub-subscribers",
+      "version": "0.1"
+    },
+    {
+      "id": "pubsub-publish",
+      "version": "0.1"
+    }
+  ],
   "provides": [
+    {
+      "id":"patron-blocks-event-handlers",
+      "version":"1.0",
+      "handlers":[
+        {
+          "methods":[
+            "POST"
+          ],
+          "pathPattern":"/automated-patron-blocks/handlers/feefine-balance-changed"
+        },
+        {
+          "methods":[
+            "POST"
+          ],
+          "pathPattern":"/automated-patron-blocks/handlers/item-checked-out"
+        },
+        {
+          "methods":[
+            "POST"
+          ],
+          "pathPattern":"/automated-patron-blocks/handlers/item-checked-in"
+        },
+        {
+          "methods":[
+            "POST"
+          ],
+          "pathPattern":"/automated-patron-blocks/handlers/item-declared-lost"
+        },
+        {
+          "methods":[
+            "POST"
+          ],
+          "pathPattern":"/automated-patron-blocks/handlers/loan-due-date-updated"
+        }
+      ]
+    },
     {
       "id": "_tenant",
       "version": "1.0",
@@ -29,6 +82,11 @@
     }
   ],
   "permissionSets": [
+    {
+      "permissionName": "patron-blocks.events.post",
+      "displayName": "Patron blocks - post event",
+      "description": "Post a patron block event"
+    }
   ],
   "launchDescriptor": {
     "dockerImage": "${artifactId}:${version}",

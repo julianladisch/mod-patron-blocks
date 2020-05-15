@@ -4,23 +4,23 @@
   "subscriptions": [
     {
       "eventType": "FF_BALANCE_CHANGED",
-      "callbackAddress": "/automated-patron-blocks/handlers/user-summary-update"
+      "callbackAddress": "/automated-patron-blocks/handlers/feefine-balance-changed"
     },
     {
       "eventType": "ITEM_CHECKED_OUT",
-      "callbackAddress": "/automated-patron-blocks/handlers/user-summary-update"
+      "callbackAddress": "/automated-patron-blocks/handlers/item-checked-out"
     },
     {
       "eventType": "ITEM_CHECKED_IN",
-      "callbackAddress": "/automated-patron-blocks/handlers/user-summary-update"
+      "callbackAddress": "/automated-patron-blocks/handlers/item-checked-in"
     },
     {
       "eventType": "ITEM_DECLARED_LOST",
-      "callbackAddress": "/automated-patron-blocks/handlers/user-summary-update"
+      "callbackAddress": "/automated-patron-blocks/handlers/item-declared-lost"
     },
     {
       "eventType": "LOAN_DUE_DATE_UPDATED",
-      "callbackAddress": "/automated-patron-blocks/handlers/user-summary-update"
+      "callbackAddress": "/automated-patron-blocks/handlers/loan-due-date-updated"
     }
   ]
 }

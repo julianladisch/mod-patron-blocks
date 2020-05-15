@@ -60,24 +60,6 @@
     </dependency>
     <dependency>
       <groupId>org.folio</groupId>
-      <artifactId>folio-service-tools-test</artifactId>
-      <version>${folio-service-tools.version}</version>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.awaitility</groupId>
-      <artifactId>awaitility</artifactId>
-      <version>4.0.2</version>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.hamcrest</groupId>
-      <artifactId>hamcrest-junit</artifactId>
-      <version>2.0.0.0</version>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.folio</groupId>
       <artifactId>mod-pubsub-client</artifactId>
       <version>1.1.5</version>
       <type>jar</type>
@@ -104,6 +86,24 @@
       <groupId>org.powermock</groupId>
       <artifactId>powermock-classloading-xstream</artifactId>
       <version>${powermock.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.folio</groupId>
+      <artifactId>folio-service-tools-test</artifactId>
+      <version>${folio-service-tools.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.awaitility</groupId>
+      <artifactId>awaitility</artifactId>
+      <version>4.0.2</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.hamcrest</groupId>
+      <artifactId>hamcrest-junit</artifactId>
+      <version>2.0.0.0</version>
       <scope>test</scope>
     </dependency>
   </dependencies>
@@ -229,12 +229,12 @@
           <dependency>
             <groupId>org.aspectj</groupId>
             <artifactId>aspectjrt</artifactId>
-            <version>1.8.9</version>
+            <version>1.9.4</version>
           </dependency>
           <dependency>
             <groupId>org.aspectj</groupId>
             <artifactId>aspectjtools</artifactId>
-            <version>1.8.9</version>
+            <version>1.9.4</version>
           </dependency>
         </dependencies>
       </plugin>
