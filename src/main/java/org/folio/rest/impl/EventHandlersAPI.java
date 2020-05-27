@@ -1,57 +1,85 @@
 package org.folio.rest.impl;
 
+import static org.folio.domain.EventType.FEE_FINE_BALANCE_CHANGED;
+
+import java.lang.invoke.MethodHandles;
 import java.util.Map;
 
 import javax.ws.rs.core.Response;
 
+import org.folio.domain.EventType;
 import org.folio.rest.jaxrs.resource.AutomatedPatronBlocksHandlers;
-import org.folio.service.EventConsumerService;
+import org.folio.rest.handlers.FeeFineBalanceChangedEventHandler;
 
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
+import io.vertx.core.logging.Logger;
+import io.vertx.core.logging.LoggerFactory;
 
-public class EventHandlersAPI implements AutomatedPatronBlocksHandlers{
+public class EventHandlersAPI implements AutomatedPatronBlocksHandlers {
+  private static final Logger log = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
 
   @Override
-  public void postAutomatedPatronBlocksHandlersFeefineBalanceChanged(String entity,
+  public void postAutomatedPatronBlocksHandlersFeeFineBalanceChanged(String payload,
     Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler,
     Context vertxContext) {
-
 
     asyncResultHandler.handle(Future.succeededFuture(
-      PostAutomatedPatronBlocksHandlersFeefineBalanceChangedResponse.respond204()));
+      PostAutomatedPatronBlocksHandlersFeeFineBalanceChangedResponse.respond204()));
 
+    logEventReceived(FEE_FINE_BALANCE_CHANGED, payload);
 
-    new EventConsumerService().handleFeefineBalanceChangedEvent(entity);
+    new FeeFineBalanceChangedEventHandler(okapiHeaders, vertxContext.owner())
+      .handle(payload);
   }
 
   @Override
-  public void postAutomatedPatronBlocksHandlersItemCheckedOut(String entity,
+  public void postAutomatedPatronBlocksHandlersItemCheckedOut(String payload,
     Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler,
     Context vertxContext) {
 
+    asyncResultHandler.handle(Future.succeededFuture(
+      PostAutomatedPatronBlocksHandlersItemCheckedOutResponse.respond204()));
+
+    logEventReceived(EventType.ITEM_CHECKED_OUT, payload);
   }
 
   @Override
-  public void postAutomatedPatronBlocksHandlersItemCheckedIn(String entity,
+  public void postAutomatedPatronBlocksHandlersItemCheckedIn(String payload,
     Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler,
     Context vertxContext) {
 
+    asyncResultHandler.handle(Future.succeededFuture(
+      PostAutomatedPatronBlocksHandlersItemCheckedInResponse.respond204()));
+
+    logEventReceived(EventType.ITEM_CHECKED_IN, payload);
   }
 
   @Override
-  public void postAutomatedPatronBlocksHandlersItemDeclaredLost(String entity,
+  public void postAutomatedPatronBlocksHandlersItemDeclaredLost(String payload,
     Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler,
     Context vertxContext) {
 
+    asyncResultHandler.handle(Future.succeededFuture(
+      PostAutomatedPatronBlocksHandlersItemDeclaredLostResponse.respond204()));
+
+    logEventReceived(EventType.ITEM_DECLARED_LOST, payload);
   }
 
   @Override
-  public void postAutomatedPatronBlocksHandlersLoanDueDateUpdated(String entity,
+  public void postAutomatedPatronBlocksHandlersLoanDueDateUpdated(String payload,
     Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler,
     Context vertxContext) {
 
+    asyncResultHandler.handle(Future.succeededFuture(
+      PostAutomatedPatronBlocksHandlersLoanDueDateUpdatedResponse.respond204()));
+
+    logEventReceived(EventType.LOAN_DUE_DATE_UPDATED, payload);
+  }
+
+  private static void logEventReceived(EventType eventType, String payload) {
+    log.info("Received {0} event with payload:\n\"{1}\"", eventType.name(), payload);
   }
 }
