@@ -1,4 +1,4 @@
-package org.folio.handlers;
+package org.folio.rest.handlers;
 
 import java.math.BigDecimal;
 import java.util.Arrays;
@@ -9,8 +9,6 @@ import org.folio.domain.UserSummary;
 import org.folio.repository.UserSummaryRepository;
 import org.folio.repository.UserSummaryRepositoryImpl;
 import org.folio.rest.TestBase;
-import org.folio.rest.handlers.AbstractEventHandler;
-import org.folio.rest.handlers.FeeFineBalanceChangedEventHandler;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;

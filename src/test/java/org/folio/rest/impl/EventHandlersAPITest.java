@@ -11,13 +11,11 @@ import org.folio.domain.UserSummary;
 import org.folio.repository.UserSummaryRepository;
 import org.folio.repository.UserSummaryRepositoryImpl;
 import org.folio.rest.TestBase;
-import org.folio.rest.persist.PostgresClient;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
 import io.restassured.response.Response;
-import io.vertx.core.Future;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
@@ -37,8 +35,7 @@ public class EventHandlersAPITest extends TestBase {
   private static final String LOAN_DUE_DATE_UPDATED_HANDLER_URL =
     "/automated-patron-blocks/handlers/loan-due-date-updated";
 
-  final UserSummaryRepository userSummaryRepository = new UserSummaryRepositoryImpl(
-    PostgresClient.getInstance(vertx, OKAPI_TENANT));
+  final UserSummaryRepository userSummaryRepository = new UserSummaryRepositoryImpl(postgresClient);
 
   @Before
   public void beforeEach() {
@@ -50,11 +47,10 @@ public class EventHandlersAPITest extends TestBase {
   public void postAutomatedPatronBlocksHandlersFeeFineBalanceChanged(TestContext context) {
     String userId = randomId();
 
-    Future<Optional<UserSummary>> findUserBeforeEvent =
-      userSummaryRepository.getUserSummaryByUserId(userId);
-    waitFor(findUserBeforeEvent);
+    Optional<UserSummary> userSummaryBeforeEvent =
+      waitFor(userSummaryRepository.getUserSummaryByUserId(userId));
 
-    context.assertFalse(findUserBeforeEvent.result().isPresent());
+    context.assertFalse(userSummaryBeforeEvent.isPresent());
 
     String payload = new JsonObject()
       .put("userId", userId)

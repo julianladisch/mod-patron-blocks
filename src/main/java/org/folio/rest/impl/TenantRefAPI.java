@@ -89,7 +89,6 @@ public class TenantRefAPI extends TenantAPI {
       }), context);
   }
 
-
   public static Future<Map<EventType, Integer>> unregisterModuleFromPubsub(
     Map<String, String> headers, Vertx vertx) {
 
