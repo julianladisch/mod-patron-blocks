@@ -2,7 +2,6 @@
 package org.folio.domain;
 
 import java.math.BigDecimal;
-import java.util.Objects;
 
 import javax.validation.constraints.Pattern;
 
@@ -117,18 +116,4 @@ public class OpenFeeFine {
         return this;
     }
 
-    @Override public boolean equals(Object o) {
-        if (this == o)
-            return true;
-        if (o == null || getClass() != o.getClass())
-            return false;
-        OpenFeeFine that = (OpenFeeFine) o;
-        return Objects.equals(feeFineId, that.feeFineId) &&
-          Objects.equals(balance, that.balance) &&
-          Objects.equals(feeFineTypeId, that.feeFineTypeId);
-    }
-
-    @Override public int hashCode() {
-        return Objects.hash(feeFineId, balance, feeFineTypeId);
-    }
 }

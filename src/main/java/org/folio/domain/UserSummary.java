@@ -4,7 +4,6 @@ package org.folio.domain;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
 
 import javax.validation.Valid;
 import javax.validation.constraints.NotNull;
@@ -194,22 +193,4 @@ public class UserSummary {
         return this;
     }
 
-    @Override public boolean equals(Object o) {
-        if (this == o)
-            return true;
-        if (o == null || getClass() != o.getClass())
-            return false;
-        UserSummary that = (UserSummary) o;
-        return Objects.equals(id, that.id) &&
-          Objects.equals(userId, that.userId) &&
-          Objects.equals(outstandingFeeFineBalance, that.outstandingFeeFineBalance) &&
-          Objects.equals(numberOfLostItems, that.numberOfLostItems) &&
-          Objects.equals(openLoans, that.openLoans) &&
-          Objects.equals(openFeeFines, that.openFeeFines);
-    }
-
-    @Override public int hashCode() {
-        return Objects.hash(id, userId, outstandingFeeFineBalance, numberOfLostItems, openLoans,
-          openFeeFines);
-    }
 }

@@ -1,8 +1,6 @@
 
 package org.folio.domain;
 
-import java.util.Objects;
-
 import javax.validation.constraints.Pattern;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
@@ -146,19 +144,4 @@ public class OpenLoan {
         return this;
     }
 
-    @Override public boolean equals(Object o) {
-        if (this == o)
-            return true;
-        if (o == null || getClass() != o.getClass())
-            return false;
-        OpenLoan openLoan = (OpenLoan) o;
-        return Objects.equals(loanId, openLoan.loanId) &&
-          Objects.equals(dueDate, openLoan.dueDate) &&
-          Objects.equals(returnedDate, openLoan.returnedDate) &&
-          Objects.equals(recall, openLoan.recall);
-    }
-
-    @Override public int hashCode() {
-        return Objects.hash(loanId, dueDate, returnedDate, recall);
-    }
 }
