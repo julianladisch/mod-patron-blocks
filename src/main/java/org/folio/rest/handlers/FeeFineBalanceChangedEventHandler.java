@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
@@ -33,8 +34,7 @@ public class FeeFineBalanceChangedEventHandler extends AbstractEventHandler {
     return succeededFuture(payload)
       .map(Payload::from)
       .compose(this::updateUserSummary)
-      .onSuccess(userSummaryId -> logSuccess(FEE_FINE_BALANCE_CHANGED, userSummaryId))
-      .onFailure(throwable -> logError(FEE_FINE_BALANCE_CHANGED, payload, throwable));
+      .onComplete(this::logResult);
   }
 
   private Future<String> updateUserSummary(Payload payload) {
@@ -93,6 +93,17 @@ public class FeeFineBalanceChangedEventHandler extends AbstractEventHandler {
       .map(result -> result.stream()
         .findFirst()
         .orElseGet(() -> buildEmptyUserSummary(payload.userId)));
+  }
+
+  protected void logResult(AsyncResult<String> result) {
+    String eventType = FEE_FINE_BALANCE_CHANGED.name();
+
+    if (result.failed()) {
+      log.error("Failed to process event {}", result.cause(), eventType);
+    } else {
+      log.info("Event {} processed successfully. Affected user summary: {}",
+        eventType, result.result());
+    }
   }
 
   private static class Payload {

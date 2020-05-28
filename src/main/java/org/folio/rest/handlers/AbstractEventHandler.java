@@ -5,7 +5,6 @@ import java.math.BigDecimal;
 import java.util.Map;
 import java.util.UUID;
 
-import org.folio.domain.EventType;
 import org.folio.domain.UserSummary;
 import org.folio.repository.UserSummaryRepository;
 import org.folio.repository.UserSummaryRepositoryImpl;
@@ -47,13 +46,4 @@ public abstract class AbstractEventHandler {
       .withNumberOfLostItems(0);
   }
 
-  protected static void logSuccess(EventType eventType, String userSummaryId) {
-    log.info("Event {} processed successfully. Affected user summary: {}",
-      eventType.name(), userSummaryId);
-  }
-
-  protected static void logError(EventType eventType, String payload, Throwable throwable) {
-    log.error("Failed to process event {}. Event payload:\n\"{}\"",
-      throwable, eventType.name(), payload);
-  }
 }

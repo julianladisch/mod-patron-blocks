@@ -2,7 +2,6 @@ package org.folio.rest.handlers;
 
 import java.math.BigDecimal;
 import java.util.Arrays;
-import java.util.Optional;
 
 import org.folio.domain.OpenFeeFine;
 import org.folio.domain.UserSummary;
@@ -13,9 +12,9 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
-import io.vertx.core.Future;
 import io.vertx.core.json.DecodeException;
 import io.vertx.core.json.JsonObject;
+import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
 
@@ -28,25 +27,33 @@ public class FeeFineBalanceChangedEventHandlerTest extends TestBase {
     new UserSummaryRepositoryImpl(postgresClient);
 
   @Before
-  public void beforeEach() {
+  public void beforeEach(TestContext context) {
     super.resetMocks();
     deleteAllFromTable(USER_SUMMARY_TABLE_NAME);
   }
 
   @Test
   public void createNewUserSummary(TestContext context) {
+    Async async = context.async();
+
     final String userId = randomId();
     final String feeFineId = randomId();
     final String feeFineTypeId = randomId();
     final BigDecimal balance = new BigDecimal("1.55");
 
     String payload = createPayloadString(userId, feeFineId, feeFineTypeId, balance);
-    waitFor(eventHandler.handle(payload));
-    checkResult(userId, balance, 1, feeFineId, feeFineTypeId, balance, context);
+    eventHandler.handle(payload)
+      .onFailure(context::fail)
+      .onSuccess(summaryId -> {
+        checkResult(summaryId, userId, balance, 1, feeFineId, feeFineTypeId, balance, context);
+        async.complete();
+      });
   }
 
   @Test
   public void addNewFeeFineToExistingUserSummary(TestContext context) {
+    Async async = context.async();
+
     final String userId = randomId();
     final BigDecimal initialOutstandingFeeFineBalance = new BigDecimal("2.55");
 
@@ -63,20 +70,28 @@ public class FeeFineBalanceChangedEventHandlerTest extends TestBase {
 
     initialUserSummary.getOpenFeeFines().add(existingFeeFine);
 
-    waitFor(userSummaryRepository.saveUserSummary(initialUserSummary));
+    userSummaryRepository.saveUserSummary(initialUserSummary)
+      .onFailure(context::fail)
+      .onSuccess(summaryId -> {
+        final String feeFineId = randomId();
+        final String feeFineTypeId = randomId();
+        final BigDecimal eventBalance = new BigDecimal("7.45");
+        String payload = createPayloadString(userId, feeFineId, feeFineTypeId, eventBalance);
 
-    final String feeFineId = randomId();
-    final String feeFineTypeId = randomId();
-    final BigDecimal eventBalance = new BigDecimal("7.45");
-    String payload = createPayloadString(userId, feeFineId, feeFineTypeId, eventBalance);
-
-    waitFor(eventHandler.handle(payload));
-    checkResult(userId, initialOutstandingFeeFineBalance.add(eventBalance), 2, feeFineId,
-      feeFineTypeId, eventBalance, context);
+        eventHandler.handle(payload)
+          .onFailure(context::fail)
+          .onSuccess(id -> {
+            checkResult(id, userId, initialOutstandingFeeFineBalance.add(eventBalance),
+              2, feeFineId, feeFineTypeId, eventBalance, context);
+            async.complete();
+          });
+      });
   }
 
   @Test
   public void updateFeeFineBalanceInExistingUserSummary(TestContext context) {
+    Async async = context.async();
+
     final String userId = randomId();
     final String feeFineId = randomId();
     final String feeFineTypeId = randomId();
@@ -95,19 +110,26 @@ public class FeeFineBalanceChangedEventHandlerTest extends TestBase {
 
     existingUserSummary.getOpenFeeFines().add(existingFeeFine);
 
-    waitFor(userSummaryRepository.saveUserSummary(existingUserSummary));
+    userSummaryRepository.saveUserSummary(existingUserSummary)
+      .onFailure(context::fail)
+      .onSuccess(summaryId -> {
+        final BigDecimal eventBalance = new BigDecimal("2.75");
+        String payload = createPayloadString(userId, feeFineId, feeFineTypeId, eventBalance);
 
-    final BigDecimal eventBalance = new BigDecimal("2.75");
-    String payload = createPayloadString(userId, feeFineId, feeFineTypeId, eventBalance);
-
-    waitFor(eventHandler.handle(payload));
-    checkResult(userId, eventBalance, 1, feeFineId, feeFineTypeId, eventBalance, context);
+        eventHandler.handle(payload)
+          .onFailure(context::fail)
+          .onSuccess(id -> {
+            checkResult(id, userId, eventBalance, 1, feeFineId, feeFineTypeId, eventBalance, context);
+            async.complete();
+          });
+      });
   }
 
   @Test
   public void deleteClosedFeeFineFromExistingUserSummary(TestContext context) {
-    final String userId = randomId();
+    Async async = context.async();
 
+    final String userId = randomId();
     final String feeFineId1 = randomId();
     final String feeFineTypeId1 = randomId();
     final BigDecimal feeFineBalance1 = new BigDecimal("1.25");
@@ -133,46 +155,65 @@ public class FeeFineBalanceChangedEventHandlerTest extends TestBase {
       .withOutstandingFeeFineBalance(feeFineBalance1.add(feeFineBalance2))
       .withOpenFeesFines(Arrays.asList(existingFeeFine1, existingFeeFine2));
 
-    waitFor(userSummaryRepository.saveUserSummary(existingUserSummary));
+    userSummaryRepository.saveUserSummary(existingUserSummary)
+      .onFailure(context::fail)
+      .onSuccess(summaryId -> {
+        String payload = createPayloadString(null, feeFineId2, null, BigDecimal.ZERO);
+        eventHandler.handle(payload)
+          .onFailure(context::fail)
+          .onSuccess(id -> {
+            checkResult(id, userId, feeFineBalance1, 1, feeFineId1,
+              feeFineTypeId1, feeFineBalance1, context);
+            async.complete();
+          });
+      });
 
-    String payload = createPayloadString(userId, feeFineId2, feeFineTypeId2, BigDecimal.ZERO);
-
-    waitFor(eventHandler.handle(payload));
-    checkResult(userId, feeFineBalance1, 1, feeFineId1, feeFineTypeId1, feeFineBalance1, context);
   }
 
   @Test
   public void eventWithInvalidJsonPayload(TestContext context) {
+    Async async = context.async();
+
     String payload = "not a json";
-    Future<String> handleFuture = eventHandler.handle(payload);
-    waitFor(handleFuture);
-    context.assertTrue(handleFuture.failed());
-    context.assertTrue(handleFuture.cause() instanceof DecodeException);
+    eventHandler.handle(payload)
+      .onSuccess(context::fail)
+      .onFailure(throwable -> {
+        context.assertTrue(throwable instanceof DecodeException);
+        async.complete();
+      });
   }
 
   @Test
   public void eventWithInvalidBalance(TestContext context) {
+    Async async = context.async();
+
     String payload = createPayloadJson(randomId(), randomId(), randomId(), BigDecimal.ZERO)
       .put("balance", "zero")
       .encodePrettily();
 
-    Future<String> handleFuture = eventHandler.handle(payload);
-    waitFor(handleFuture);
-    context.assertTrue(handleFuture.failed());
-    context.assertTrue(handleFuture.cause() instanceof IllegalArgumentException);
-    context.assertTrue(handleFuture.cause().getLocalizedMessage()
-      .startsWith("Invalid fee/fine balance value in event payload"));
+    eventHandler.handle(payload)
+      .onSuccess(context::fail)
+      .onFailure(throwable -> {
+        context.assertTrue(throwable instanceof IllegalArgumentException);
+        context.assertTrue(throwable.getMessage().startsWith(
+          "Invalid fee/fine balance value in event payload"));
+        async.complete();
+      });
   }
 
   @Test
   public void eventWithInvalidUserId(TestContext context) {
+    Async async = context.async();
+
     String invalidUserId = randomId() + "z";
     String payload = createPayloadString(invalidUserId, randomId(), randomId(), BigDecimal.ZERO);
 
-    Future<String> handleFuture = eventHandler.handle(payload);
-    waitFor(handleFuture);
-    context.assertTrue(handleFuture.failed());
-    context.assertTrue(handleFuture.cause() instanceof NumberFormatException);
+    eventHandler.handle(payload)
+      .onSuccess(context::fail)
+      .onFailure(throwable -> {
+        context.assertTrue(throwable instanceof NumberFormatException);
+        async.complete();
+      });
   }
 
   private static String createPayloadString(String userId, String feeFineId, String feeFineTypeId,
@@ -192,47 +233,33 @@ public class FeeFineBalanceChangedEventHandlerTest extends TestBase {
       .put("balance", balance.doubleValue());
   }
 
-  private void checkResult(String userId, BigDecimal expectedOutstandingFeeFineBalance,
-    int expectedNumberOfOpenFeesFines, String expectedFeeFineId, String expectedFeeFineTypeId,
+  private void checkResult(String summaryId, String userId,
+    BigDecimal expectedOutstandingFeeFineBalance, int expectedNumberOfOpenFeesFines,
+    String expectedFeeFineId, String expectedFeeFineTypeId,
     BigDecimal expectedFeeFineBalance, TestContext context) {
 
-    UserSummary userSummary = findUserSummaryByUserId(userId, context);
+    userSummaryRepository.getUserSummaryById(summaryId)
+      .onFailure(context::fail)
+      .onSuccess(optionalSummary -> {
+        UserSummary userSummary = optionalSummary.orElseThrow(() ->
+          new AssertionError("User summary was not found: " + summaryId));
 
-    context.assertNotNull(userSummary.getId());
-    context.assertEquals(userId, userSummary.getUserId());
-    context.assertEquals(expectedOutstandingFeeFineBalance,
-      userSummary.getOutstandingFeeFineBalance());
-    context.assertTrue(userSummary.getOpenLoans().isEmpty());
-    context.assertEquals(0, userSummary.getNumberOfLostItems());
-    context.assertEquals(expectedNumberOfOpenFeesFines, userSummary.getOpenFeeFines().size());
+        context.assertEquals(userId, userSummary.getUserId());
+        context.assertEquals(expectedOutstandingFeeFineBalance,
+          userSummary.getOutstandingFeeFineBalance());
+        context.assertTrue(userSummary.getOpenLoans().isEmpty());
+        context.assertEquals(0, userSummary.getNumberOfLostItems());
+        context.assertEquals(expectedNumberOfOpenFeesFines, userSummary.getOpenFeeFines().size());
 
-    OpenFeeFine openFeeFine = findOpenFeeFineById(userSummary, expectedFeeFineId, context);
+        OpenFeeFine openFeeFine = userSummary.getOpenFeeFines().stream()
+          .filter(feeFine -> feeFine.getFeeFineId().equals(expectedFeeFineId))
+          .findFirst()
+          .orElseThrow(() -> new AssertionError("Fee/fine was not found: " + expectedFeeFineId));
 
-    context.assertEquals(expectedFeeFineId, openFeeFine.getFeeFineId());
-    context.assertEquals(expectedFeeFineTypeId, openFeeFine.getFeeFineTypeId());
-    context.assertEquals(expectedFeeFineBalance, openFeeFine.getBalance());
-  }
-
-  private static OpenFeeFine findOpenFeeFineById(UserSummary userSummary, String feeFineId,
-    TestContext context) {
-
-    return userSummary.getOpenFeeFines().stream()
-      .filter(feeFine -> feeFine.getFeeFineId().equals(feeFineId))
-      .findFirst()
-      .orElseGet(() -> {
-        context.fail(String.format("Fee/fine %s was not found in given user summary", feeFineId));
-        return null;
+        context.assertEquals(expectedFeeFineId, openFeeFine.getFeeFineId());
+        context.assertEquals(expectedFeeFineTypeId, openFeeFine.getFeeFineTypeId());
+        context.assertEquals(expectedFeeFineBalance, openFeeFine.getBalance());
       });
-  }
-
-  private static UserSummary findUserSummaryByUserId(String userId, TestContext context) {
-    Future<Optional<UserSummary>> findUser = userSummaryRepository.getUserSummaryByUserId(userId);
-    waitFor(findUser);
-
-    return findUser.result().orElseGet(() -> {
-      context.fail(String.format("Summary for user %s was not found", userId));
-      return null;
-    });
   }
 
 }
