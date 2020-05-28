@@ -107,9 +107,17 @@ public class FeeFineBalanceChangedEventHandler extends AbstractEventHandler {
           "Invalid fee/fine balance value in event payload: " + balanceString, e);
       }
 
-      UUID.fromString(userId); // to make sure that userId value is a proper UUID
+      validateUUID(feeFineId);
+      validateUUID(feeFineTypeId);
+      validateUUID(userId);
 
       return new Payload(userId, feeFineId, feeFineTypeId, balance);
+    }
+
+    private static void validateUUID(String uuid) {
+      if (uuid != null) {
+        UUID.fromString(uuid);
+      }
     }
 
   }

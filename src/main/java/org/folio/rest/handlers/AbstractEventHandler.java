@@ -45,12 +45,12 @@ public abstract class AbstractEventHandler {
   }
 
   protected static void logSuccess(EventType eventType, String userSummaryId) {
-    log.error("Event {0} processed successfully. Affected user summary: {1}",
+    log.info("Event {} processed successfully. Affected user summary: {}",
       eventType.name(), userSummaryId);
   }
 
   protected static void logError(EventType eventType, String payload, Throwable throwable) {
-    log.error("Failed to process event {0}. Event payload:\n\"{1}\"",
+    log.error("Failed to process event {}. Event payload:\n\"{}\"",
       throwable, eventType.name(), payload);
   }
 }

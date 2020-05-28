@@ -108,7 +108,7 @@ public class TenantRefAPI extends TenantAPI {
           eventType.name(), PubSubClientUtils.constructModuleName(), ar -> {
             int statusCode = ar.statusCode();
             if (statusCode != HttpStatus.HTTP_NO_CONTENT.toInt()) {
-              log.error("Failed to unsubscribe from {0} events. Response status: {1}",
+              log.error("Failed to unsubscribe from {} events. Response status: {}",
                 eventType.name(), statusCode);
             }
             eventToResponseStatus.put(eventType, statusCode);
