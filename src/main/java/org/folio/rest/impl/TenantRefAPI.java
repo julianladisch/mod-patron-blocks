@@ -117,7 +117,7 @@ public class TenantRefAPI extends TenantAPI {
         );
       }
     } catch (Exception exception) {
-      log.error("Failed to unsubscribe from PubSub events", exception);
+      log.error("Failed to unsubscribe from events", exception);
       return Future.failedFuture(exception);
     }
 

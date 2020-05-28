@@ -13,10 +13,6 @@
     {
       "id": "pubsub-subscribers",
       "version": "0.1"
-    },
-    {
-      "id": "pubsub-publish",
-      "version": "0.1"
     }
   ],
   "provides": [
@@ -28,31 +24,46 @@
           "methods":[
             "POST"
           ],
-          "pathPattern":"/automated-patron-blocks/handlers/feefine-balance-changed"
+          "pathPattern":"/automated-patron-blocks/handlers/fee-fine-balance-changed",
+          "permissionsRequired": [
+            "patron-blocks.events.post"
+          ]
         },
         {
           "methods":[
             "POST"
           ],
-          "pathPattern":"/automated-patron-blocks/handlers/item-checked-out"
+          "pathPattern":"/automated-patron-blocks/handlers/item-checked-out",
+          "permissionsRequired": [
+            "patron-blocks.events.post"
+          ]
         },
         {
           "methods":[
             "POST"
           ],
-          "pathPattern":"/automated-patron-blocks/handlers/item-checked-in"
+          "pathPattern":"/automated-patron-blocks/handlers/item-checked-in",
+          "permissionsRequired": [
+            "patron-blocks.events.post"
+          ]
         },
         {
           "methods":[
             "POST"
           ],
-          "pathPattern":"/automated-patron-blocks/handlers/item-declared-lost"
+          "pathPattern":"/automated-patron-blocks/handlers/item-declared-lost",
+          "permissionsRequired": [
+            "patron-blocks.events.post"
+          ]
         },
         {
           "methods":[
             "POST"
           ],
-          "pathPattern":"/automated-patron-blocks/handlers/loan-due-date-updated"
+          "pathPattern":"/automated-patron-blocks/handlers/loan-due-date-updated",
+          "permissionsRequired": [
+            "patron-blocks.events.post"
+          ]
         }
       ]
     },
@@ -76,7 +87,10 @@
           "methods": [
             "DELETE"
           ],
-          "pathPattern": "/_/tenant"
+          "pathPattern": "/_/tenant",
+          "modulePermissions": [
+            "pubsub.subscribers.delete"
+          ]
         }
       ]
     }

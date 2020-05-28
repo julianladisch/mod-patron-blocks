@@ -65,7 +65,7 @@ public class TenantRefAPITest extends TestBase {
     wireMock.stubFor(delete(urlPathEqualTo("/pubsub/event-types/ITEM_CHECKED_OUT/subscribers"))
       .atPriority(1)
       .willReturn(aResponse().withStatus(400)));
-    wireMock.stubFor(delete(urlPathMatching("/pubsub/event-types/.*/subscribers"))
+    wireMock.stubFor(delete(urlPathMatching("/pubsub/event-types/\\w+/subscribers"))
       .atPriority(10)
       .willReturn(aResponse().withStatus(204)));
 
