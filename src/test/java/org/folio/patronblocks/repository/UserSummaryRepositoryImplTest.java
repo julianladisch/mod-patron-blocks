@@ -120,8 +120,12 @@ public class UserSummaryRepositoryImplTest extends APITests {
       .atMost(1, TimeUnit.SECONDS)
       .until(userSummaryRepository.getUserSummaries(null, 0, 100)::result, hasSize(3));
 
-    userSummaryRepository.deleteUserSummary(userSummaryId1);
-    userSummaryRepository.deleteUserSummary(userSummaryId3);
+    Future<Boolean> deleteUserSummary1 = userSummaryRepository.deleteUserSummary(userSummaryId1);
+    Future<Boolean> deleteUserSummary2 = userSummaryRepository.deleteUserSummary(userSummaryId3);
+
+    Awaitility.await()
+      .atMost(1, TimeUnit.SECONDS)
+      .until(() -> deleteUserSummary1.isComplete() && deleteUserSummary2.isComplete());
 
     Future<List<UserSummary>> userSummaryRemaining =
       userSummaryRepository.getUserSummaries(null, 0, 100);
