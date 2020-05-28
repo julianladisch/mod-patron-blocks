@@ -12,6 +12,7 @@ import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
 
+import org.apache.commons.lang3.StringUtils;
 import org.folio.domain.OpenFeeFine;
 import org.folio.domain.UserSummary;
 import org.folio.rest.persist.PostgresClient;
@@ -43,7 +44,7 @@ public class FeeFineBalanceChangedEventHandler extends AbstractEventHandler {
     List<OpenFeeFine> openFeeFines = userSummary.getOpenFeeFines();
 
     OpenFeeFine openFeeFine = openFeeFines.stream()
-      .filter(feeFine -> feeFine.getFeeFineId().equals(payload.feeFineId))
+      .filter(feeFine -> StringUtils.equals(feeFine.getFeeFineId(), payload.feeFineId))
       .findFirst()
       .orElseGet(() -> {
         OpenFeeFine newFeeFine = new OpenFeeFine()
