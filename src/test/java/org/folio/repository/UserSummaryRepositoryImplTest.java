@@ -13,7 +13,10 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
+import com.github.jasync.sql.db.postgresql.exceptions.GenericDatabaseException;
+
 import io.vertx.core.CompositeFuture;
+import io.vertx.core.Future;
 import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
 
@@ -39,6 +42,38 @@ public class UserSummaryRepositoryImplTest extends TestBase {
 
     context.assertTrue(retrievedUserSummary.isPresent());
     assertSummariesAreEqual(userSummaryToSave, retrievedUserSummary.get(), context);
+  }
+
+  @Test
+  public void shouldFailWhenAttemptingToSaveSummaryWithDuplicateId(TestContext context) {
+    String sameSummaryId = randomId();
+    UserSummary userSummaryToSave1 =  createUserSummary(sameSummaryId, randomId(), ONE, 2);
+    UserSummary userSummaryToSave2 =  createUserSummary(sameSummaryId, randomId(), ONE, 3);
+
+    waitFor(repository.saveUserSummary(userSummaryToSave1));
+    Future<String> saveDuplicateSummary = repository.saveUserSummary(userSummaryToSave2);
+    waitFor(saveDuplicateSummary);
+
+    context.assertTrue(saveDuplicateSummary.failed());
+    context.assertTrue(saveDuplicateSummary.cause() instanceof GenericDatabaseException);
+    context.assertTrue(saveDuplicateSummary.cause().getMessage().contains(
+      "duplicate key value violates unique constraint \"user_summary_pkey\""));
+  }
+
+  @Test
+  public void shouldFailWhenAttemptingToSaveSummaryWithDuplicateUserId(TestContext context) {
+    String sameUserId = randomId();
+    UserSummary userSummaryToSave1 =  createUserSummary(randomId(), sameUserId, ONE, 2);
+    UserSummary userSummaryToSave2 =  createUserSummary(randomId(), sameUserId, ONE, 3);
+
+    waitFor(repository.saveUserSummary(userSummaryToSave1));
+    Future<String> saveDuplicateSummary = repository.saveUserSummary(userSummaryToSave2);
+    waitFor(saveDuplicateSummary);
+
+    context.assertTrue(saveDuplicateSummary.failed());
+    context.assertTrue(saveDuplicateSummary.cause() instanceof GenericDatabaseException);
+    context.assertTrue(saveDuplicateSummary.cause().getMessage().contains(
+      "duplicate key value violates unique constraint \"user_summary_userid_idx_unique\""));
   }
 
   @Test

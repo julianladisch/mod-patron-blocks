@@ -36,12 +36,15 @@ public abstract class AbstractEventHandler {
 
   protected Future<UserSummary> getSummaryForUser(String userId) {
     return userSummaryRepository.getUserSummaryByUserId(userId)
-      .map(summary -> summary.orElseGet(() ->
-        new UserSummary()
-          .withId(UUID.randomUUID().toString())
-          .withUserId(userId)
-          .withOutstandingFeeFineBalance(BigDecimal.ZERO)
-          .withNumberOfLostItems(0)));
+      .map(summary -> summary.orElseGet(() -> buildEmptyUserSummary(userId)));
+  }
+
+  protected UserSummary buildEmptyUserSummary(String userId) {
+    return new UserSummary()
+      .withId(UUID.randomUUID().toString())
+      .withUserId(userId)
+      .withOutstandingFeeFineBalance(BigDecimal.ZERO)
+      .withNumberOfLostItems(0);
   }
 
   protected static void logSuccess(EventType eventType, String userSummaryId) {

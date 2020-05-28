@@ -18,6 +18,8 @@ import org.folio.domain.UserSummary;
 import org.folio.rest.persist.PostgresClient;
 
 public class FeeFineBalanceChangedEventHandler extends AbstractEventHandler {
+  private static final String FIND_SUMMARY_BY_FEE_FINE_ID_QUERY_TEMPLATE =
+    "openFeesFines == \"*\\\"feeFineId\\\": \\\"%s\\\"*\"";
 
   public FeeFineBalanceChangedEventHandler(Map<String, String> okapiHeaders, Vertx vertx) {
     super(okapiHeaders, vertx);
@@ -36,7 +38,7 @@ public class FeeFineBalanceChangedEventHandler extends AbstractEventHandler {
   }
 
   private Future<String> updateUserSummary(Payload payload) {
-    return getSummaryForUser(payload.userId)
+    return getUserSummary(payload)
       .compose(summary -> updateUserSummary(summary, payload));
   }
 
@@ -78,6 +80,21 @@ public class FeeFineBalanceChangedEventHandler extends AbstractEventHandler {
     );
   }
 
+  private Future<UserSummary> getUserSummary(Payload payload) {
+    return payload.userId != null
+      ? getSummaryForUser(payload.userId)
+      : getSummaryByFeeFineId(payload);
+  }
+
+  private Future<UserSummary> getSummaryByFeeFineId(Payload payload) {
+    String query = String.format(FIND_SUMMARY_BY_FEE_FINE_ID_QUERY_TEMPLATE, payload.feeFineId);
+
+    return userSummaryRepository.getUserSummaries(query, 0, 1)
+      .map(result -> result.stream()
+        .findFirst()
+        .orElseGet(() -> buildEmptyUserSummary(payload.userId)));
+  }
+
   private static class Payload {
     private final String userId;
     private final String feeFineId;
@@ -107,15 +124,15 @@ public class FeeFineBalanceChangedEventHandler extends AbstractEventHandler {
           "Invalid fee/fine balance value in event payload: " + balanceString, e);
       }
 
-      validateUUID(feeFineId);
-      validateUUID(feeFineTypeId);
-      validateUUID(userId);
+      validateUUID(feeFineId, true);
+      validateUUID(feeFineTypeId, false);
+      validateUUID(userId, false);
 
       return new Payload(userId, feeFineId, feeFineTypeId, balance);
     }
 
-    private static void validateUUID(String uuid) {
-      if (uuid != null) {
+    private static void validateUUID(String uuid, boolean required) {
+      if (required || uuid != null) {
         UUID.fromString(uuid);
       }
     }

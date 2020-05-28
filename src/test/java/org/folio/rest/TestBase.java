@@ -161,7 +161,7 @@ public class TestBase {
   }
 
   protected static <T> T waitFor(Future<T> future) {
-    return waitFor(future, 1);
+    return waitFor(future, 3);
   }
 
   protected static <T> T waitFor(Future<T> future, int waitForSeconds) {
