@@ -36,8 +36,9 @@ resourceTypes:
       ]
     description: Return a list of patron block conditions
   post:
-    is: [validate]
-    description: Create a patron block condition
+    responses:
+      501:
+        description: "Not implemented"
   /{patronBlockConditionId}:
     type:
       collection-item:
@@ -46,3 +47,7 @@ resourceTypes:
     put:
       is: [validate]
       description: Update a patron block condition
+    delete:
+      responses:
+        501:
+          description: "Not implemented"

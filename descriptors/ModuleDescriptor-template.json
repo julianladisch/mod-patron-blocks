@@ -40,17 +40,9 @@
           "pathPattern": "patron-block-conditions/{id}",
           "permissionsRequired": ["patron-block-conditions.item.get"]
         }, {
-          "methods": ["POST"],
-          "pathPattern": "/patron-block-conditions",
-          "permissionsRequired": ["patron-block-conditions.item.post"]
-        }, {
           "methods": ["PUT"],
           "pathPattern": "/patron-block-conditions/{id}",
           "permissionsRequired": ["patron-block-conditions.item.put"]
-        }, {
-          "methods": ["DELETE"],
-          "pathPattern": "/patron-block-conditions/{id}",
-          "permissionsRequired": ["patron-block-conditions.item.delete"]
         }
       ]
     },
@@ -94,19 +86,9 @@
       "description": "Get patron block condition by id"
     },
     {
-      "permissionName": "patron-block-conditions.item.post",
-      "displayName": "Patron block conditions - post patron block condition",
-      "description": "Create patron block condition"
-    },
-    {
       "permissionName": "patron-block-conditions.item.put",
       "displayName": "Patron block conditions - put patron block condition",
       "description": "Put patron block condition by id"
-    },
-    {
-      "permissionName": "patron-block-conditions.item.delete",
-      "displayName": "Patron block conditions - delete patron block condition",
-      "description": "Delete patron block condition by id"
     },
     {
       "permissionName": "patron-block-limits.collection.get",
@@ -132,23 +114,6 @@
       "permissionName": "patron-block-limits.item.delete",
       "displayName": "Patron block limits - delete patron block limit",
       "description": "Delete patron block limit by id"
-    },
-    {
-      "permissionName" : "users.all",
-      "displayName" : "users all",
-      "description" : "All permissions for the mod-users module",
-      "subPermissions" : [
-        "patron-block-conditions.collection.get",
-        "patron-block-conditions.item.get",
-        "patron-block-conditions.item.post",
-        "patron-block-conditions.item.put",
-        "patron-block-conditions.item.delete",
-        "patron-block-limits.collection.get",
-        "patron-block-limits.item.get",
-        "patron-block-limits.item.post",
-        "patron-block-limits.item.put",
-        "patron-block-limits.item.delete"
-      ]
     }
   ],
   "launchDescriptor": {

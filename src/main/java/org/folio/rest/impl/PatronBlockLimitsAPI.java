@@ -27,6 +27,10 @@ public class PatronBlockLimitsAPI implements PatronBlockLimits {
   private static final List<String> CONDITIONS_IDS_WITH_DOUBLE_VALUE_TYPE =
     ImmutableList.of("cf7a0d5f-a327-4ca1-aa9e-dc55ec006b8a");
   private static final String VALUE_FIELD = "value";
+  private static final double MIN_DOUBLE_LIMIT = 0.01;
+  private static final double MAX_DOUBLE_LIMIT = 9999.99;
+  private static final int MIN_INT_LIMIT = 0;
+  private static final int MAX_INT_LIMIT = 999999;
 
   @Validate
   @Override
@@ -106,7 +110,7 @@ public class PatronBlockLimitsAPI implements PatronBlockLimits {
   }
 
   private Errors validateRangeForDoubleValueType(Double limit) {
-    if (limit >= 0.01 && limit <= 9999.99) {
+    if (limit >= MIN_DOUBLE_LIMIT && limit <= MAX_DOUBLE_LIMIT) {
       return null;
     }
     if (limit == 0.00) {
@@ -115,15 +119,15 @@ public class PatronBlockLimitsAPI implements PatronBlockLimits {
           "to skip this limit, leave value set to blank");
     }
     return createValidationErrorMessage(VALUE_FIELD, limit.toString(),
-      "Must be blank or a number from 0.01 to 9999.99");
+      "Must be blank or a number from " + MIN_DOUBLE_LIMIT + " to " + MAX_DOUBLE_LIMIT);
   }
 
   private Errors validateRangeForIntegerValueType(Double limit) {
     boolean isInt = limit % 1 == 0;
-    if (isInt && limit >= 0 && limit <= 999999) {
+    if (isInt && limit >= MIN_INT_LIMIT && limit <= MAX_INT_LIMIT) {
       return null;
     }
     return createValidationErrorMessage(VALUE_FIELD, limit.toString(),
-      "Must be blank or an integer from 0 to 999999");
+      "Must be blank or an integer from " + MIN_INT_LIMIT + " to " + MAX_INT_LIMIT);
   }
 }

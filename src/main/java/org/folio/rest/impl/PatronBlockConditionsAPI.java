@@ -1,5 +1,6 @@
 package org.folio.rest.impl;
 
+import static io.vertx.core.Future.succeededFuture;
 import static org.apache.commons.lang.StringUtils.isBlank;
 import static org.folio.rest.tools.utils.ValidationHelper.createValidationErrorMessage;
 
@@ -32,22 +33,12 @@ public class PatronBlockConditionsAPI implements PatronBlockConditions {
       okapiHeaders, vertxContext, GetPatronBlockConditionsResponse.class, asyncResultHandler);
   }
 
-  @Validate
   @Override
   public void postPatronBlockConditions(String lang, PatronBlockCondition entity,
     Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler,
     Context vertxContext) {
 
-    Errors errors = validateEntity(entity);
-    if (errors != null) {
-      asyncResultHandler.handle(io.vertx.core.Future.succeededFuture(
-        PostPatronBlockConditionsResponse
-          .respond422WithApplicationJson(errors)));
-      return;
-    }
-
-    PgUtil.post(PATRON_BLOCK_CONDITIONS, entity, okapiHeaders, vertxContext,
-      PostPatronBlockConditionsResponse.class, asyncResultHandler);
+    asyncResultHandler.handle(succeededFuture(PostPatronBlockConditionsResponse.respond501()));
   }
 
   @Validate
@@ -59,7 +50,7 @@ public class PatronBlockConditionsAPI implements PatronBlockConditions {
 
     Errors errors = validateEntity(entity);
     if (errors != null) {
-      asyncResultHandler.handle(io.vertx.core.Future.succeededFuture(
+      asyncResultHandler.handle(succeededFuture(
         PutPatronBlockConditionsByPatronBlockConditionIdResponse
           .respond422WithApplicationJson(errors)));
       return;
@@ -80,16 +71,13 @@ public class PatronBlockConditionsAPI implements PatronBlockConditions {
       asyncResultHandler);
   }
 
-  @Validate
   @Override
   public void deletePatronBlockConditionsByPatronBlockConditionId(
     String patronBlockConditionId, String lang, Map<String,
     String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler,
     Context vertxContext) {
 
-    PgUtil.deleteById(PATRON_BLOCK_CONDITIONS, patronBlockConditionId, okapiHeaders,
-      vertxContext, DeletePatronBlockConditionsByPatronBlockConditionIdResponse.class,
-      asyncResultHandler);
+    asyncResultHandler.handle(succeededFuture(PostPatronBlockConditionsResponse.respond501()));
   }
 
   private Errors validateEntity(PatronBlockCondition entity) {

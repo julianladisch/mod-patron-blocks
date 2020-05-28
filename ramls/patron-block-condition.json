@@ -42,6 +42,7 @@
       "$ref": "raml-util/schemas/metadata.schema"
     }
   },
+  "additionalProperties": false,
   "required": [
     "id",
     "name",

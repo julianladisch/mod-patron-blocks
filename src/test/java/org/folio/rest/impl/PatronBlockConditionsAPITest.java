@@ -1,6 +1,7 @@
 package org.folio.rest.impl;
 
-import static org.apache.http.HttpStatus.SC_CREATED;
+import static org.apache.http.HttpStatus.SC_NOT_FOUND;
+import static org.apache.http.HttpStatus.SC_NOT_IMPLEMENTED;
 import static org.apache.http.HttpStatus.SC_UNPROCESSABLE_ENTITY;
 import static org.folio.test.util.TestUtil.readFile;
 import static org.hamcrest.CoreMatchers.equalTo;
@@ -29,6 +30,7 @@ import io.vertx.ext.unit.junit.VertxUnitRunner;
 public class PatronBlockConditionsAPITest extends TestBase {
 
   private static final String MAX_NUMBER_OF_LOST_ITEMS_CONDITION_ID = "72b67965-5b73-4840-bc0b-be8f3f6e047e";
+  private static final String MAX_NUMBER_OF_LOST_ITEMS_NON_EXISTENT_ID = "72b67965-5b73-4840-bc0b-be8f3f6e084d";
   private static final String MAX_NUMBER_OF_ITEMS_CHARGED_OUT = "3d7c52dc-c732-4223-8bf8-e5917801386f";
   private static final String MAX_NUMBER_OF_OVERDUE_ITEMS = "584fbd4f-6a34-4730-a6ca-73a6a6a9d845";
   private static final String MAX_NUMBER_OF_OVERDUE_RECALLS = "e5b45031-a202-4abb-917b-e1df9346fe2c";
@@ -84,18 +86,18 @@ public class PatronBlockConditionsAPITest extends TestBase {
   }
 
   @Test
-  public void cannotPostMaxNumberOfLostItemWithNoMessage()
+  public void cannotUpdateMaxNumberOfLostItemsConditionWithNonExistentId()
     throws IOException, URISyntaxException {
 
-    String maxNumberOfLostItems = readFile(PATRON_BLOCK_CONDITIONS
-      +"/max_number_of_lost_items_no_message.json");
-    PatronBlockCondition response = postWithStatus(PATRON_BLOCK_CONDITIONS_URL, maxNumberOfLostItems,
-      SC_UNPROCESSABLE_ENTITY, USER_ID)
-      .as(PatronBlockCondition.class);
+    String updatedConditionWithNonExistentId = readFile(PATRON_BLOCK_CONDITIONS
+      +"/max_number_of_lost_items_non_existent_id.json");
 
-    List<Map<String, Object>> errors =  (List<Map<String, Object>>) response.getAdditionalProperties().get("errors");
-    String message = (String) errors.get(0).get("message");
-    assertThat(message, is("Message to be displayed is a required field if one or more blocked actions selected"));
+    putWithStatus(PATRON_BLOCK_CONDITIONS_URL
+      + MAX_NUMBER_OF_LOST_ITEMS_NON_EXISTENT_ID, updatedConditionWithNonExistentId,
+      SC_NOT_FOUND, USER_ID);
+    PatronBlockConditions conditions = getWithOk(PATRON_BLOCK_CONDITIONS_URL)
+      .as(PatronBlockConditions.class);
+    assertThat(conditions.getTotalRecords(), equalTo(NUMBER_OF_PREDEFINED_CONDITIONS));
   }
 
   @Test
@@ -107,23 +109,19 @@ public class PatronBlockConditionsAPITest extends TestBase {
     PatronBlockCondition response = putWithStatus(PATRON_BLOCK_CONDITIONS_URL
         + MAX_NUMBER_OF_LOST_ITEMS_CONDITION_ID, maxNumberOfLostItems, SC_UNPROCESSABLE_ENTITY, USER_ID)
       .as(PatronBlockCondition.class);
-    List<Map<String, Object>> errors =  (List<Map<String, Object>>) response.getAdditionalProperties().get("errors");
+    List<Map<String, Object>> errors = (List<Map<String, Object>>) response.getAdditionalProperties().get("errors");
     String message = (String) errors.get(0).get("message");
     assertThat(message, is("Message to be displayed is a required field if one or more blocked actions selected"));
   }
 
   @Test
-  public void cannotPostMaxNumberOfLostItemWithMessageAndNoFlagSetToTrue()
+  public void cannotPostNewCondition()
     throws IOException, URISyntaxException {
 
     String maxNumberOfLostItems = readFile(PATRON_BLOCK_CONDITIONS
       +"/max_number_of_lost_items_no_flat_set_to_true.json");
-    PatronBlockCondition response = postWithStatus(PATRON_BLOCK_CONDITIONS_URL, maxNumberOfLostItems,
-      SC_UNPROCESSABLE_ENTITY, USER_ID)
-      .as(PatronBlockCondition.class);
-    List<Map<String, Object>> errors =  (List<Map<String, Object>>) response.getAdditionalProperties().get("errors");
-    String message = (String) errors.get(0).get("message");
-    assertThat(message, is("One or more blocked actions must be selected for message to be displayed to be used"));
+    postWithStatus(PATRON_BLOCK_CONDITIONS_URL, maxNumberOfLostItems,
+      SC_NOT_IMPLEMENTED, USER_ID);
   }
 
   @Test
@@ -135,27 +133,25 @@ public class PatronBlockConditionsAPITest extends TestBase {
     PatronBlockCondition response = putWithStatus(PATRON_BLOCK_CONDITIONS_URL
         + MAX_NUMBER_OF_LOST_ITEMS_CONDITION_ID, maxNumberOfLostItems, SC_UNPROCESSABLE_ENTITY, USER_ID)
       .as(PatronBlockCondition.class);
-    List<Map<String, Object>> errors =  (List<Map<String, Object>>) response.getAdditionalProperties().get("errors");
+    List<Map<String, Object>> errors = (List<Map<String, Object>>) response.getAdditionalProperties().get("errors");
     String message = (String) errors.get(0).get("message");
     assertThat(message, is("One or more blocked actions must be selected for message to be displayed to be used"));
   }
 
   @Test
-  public void canDeletePredefinedConditionsAndAddNewOne() throws IOException, URISyntaxException {
+  public void cannotDeletePredefinedConditions() {
 
-    deleteWithNoContent(PATRON_BLOCK_CONDITIONS_URL + MAX_NUMBER_OF_LOST_ITEMS_CONDITION_ID);
-    deleteWithNoContent(PATRON_BLOCK_CONDITIONS_URL + MAX_NUMBER_OF_ITEMS_CHARGED_OUT);
-    deleteWithNoContent(PATRON_BLOCK_CONDITIONS_URL + MAX_NUMBER_OF_OVERDUE_ITEMS);
-    deleteWithNoContent(PATRON_BLOCK_CONDITIONS_URL + MAX_NUMBER_OF_OVERDUE_RECALLS);
-    deleteWithNoContent(PATRON_BLOCK_CONDITIONS_URL + MAX_OUTSTANDING_FEEFINE_BALANCE);
-    deleteWithNoContent(PATRON_BLOCK_CONDITIONS_URL + RECALL_OVERDUE_BY_MAX_NUMBER);
-
-    String updatedMaxNumberOfLostItemsCondition = readFile(PATRON_BLOCK_CONDITIONS
-      +"/max_number_of_overdue_items.json");
-    postWithStatus(PATRON_BLOCK_CONDITIONS_URL, updatedMaxNumberOfLostItemsCondition,
-      SC_CREATED, USER_ID);
-    PatronBlockConditions conditions = getWithOk(PATRON_BLOCK_CONDITIONS_URL)
-      .as(PatronBlockConditions.class);
-    assertThat(conditions.getTotalRecords(), equalTo(1));
+    deleteWithStatus(PATRON_BLOCK_CONDITIONS_URL + MAX_NUMBER_OF_LOST_ITEMS_CONDITION_ID,
+      SC_NOT_IMPLEMENTED);
+    deleteWithStatus(PATRON_BLOCK_CONDITIONS_URL + MAX_NUMBER_OF_ITEMS_CHARGED_OUT,
+      SC_NOT_IMPLEMENTED);
+    deleteWithStatus(PATRON_BLOCK_CONDITIONS_URL + MAX_NUMBER_OF_OVERDUE_ITEMS,
+      SC_NOT_IMPLEMENTED);
+    deleteWithStatus(PATRON_BLOCK_CONDITIONS_URL + MAX_NUMBER_OF_OVERDUE_RECALLS,
+      SC_NOT_IMPLEMENTED);
+    deleteWithStatus(PATRON_BLOCK_CONDITIONS_URL + MAX_OUTSTANDING_FEEFINE_BALANCE,
+      SC_NOT_IMPLEMENTED);
+    deleteWithStatus(PATRON_BLOCK_CONDITIONS_URL + RECALL_OVERDUE_BY_MAX_NUMBER,
+      SC_NOT_IMPLEMENTED);
   }
 }
