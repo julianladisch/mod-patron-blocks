@@ -14,7 +14,8 @@ import org.folio.rest.persist.interfaces.Results;
 
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
-import io.vertx.ext.sql.UpdateResult;
+import io.vertx.sqlclient.Row;
+import io.vertx.sqlclient.RowSet;
 
 public class UserSummaryRepositoryImpl implements UserSummaryRepository {
 
@@ -56,16 +57,16 @@ public class UserSummaryRepositoryImpl implements UserSummaryRepository {
 
   @Override
   public Future<Boolean> updateUserSummary(UserSummary userSummary) {
-    Promise<UpdateResult> promise = Promise.promise();
+    Promise<RowSet<Row>> promise = Promise.promise();
     pgClient.update(USER_SUMMARY_TABLE, userSummary, userSummary.getId(), promise);
-    return promise.future().map(updateResult -> updateResult.getUpdated() == 1);
+    return promise.future().map(updateResult -> updateResult.rowCount() == 1);
   }
 
   @Override
   public Future<Boolean> deleteUserSummary(String id) {
-    Promise<UpdateResult> promise = Promise.promise();
+    Promise<RowSet<Row>> promise = Promise.promise();
     pgClient.delete(USER_SUMMARY_TABLE, id, promise);
-    return promise.future().map(updateResult -> updateResult.getUpdated() == 1);
+    return promise.future().map(updateResult -> updateResult.rowCount() == 1);
   }
 
   /**
