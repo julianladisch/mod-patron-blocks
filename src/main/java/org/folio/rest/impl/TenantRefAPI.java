@@ -108,6 +108,9 @@ public class TenantRefAPI extends TenantAPI {
             if (statusCode != HttpStatus.HTTP_NO_CONTENT.toInt()) {
               log.error("Failed to unsubscribe from {} events. Response status: {}",
                 eventType.name(), statusCode);
+            } else {
+              log.info("Successfully unsubscribed from {} events. Response status: {}",
+                eventType.name(), statusCode);
             }
             eventToResponseStatus.put(eventType, statusCode);
             promise.complete(eventType);
