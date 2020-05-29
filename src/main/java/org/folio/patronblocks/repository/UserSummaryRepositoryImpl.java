@@ -29,7 +29,6 @@ public class UserSummaryRepositoryImpl implements UserSummaryRepository {
   public Future<List<UserSummary>> getUserSummaries(String query, int offset, int limit) {
 
     Promise<Results<UserSummary>> promise = Promise.promise();
-
     try {
       String[] fieldList = {"*"};
       CQLWrapper cql = getCQL(query, limit, offset);

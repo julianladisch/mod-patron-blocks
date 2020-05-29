@@ -1,5 +1,6 @@
 package org.folio.rest.impl;
 
+import static org.apache.http.HttpStatus.SC_BAD_REQUEST;
 import static org.apache.http.HttpStatus.SC_NOT_FOUND;
 import static org.apache.http.HttpStatus.SC_NOT_IMPLEMENTED;
 import static org.apache.http.HttpStatus.SC_UNPROCESSABLE_ENTITY;
@@ -31,11 +32,6 @@ public class PatronBlockConditionsAPITest extends TestBase {
 
   private static final String MAX_NUMBER_OF_LOST_ITEMS_CONDITION_ID = "72b67965-5b73-4840-bc0b-be8f3f6e047e";
   private static final String MAX_NUMBER_OF_LOST_ITEMS_NON_EXISTENT_ID = "72b67965-5b73-4840-bc0b-be8f3f6e084d";
-  private static final String MAX_NUMBER_OF_ITEMS_CHARGED_OUT = "3d7c52dc-c732-4223-8bf8-e5917801386f";
-  private static final String MAX_NUMBER_OF_OVERDUE_ITEMS = "584fbd4f-6a34-4730-a6ca-73a6a6a9d845";
-  private static final String MAX_NUMBER_OF_OVERDUE_RECALLS = "e5b45031-a202-4abb-917b-e1df9346fe2c";
-  private static final String MAX_OUTSTANDING_FEEFINE_BALANCE = "cf7a0d5f-a327-4ca1-aa9e-dc55ec006b8a";
-  private static final String RECALL_OVERDUE_BY_MAX_NUMBER = "08530ac4-07f2-48e6-9dda-a97bc2bf7053";
   private static final Header USER_ID = new Header(XOkapiHeaders.USER_ID, "111111111");
   private static final String PATRON_BLOCK_CONDITIONS_URL = "/patron-block-conditions/";
   private static final String PATRON_BLOCK_CONDITIONS = "patron-block-conditions";
@@ -115,16 +111,6 @@ public class PatronBlockConditionsAPITest extends TestBase {
   }
 
   @Test
-  public void cannotPostNewCondition()
-    throws IOException, URISyntaxException {
-
-    String maxNumberOfLostItems = readFile(PATRON_BLOCK_CONDITIONS
-      +"/max_number_of_lost_items_no_flat_set_to_true.json");
-    postWithStatus(PATRON_BLOCK_CONDITIONS_URL, maxNumberOfLostItems,
-      SC_NOT_IMPLEMENTED, USER_ID);
-  }
-
-  @Test
   public void cannotUpdateMaxNumberOfLostItemWithMessageAndNoFlagSetToTrue()
     throws IOException, URISyntaxException {
 
@@ -139,19 +125,19 @@ public class PatronBlockConditionsAPITest extends TestBase {
   }
 
   @Test
-  public void cannotDeletePredefinedConditions() {
+  public void cannotDeletePredefinedCondition() {
 
     deleteWithStatus(PATRON_BLOCK_CONDITIONS_URL + MAX_NUMBER_OF_LOST_ITEMS_CONDITION_ID,
-      SC_NOT_IMPLEMENTED);
-    deleteWithStatus(PATRON_BLOCK_CONDITIONS_URL + MAX_NUMBER_OF_ITEMS_CHARGED_OUT,
-      SC_NOT_IMPLEMENTED);
-    deleteWithStatus(PATRON_BLOCK_CONDITIONS_URL + MAX_NUMBER_OF_OVERDUE_ITEMS,
-      SC_NOT_IMPLEMENTED);
-    deleteWithStatus(PATRON_BLOCK_CONDITIONS_URL + MAX_NUMBER_OF_OVERDUE_RECALLS,
-      SC_NOT_IMPLEMENTED);
-    deleteWithStatus(PATRON_BLOCK_CONDITIONS_URL + MAX_OUTSTANDING_FEEFINE_BALANCE,
-      SC_NOT_IMPLEMENTED);
-    deleteWithStatus(PATRON_BLOCK_CONDITIONS_URL + RECALL_OVERDUE_BY_MAX_NUMBER,
-      SC_NOT_IMPLEMENTED);
+      SC_BAD_REQUEST);
+  }
+
+  @Test
+  public void cannotPostNewCondition()
+    throws IOException, URISyntaxException {
+
+    String maxNumberOfLostItems = readFile(PATRON_BLOCK_CONDITIONS
+      +"/max_number_of_lost_items_no_flat_set_to_true.json");
+    postWithStatus(PATRON_BLOCK_CONDITIONS_URL, maxNumberOfLostItems,
+      SC_BAD_REQUEST, USER_ID);
   }
 }

@@ -33,14 +33,6 @@ public class PatronBlockConditionsAPI implements PatronBlockConditions {
       okapiHeaders, vertxContext, GetPatronBlockConditionsResponse.class, asyncResultHandler);
   }
 
-  @Override
-  public void postPatronBlockConditions(String lang, PatronBlockCondition entity,
-    Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler,
-    Context vertxContext) {
-
-    asyncResultHandler.handle(succeededFuture(PostPatronBlockConditionsResponse.respond501()));
-  }
-
   @Validate
   @Override
   public void putPatronBlockConditionsByPatronBlockConditionId(
@@ -69,15 +61,6 @@ public class PatronBlockConditionsAPI implements PatronBlockConditions {
     PgUtil.getById(PATRON_BLOCK_CONDITIONS, PatronBlockCondition.class, patronBlockConditionId,
       okapiHeaders, vertxContext, GetPatronBlockConditionsByPatronBlockConditionIdResponse.class,
       asyncResultHandler);
-  }
-
-  @Override
-  public void deletePatronBlockConditionsByPatronBlockConditionId(
-    String patronBlockConditionId, String lang, Map<String,
-    String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler,
-    Context vertxContext) {
-
-    asyncResultHandler.handle(succeededFuture(PostPatronBlockConditionsResponse.respond501()));
   }
 
   private Errors validateEntity(PatronBlockCondition entity) {

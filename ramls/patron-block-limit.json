@@ -27,7 +27,6 @@
       "readonly": true
     }
   },
-  "additionalProperties": false,
   "required": [
     "id",
     "patronGroupId",

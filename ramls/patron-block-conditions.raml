@@ -19,12 +19,12 @@ traits:
   validate: !include raml-util/traits/validation.raml
 
 resourceTypes:
-  collection: !include raml-util/rtypes/collection.raml
-  collection-item: !include raml-util/rtypes/item-collection.raml
+  collection-get: !include raml-util/rtypes/collection-get.raml
+  item-collection-get: !include raml-util/rtypes/item-collection-get.raml
 
 /patron-block-conditions:
   type:
-    collection:
+    collection-get:
       exampleCollection: !include examples/patron-block-conditions.sample
       exampleItem: !include examples/patron-block-condition.sample
       schemaCollection: patron-block-conditions
@@ -35,19 +35,38 @@ resourceTypes:
       searchable: {description: "searchable using CQL", example: "name=\"undergrad*\""}
       ]
     description: Return a list of patron block conditions
-  post:
-    responses:
-      501:
-        description: "Not implemented"
   /{patronBlockConditionId}:
     type:
-      collection-item:
+      item-collection-get:
         schema: patron-block-condition
         exampleItem: !include examples/patron-block-condition.sample
     put:
-      is: [validate]
-      description: Update a patron block condition
-    delete:
+      is: [language, validate]
+      description: |
+        Update <<resourcePathName|!singularize>> item with given {<<resourcePathName|!singularize>>Id}
+      body:
+        application/json:
+          type: patron-block-condition
+          example:
+            strict: false
+            value: <<exampleItem>>
       responses:
-        501:
-          description: "Not implemented"
+        204:
+          description: "Item successfully updated"
+        404:
+          description: "Item with a given ID not found"
+          body:
+            text/plain:
+              example: |
+                "<<resourcePathName|!singularize>> not found"
+        400:
+          description: "Bad request, e.g. malformed request body or query parameter. Details of the error (e.g. name of the parameter or line/character number with malformed data) provided in the response."
+          body:
+            text/plain:
+              example: |
+                "unable to update <<resourcePathName|!singularize>> -- malformed JSON at 13:4"
+        500:
+          description: "Internal server error, e.g. due to misconfiguration"
+          body:
+            text/plain:
+              example: "internal server error, contact administrator"
