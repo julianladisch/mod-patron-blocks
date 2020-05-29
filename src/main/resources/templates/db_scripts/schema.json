@@ -9,6 +9,15 @@
           "tOps": "ADD"
         }
       ]
+    },
+    {
+      "tableName" : "patron_block_conditions",
+      "withMetadata" : true,
+      "customSnippetPath": "populate-patron-block-conditions.sql"
+    },
+    {
+      "tableName": "patron_block_limits",
+      "withMetadata": true
     }
   ]
 }
