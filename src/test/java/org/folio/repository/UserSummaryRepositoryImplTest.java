@@ -13,12 +13,11 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
-import com.github.jasync.sql.db.postgresql.exceptions.GenericDatabaseException;
-
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
+import io.vertx.pgclient.PgException;
 
 @RunWith(VertxUnitRunner.class)
 public class UserSummaryRepositoryImplTest extends TestBase {
@@ -55,8 +54,8 @@ public class UserSummaryRepositoryImplTest extends TestBase {
     waitFor(saveDuplicateSummary);
 
     context.assertTrue(saveDuplicateSummary.failed());
-    context.assertTrue(saveDuplicateSummary.cause() instanceof GenericDatabaseException);
-    context.assertTrue(saveDuplicateSummary.cause().getMessage().contains(
+    context.assertTrue(saveDuplicateSummary.cause() instanceof PgException);
+    context.assertTrue(saveDuplicateSummary.cause().getMessage().equals(
       "duplicate key value violates unique constraint \"user_summary_pkey\""));
   }
 
@@ -71,8 +70,8 @@ public class UserSummaryRepositoryImplTest extends TestBase {
     waitFor(saveDuplicateSummary);
 
     context.assertTrue(saveDuplicateSummary.failed());
-    context.assertTrue(saveDuplicateSummary.cause() instanceof GenericDatabaseException);
-    context.assertTrue(saveDuplicateSummary.cause().getMessage().contains(
+    context.assertTrue(saveDuplicateSummary.cause() instanceof PgException);
+    context.assertTrue(saveDuplicateSummary.cause().getMessage().equals(
       "duplicate key value violates unique constraint \"user_summary_userid_idx_unique\""));
   }
 
