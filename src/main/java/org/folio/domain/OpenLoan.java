@@ -1,5 +1,5 @@
 
-package org.folio.patronblocks.model;
+package org.folio.domain;
 
 import javax.validation.constraints.Pattern;
 

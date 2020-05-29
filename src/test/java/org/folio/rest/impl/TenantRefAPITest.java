@@ -1,47 +1,53 @@
 package org.folio.rest.impl;
 
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.when;
-import static org.powermock.api.mockito.PowerMockito.mockStatic;
+import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
+import static com.github.tomakehurst.wiremock.client.WireMock.delete;
+import static com.github.tomakehurst.wiremock.client.WireMock.post;
+import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
+import static com.github.tomakehurst.wiremock.client.WireMock.urlPathMatching;
 
-import java.util.concurrent.CompletableFuture;
-
-import org.apache.http.HttpStatus;
-import org.folio.rest.util.OkapiConnectionParams;
-import org.folio.util.pubsub.PubSubClientUtils;
-import org.folio.util.pubsub.exceptions.ModuleRegistrationException;
-import org.junit.Rule;
+import org.folio.rest.TestBase;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import org.powermock.api.mockito.PowerMockito;
-import org.powermock.core.classloader.annotations.PrepareForTest;
-import org.powermock.modules.junit4.rule.PowerMockRule;
 
 import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
 
 @RunWith(VertxUnitRunner.class)
-@PrepareForTest(PubSubClientUtils.class)
-public class TenantRefAPITest extends APITests {
-  @Rule
-  public PowerMockRule rule = new PowerMockRule();
+public class TenantRefAPITest extends TestBase {
 
   @Test
-  public void shouldSucceedWhenRegisteredInPubsub(final TestContext context) {
+  public void postTenantShouldFailWhenRegistrationInPubsubFailed(TestContext context) {
     Async async = context.async();
 
-    mockStatic(PubSubClientUtils.class);
-    when(PubSubClientUtils.registerModule(any(OkapiConnectionParams.class)))
-      .thenReturn(CompletableFuture.completedFuture(true));
+    wireMock.stubFor(post(urlPathMatching("/pubsub/.+"))
+      .willReturn(aResponse().withStatus(500).withBody("Module registration failed")));
 
     try {
-      tenantClient.postTenant(getTenantAttributes(), result -> {
-        context.assertEquals(HttpStatus.SC_CREATED, result.statusCode());
-        // start verifying behavior
-        PowerMockito.verifyStatic(PubSubClientUtils.class);
-        // verify that module registration method was invoked
-        PubSubClientUtils.registerModule(any(OkapiConnectionParams.class));
+      tenantClient.postTenant(getTenantAttributes(), response -> {
+        context.assertEquals(500, response.statusCode());
+        response.bodyHandler(body -> {
+          context.assertTrue(body.toString().contains(
+            "Module's publishers were not registered in PubSub"));
+          async.complete();
+        });
+      });
+    } catch (Exception e) {
+      context.fail(e);
+    }
+  }
+
+  @Test
+  public void deleteTenantShouldSucceedWhenSuccessfullyUnsubscribedFromPubSub(TestContext context) {
+    Async async = context.async();
+
+    wireMock.stubFor(delete(urlPathMatching("/pubsub/event-types/.+/subscribers"))
+      .willReturn(aResponse().withStatus(204)));
+
+    try {
+      tenantClient.deleteTenant(response -> {
+        context.assertEquals(204, response.statusCode());
         async.complete();
       });
     } catch (Exception e) {
@@ -50,24 +56,25 @@ public class TenantRefAPITest extends APITests {
   }
 
   @Test
-  public void shouldFailWhenRegistrationInPubsubFails(TestContext context) {
+  public void deleteTenantShouldFailWhenFailedToUnsubscribeFromPubSub(TestContext context) {
     Async async = context.async();
 
-    String errorMessage = "Module registration failed";
-    CompletableFuture<Boolean> future = new CompletableFuture<>();
-    future.completeExceptionally(new ModuleRegistrationException(errorMessage));
-
-    mockStatic(PubSubClientUtils.class);
-    when(PubSubClientUtils.registerModule(any(OkapiConnectionParams.class)))
-      .thenReturn(future);
+    wireMock.stubFor(delete(urlPathEqualTo("/pubsub/event-types/ITEM_CHECKED_IN/subscribers"))
+      .atPriority(1)
+      .willReturn(aResponse().withStatus(500)));
+    wireMock.stubFor(delete(urlPathEqualTo("/pubsub/event-types/ITEM_CHECKED_OUT/subscribers"))
+      .atPriority(1)
+      .willReturn(aResponse().withStatus(400)));
+    wireMock.stubFor(delete(urlPathMatching("/pubsub/event-types/\\w+/subscribers"))
+      .atPriority(10)
+      .willReturn(aResponse().withStatus(204)));
 
     try {
-      tenantClient.postTenant(getTenantAttributes(), response -> {
-        context.assertEquals(HttpStatus.SC_INTERNAL_SERVER_ERROR, response.statusCode());
-        response.bodyHandler(body -> {
-          context.assertEquals(errorMessage, body.toString());
-          async.complete();
-        });
+      tenantClient.deleteTenant(response -> {
+        context.assertEquals(500, response.statusCode());
+        response.bodyHandler(body -> context.assertTrue(body.toString()
+          .startsWith("deleteTenant execution failed: Failed to unsubscribe from events")));
+        async.complete();
       });
     } catch (Exception e) {
       context.fail(e);

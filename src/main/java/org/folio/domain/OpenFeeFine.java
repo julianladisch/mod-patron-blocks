@@ -1,5 +1,5 @@
 
-package org.folio.patronblocks.model;
+package org.folio.domain;
 
 import java.math.BigDecimal;
 
@@ -17,9 +17,9 @@ import com.fasterxml.jackson.annotation.JsonPropertyOrder;
  */
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @JsonPropertyOrder({
-    "accountId",
+    "feeFineId",
     "balance",
-    "feeFineId"
+    "feeFineTypeId"
 })
 public class OpenFeeFine {
 
@@ -27,10 +27,10 @@ public class OpenFeeFine {
      * A universally unique identifier (UUID), this is a 128-bit number used to identify a record and is shown in hex with dashes, for example 6312d172-f0cf-40f6-b27d-9fa8feaf332f; the UUID version must be from 1-5; see https://dev.folio.org/guides/uuids/
      *
      */
-    @JsonProperty("accountId")
+    @JsonProperty("feeFineId")
     @JsonPropertyDescription("A universally unique identifier (UUID), this is a 128-bit number used to identify a record and is shown in hex with dashes, for example 6312d172-f0cf-40f6-b27d-9fa8feaf332f; the UUID version must be from 1-5; see https://dev.folio.org/guides/uuids/")
     @Pattern(regexp = "^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[1-5][a-fA-F0-9]{3}-[89abAB][a-fA-F0-9]{3}-[a-fA-F0-9]{12}$")
-    private String accountId;
+    private String feeFineId;
     /**
      * Balance
      *
@@ -42,31 +42,31 @@ public class OpenFeeFine {
      * A universally unique identifier (UUID), this is a 128-bit number used to identify a record and is shown in hex with dashes, for example 6312d172-f0cf-40f6-b27d-9fa8feaf332f; the UUID version must be from 1-5; see https://dev.folio.org/guides/uuids/
      *
      */
-    @JsonProperty("feeFineId")
+    @JsonProperty("feeFineTypeId")
     @JsonPropertyDescription("A universally unique identifier (UUID), this is a 128-bit number used to identify a record and is shown in hex with dashes, for example 6312d172-f0cf-40f6-b27d-9fa8feaf332f; the UUID version must be from 1-5; see https://dev.folio.org/guides/uuids/")
     @Pattern(regexp = "^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[1-5][a-fA-F0-9]{3}-[89abAB][a-fA-F0-9]{3}-[a-fA-F0-9]{12}$")
-    private String feeFineId;
+    private String feeFineTypeId;
 
     /**
      * A universally unique identifier (UUID), this is a 128-bit number used to identify a record and is shown in hex with dashes, for example 6312d172-f0cf-40f6-b27d-9fa8feaf332f; the UUID version must be from 1-5; see https://dev.folio.org/guides/uuids/
      *
      */
-    @JsonProperty("accountId")
-    public String getAccountId() {
-        return accountId;
+    @JsonProperty("feeFineId")
+    public String getFeeFineId() {
+        return feeFineId;
     }
 
     /**
      * A universally unique identifier (UUID), this is a 128-bit number used to identify a record and is shown in hex with dashes, for example 6312d172-f0cf-40f6-b27d-9fa8feaf332f; the UUID version must be from 1-5; see https://dev.folio.org/guides/uuids/
      *
      */
-    @JsonProperty("accountId")
-    public void setAccountId(String accountId) {
-        this.accountId = accountId;
+    @JsonProperty("feeFineId")
+    public void setFeeFineId(String feeFineId) {
+        this.feeFineId = feeFineId;
     }
 
-    public OpenFeeFine withAccountId(String accountId) {
-        this.accountId = accountId;
+    public OpenFeeFine withFeeFineId(String feeFineId) {
+        this.feeFineId = feeFineId;
         return this;
     }
 
@@ -97,22 +97,22 @@ public class OpenFeeFine {
      * A universally unique identifier (UUID), this is a 128-bit number used to identify a record and is shown in hex with dashes, for example 6312d172-f0cf-40f6-b27d-9fa8feaf332f; the UUID version must be from 1-5; see https://dev.folio.org/guides/uuids/
      *
      */
-    @JsonProperty("feeFineId")
-    public String getFeeFineId() {
-        return feeFineId;
+    @JsonProperty("feeFineTypeId")
+    public String getFeeFineTypeId() {
+        return feeFineTypeId;
     }
 
     /**
      * A universally unique identifier (UUID), this is a 128-bit number used to identify a record and is shown in hex with dashes, for example 6312d172-f0cf-40f6-b27d-9fa8feaf332f; the UUID version must be from 1-5; see https://dev.folio.org/guides/uuids/
      *
      */
-    @JsonProperty("feeFineId")
-    public void setFeeFineId(String feeFineId) {
-        this.feeFineId = feeFineId;
+    @JsonProperty("feeFineTypeId")
+    public void setFeeFineTypeId(String feeFineTypeId) {
+        this.feeFineTypeId = feeFineTypeId;
     }
 
-    public OpenFeeFine withFeeFineId(String feeFineId) {
-        this.feeFineId = feeFineId;
+    public OpenFeeFine withFeeFineTypeId(String feeFineTypeId) {
+        this.feeFineTypeId = feeFineTypeId;
         return this;
     }
 

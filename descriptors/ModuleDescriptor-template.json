@@ -1,8 +1,72 @@
 {
   "id": "${artifactId}-${version}",
   "name": "Patron Blocks Module",
-  "requires": [],
+  "requires": [
+    {
+      "id": "pubsub-event-types",
+      "version": "0.1"
+    },
+    {
+      "id": "pubsub-publishers",
+      "version": "0.1"
+    },
+    {
+      "id": "pubsub-subscribers",
+      "version": "0.1"
+    }
+  ],
   "provides": [
+    {
+      "id":"patron-blocks-event-handlers",
+      "version":"1.0",
+      "handlers":[
+        {
+          "methods":[
+            "POST"
+          ],
+          "pathPattern":"/automated-patron-blocks/handlers/fee-fine-balance-changed",
+          "permissionsRequired": [
+            "patron-blocks.events.post"
+          ]
+        },
+        {
+          "methods":[
+            "POST"
+          ],
+          "pathPattern":"/automated-patron-blocks/handlers/item-checked-out",
+          "permissionsRequired": [
+            "patron-blocks.events.post"
+          ]
+        },
+        {
+          "methods":[
+            "POST"
+          ],
+          "pathPattern":"/automated-patron-blocks/handlers/item-checked-in",
+          "permissionsRequired": [
+            "patron-blocks.events.post"
+          ]
+        },
+        {
+          "methods":[
+            "POST"
+          ],
+          "pathPattern":"/automated-patron-blocks/handlers/item-declared-lost",
+          "permissionsRequired": [
+            "patron-blocks.events.post"
+          ]
+        },
+        {
+          "methods":[
+            "POST"
+          ],
+          "pathPattern":"/automated-patron-blocks/handlers/loan-due-date-updated",
+          "permissionsRequired": [
+            "patron-blocks.events.post"
+          ]
+        }
+      ]
+    },
     {
       "id": "_tenant",
       "version": "1.0",
@@ -23,7 +87,10 @@
           "methods": [
             "DELETE"
           ],
-          "pathPattern": "/_/tenant"
+          "pathPattern": "/_/tenant",
+          "modulePermissions": [
+            "pubsub.subscribers.delete"
+          ]
         }
       ]
     },
@@ -75,6 +142,11 @@
     }
   ],
   "permissionSets": [
+    {
+      "permissionName": "patron-blocks.events.post",
+      "displayName": "Patron blocks - post event",
+      "description": "Post an event able to affect the state of automated patron blocks"
+    }
     {
       "permissionName": "patron-block-conditions.collection.get",
       "displayName": "Patron block conditions - get patron block condition collection",

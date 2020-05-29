@@ -1,11 +1,14 @@
-package org.folio.patronblocks.repository;
+package org.folio.repository;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Stream;
 
 import org.folio.cql2pgjson.CQL2PgJSON;
 import org.folio.cql2pgjson.exception.FieldException;
-import org.folio.patronblocks.model.UserSummary;
+import org.folio.domain.UserSummary;
+import org.folio.rest.persist.Criteria.Criteria;
+import org.folio.rest.persist.Criteria.Criterion;
 import org.folio.rest.persist.Criteria.Limit;
 import org.folio.rest.persist.Criteria.Offset;
 import org.folio.rest.persist.PostgresClient;
@@ -20,6 +23,9 @@ import io.vertx.sqlclient.RowSet;
 public class UserSummaryRepositoryImpl implements UserSummaryRepository {
 
   private static final String USER_SUMMARY_TABLE = "user_summary";
+  private static final String USER_ID_FIELD = "'userId'";
+  private static final String OPERATION_EQUALS = "=";
+
   private PostgresClient pgClient;
 
   public UserSummaryRepositoryImpl(PostgresClient pgClient) {
@@ -48,9 +54,34 @@ public class UserSummaryRepositoryImpl implements UserSummaryRepository {
   }
 
   @Override
+  public Future<Optional<UserSummary>> getUserSummaryByUserId(String userId) {
+    Promise<Results<UserSummary>> promise = Promise.promise();
+
+    Criterion criterion = new Criterion(new Criteria()
+        .addField(USER_ID_FIELD)
+        .setOperation(OPERATION_EQUALS)
+        .setVal(userId)
+        .setJSONB(true));
+
+    pgClient.get(USER_SUMMARY_TABLE, UserSummary.class, criterion, true, promise);
+
+    return promise.future()
+      .map(Results::getResults)
+      .map(List::stream)
+      .map(Stream::findFirst);
+  }
+
+  @Override
   public Future<String> saveUserSummary(UserSummary userSummary) {
     Promise<String> promise = Promise.promise();
     pgClient.save(USER_SUMMARY_TABLE, userSummary.getId(), userSummary, promise);
+    return promise.future();
+  }
+
+  @Override
+  public Future<String> upsertUserSummary(UserSummary userSummary) {
+    Promise<String> promise = Promise.promise();
+    pgClient.upsert(USER_SUMMARY_TABLE, userSummary.getId(), userSummary, promise);
     return promise.future();
   }
 
@@ -76,8 +107,7 @@ public class UserSummaryRepositoryImpl implements UserSummaryRepository {
    * @return - CQL wrapper for building postgres request to database
    * @throws org.folio.cql2pgjson.exception.FieldException field exception
    */
-  private CQLWrapper getCQL(String query, int limit, int offset)
-    throws FieldException {
+  private CQLWrapper getCQL(String query, int limit, int offset) throws FieldException {
     CQL2PgJSON cql2pgJson = new CQL2PgJSON(USER_SUMMARY_TABLE + ".jsonb");
     return new CQLWrapper(cql2pgJson, query)
       .setLimit(new Limit(limit))

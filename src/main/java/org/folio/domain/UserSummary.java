@@ -1,5 +1,5 @@
 
-package org.folio.patronblocks.model;
+package org.folio.domain;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
@@ -24,11 +24,9 @@ import com.fasterxml.jackson.annotation.JsonPropertyOrder;
     "id",
     "userId",
     "outstandingFeeFineBalance",
-    "numberOfOpenFeesFinesForLostItems",
     "numberOfLostItems",
     "openLoans",
-    "openFeesFines",
-    "metadata"
+    "openFeesFines"
 })
 public class UserSummary {
 
@@ -58,13 +56,6 @@ public class UserSummary {
     @JsonPropertyDescription("Outstanding fee/fine balance")
     private BigDecimal outstandingFeeFineBalance;
     /**
-     * Number of open fees/fines for lost items
-     *
-     */
-    @JsonProperty("numberOfOpenFeesFinesForLostItems")
-    @JsonPropertyDescription("Number of open fees/fines for lost items")
-    private Integer numberOfOpenFeesFinesForLostItems;
-    /**
      * Number of lost items
      *
      */
@@ -73,10 +64,10 @@ public class UserSummary {
     private Integer numberOfLostItems;
     @JsonProperty("openLoans")
     @Valid
-    private List<OpenLoan> openLoans = new ArrayList<OpenLoan>();
+    private List<OpenLoan> openLoans = new ArrayList<>();
     @JsonProperty("openFeesFines")
     @Valid
-    private List<OpenFeeFine> openFeeFines = new ArrayList<OpenFeeFine>();
+    private List<OpenFeeFine> openFeeFines = new ArrayList<>();
 
     /**
      * A universally unique identifier (UUID), this is a 128-bit number used to identify a record and is shown in hex with dashes, for example 6312d172-f0cf-40f6-b27d-9fa8feaf332f; the UUID version must be from 1-5; see https://dev.folio.org/guides/uuids/
@@ -150,29 +141,6 @@ public class UserSummary {
     }
 
     /**
-     * Number of open fees/fines for lost items
-     *
-     */
-    @JsonProperty("numberOfOpenFeesFinesForLostItems")
-    public Integer getNumberOfOpenFeesFinesForLostItems() {
-        return numberOfOpenFeesFinesForLostItems;
-    }
-
-    /**
-     * Number of open fees/fines for lost items
-     *
-     */
-    @JsonProperty("numberOfOpenFeesFinesForLostItems")
-    public void setNumberOfOpenFeesFinesForLostItems(Integer numberOfOpenFeesFinesForLostItems) {
-        this.numberOfOpenFeesFinesForLostItems = numberOfOpenFeesFinesForLostItems;
-    }
-
-    public UserSummary withNumberOfOpenFeesFinesForLostItems(Integer numberOfOpenFeesFinesForLostItems) {
-        this.numberOfOpenFeesFinesForLostItems = numberOfOpenFeesFinesForLostItems;
-        return this;
-    }
-
-    /**
      * Number of lost items
      *
      */
@@ -224,4 +192,5 @@ public class UserSummary {
         this.openFeeFines = openFeeFines;
         return this;
     }
+
 }
