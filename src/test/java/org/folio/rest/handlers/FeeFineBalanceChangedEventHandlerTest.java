@@ -3,6 +3,8 @@ package org.folio.rest.handlers;
 import java.math.BigDecimal;
 import java.util.Arrays;
 
+import javax.validation.ValidationException;
+
 import org.folio.domain.OpenFeeFine;
 import org.folio.domain.UserSummary;
 import org.folio.repository.UserSummaryRepository;
@@ -211,7 +213,7 @@ public class FeeFineBalanceChangedEventHandlerTest extends TestBase {
     eventHandler.handle(payload)
       .onSuccess(context::fail)
       .onFailure(throwable -> {
-        context.assertTrue(throwable instanceof NumberFormatException);
+        context.assertTrue(throwable instanceof ValidationException);
         async.complete();
       });
   }

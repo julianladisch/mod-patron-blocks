@@ -99,7 +99,7 @@
     {
       "permissionName": "patron-blocks.events.post",
       "displayName": "Patron blocks - post event",
-      "description": "Post a patron block event"
+      "description": "Post an event able to affect the state of automated patron blocks"
     }
   ],
   "launchDescriptor": {

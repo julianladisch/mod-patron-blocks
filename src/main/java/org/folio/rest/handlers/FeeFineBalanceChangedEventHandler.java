@@ -2,11 +2,11 @@ package org.folio.rest.handlers;
 
 import static io.vertx.core.Future.succeededFuture;
 import static org.folio.domain.EventType.FEE_FINE_BALANCE_CHANGED;
+import static org.folio.util.UuidHelper.validateUUID;
 
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
@@ -140,12 +140,6 @@ public class FeeFineBalanceChangedEventHandler extends AbstractEventHandler {
       validateUUID(userId, false);
 
       return new Payload(userId, feeFineId, feeFineTypeId, balance);
-    }
-
-    private static void validateUUID(String uuid, boolean required) {
-      if (required || uuid != null) {
-        UUID.fromString(uuid);
-      }
     }
 
   }

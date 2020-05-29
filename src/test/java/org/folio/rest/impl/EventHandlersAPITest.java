@@ -96,7 +96,6 @@ public class EventHandlersAPITest extends TestBase {
   private void assertThatUserSummaryWasCreated(String userId) {
     Awaitility.await()
       .atMost(5, SECONDS)
-      .pollInterval(500, MILLISECONDS)
       .until(() -> waitFor(userSummaryRepository.getUserSummaryByUserId(userId)).isPresent());
   }
 

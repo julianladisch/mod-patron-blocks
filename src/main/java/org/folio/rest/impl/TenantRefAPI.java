@@ -48,13 +48,11 @@ public class TenantRefAPI extends TenantAPI {
       PubSubClientUtils.registerModule(new OkapiConnectionParams(headers, context.owner()))
         .whenComplete((result, throwable) -> {
           if (isTrue(result) && throwable == null) {
-            log.info("Module was successfully registered as subscriber in mod-pubsub");
             log.info("postTenant executed successfully");
             handler.handle(succeededFuture(PostTenantResponse
               .respond201WithApplicationJson(EMPTY)));
           } else {
-            log.error("Error during module registration in mod-pubsub", throwable);
-            log.error("postTenant failure", throwable);
+            log.error("postTenant execution failed", throwable);
             handler.handle(succeededFuture(PostTenantResponse
               .respond500WithTextPlain(throwable.getLocalizedMessage())));
           }
