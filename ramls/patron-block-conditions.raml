@@ -1,0 +1,72 @@
+#%RAML 1.0
+title: Patron Block Conditions
+version: v0.1
+baseUri: http://github.com/org/folio/mod-users
+
+documentation:
+  - title: mod-users Patron Block Conditions API
+    content: Query and manage each condition that can trigger a patron block and the messages that should be displayed when triggered.
+
+types:
+  patron-block-condition: !include patron-block-condition.json
+  patron-block-conditions: !include patron-block-conditions.json
+  errors: !include raml-util/schemas/errors.schema
+
+traits:
+  pageable: !include raml-util/traits/pageable.raml
+  searchable: !include raml-util/traits/searchable.raml
+  language: !include raml-util/traits/language.raml
+  validate: !include raml-util/traits/validation.raml
+
+resourceTypes:
+  collection-get: !include raml-util/rtypes/collection-get.raml
+  item-collection-get: !include raml-util/rtypes/item-collection-get.raml
+
+/patron-block-conditions:
+  type:
+    collection-get:
+      exampleCollection: !include examples/patron-block-conditions.sample
+      exampleItem: !include examples/patron-block-condition.sample
+      schemaCollection: patron-block-conditions
+      schemaItem: patron-block-condition
+  get:
+    is: [
+      pageable,
+      searchable: {description: "searchable using CQL", example: "name=\"undergrad*\""}
+      ]
+    description: Return a list of patron block conditions
+  /{patronBlockConditionId}:
+    type:
+      item-collection-get:
+        schema: patron-block-condition
+        exampleItem: !include examples/patron-block-condition.sample
+    put:
+      is: [language, validate]
+      description: |
+        Update <<resourcePathName|!singularize>> item with given {<<resourcePathName|!singularize>>Id}
+      body:
+        application/json:
+          type: patron-block-condition
+          example:
+            strict: false
+            value: <<exampleItem>>
+      responses:
+        204:
+          description: "Item successfully updated"
+        404:
+          description: "Item with a given ID not found"
+          body:
+            text/plain:
+              example: |
+                "<<resourcePathName|!singularize>> not found"
+        400:
+          description: "Bad request, e.g. malformed request body or query parameter. Details of the error (e.g. name of the parameter or line/character number with malformed data) provided in the response."
+          body:
+            text/plain:
+              example: |
+                "unable to update <<resourcePathName|!singularize>> -- malformed JSON at 13:4"
+        500:
+          description: "Internal server error, e.g. due to misconfiguration"
+          body:
+            text/plain:
+              example: "internal server error, contact administrator"
