@@ -28,7 +28,6 @@ resourceTypes:
       exampleCollection: !include examples/patron-block-conditions.sample
       exampleItem: !include examples/patron-block-condition.sample
       schemaCollection: patron-block-conditions
-      schemaItem: patron-block-condition
   get:
     is: [
       pageable,
@@ -49,7 +48,7 @@ resourceTypes:
           type: patron-block-condition
           example:
             strict: false
-            value: <<exampleItem>>
+            value: exampleItem
       responses:
         204:
           description: "Item successfully updated"
