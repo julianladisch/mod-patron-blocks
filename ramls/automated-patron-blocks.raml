@@ -22,6 +22,11 @@ traits:
           application/json:
             schema: automatedPatronBlocks
             example: !include examples/automated-patron-blocks.sample
+      400:
+        description: "Invalid user ID in request"
+        body:
+          text/plain:
+            example: "Bad request, e.g. invalid user UUID"
       500:
         description: "Internal server error, e.g. due to misconfiguration"
         body:

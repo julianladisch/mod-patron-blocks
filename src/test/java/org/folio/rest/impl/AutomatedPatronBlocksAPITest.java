@@ -80,6 +80,15 @@ public class AutomatedPatronBlocksAPITest extends TestBase {
   }
 
   @Test
+  public void shouldReturnBadRequestErrorWhenCalledWithInvalidUserId() {
+    sendRequest("invalid")
+      .then()
+      .statusCode(400)
+      .contentType(ContentType.TEXT)
+      .body(equalTo("Invalid user UUID: \"invalid\""));
+  }
+
+  @Test
   public void shouldReturnNoBlocksWhenUserSummaryDoesNotExist() {
     String emptyBlocksResponse = toJson(new AutomatedPatronBlocks());
 

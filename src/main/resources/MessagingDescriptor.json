@@ -49,7 +49,7 @@
       "callbackAddress": "/automated-patron-blocks/handlers/item-declared-lost"
     },
     {
-      "eventType": "LOAN_DUE_DATE_UPDATED",
+      "eventType": "LOAN_DUE_DATE_CHANGED",
       "callbackAddress": "/automated-patron-blocks/handlers/loan-due-date-updated"
     }
   ]
