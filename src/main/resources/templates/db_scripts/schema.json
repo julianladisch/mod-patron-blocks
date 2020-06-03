@@ -17,7 +17,14 @@
     },
     {
       "tableName": "patron_block_limits",
-      "withMetadata": true
+      "withMetadata": true,
+      "foreignKeys": [
+        {
+          "fieldName": "conditionId",
+          "targetTable": "patron_block_conditions",
+          "tOps": "ADD"
+        }
+      ]
     }
   ]
 }

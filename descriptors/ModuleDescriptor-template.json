@@ -17,6 +17,21 @@
   ],
   "provides": [
     {
+      "id":"automated-patron-blocks",
+      "version":"0.1",
+      "handlers":[
+        {
+          "methods":[
+            "GET"
+          ],
+          "pathPattern":"/automated-patron-blocks/{userId}",
+          "permissionsRequired": [
+            "automated-patron-blocks.collection.get"
+          ]
+        }
+      ]
+    },
+    {
       "id":"patron-blocks-event-handlers",
       "version":"1.0",
       "handlers":[
@@ -146,7 +161,7 @@
       "permissionName": "patron-blocks.events.post",
       "displayName": "Patron blocks - post event",
       "description": "Post an event able to affect the state of automated patron blocks"
-    }
+    },
     {
       "permissionName": "patron-block-conditions.collection.get",
       "displayName": "Patron block conditions - get patron block condition collection",
@@ -186,6 +201,11 @@
       "permissionName": "patron-block-limits.item.delete",
       "displayName": "Patron block limits - delete patron block limit",
       "description": "Delete patron block limit by id"
+    },
+    {
+      "permissionName": "automated-patron-blocks.collection.get",
+      "displayName": "Patron blocks - get blocks for patron",
+      "description": "Get automated patron blocks by user ID"
     }
   ],
   "launchDescriptor": {

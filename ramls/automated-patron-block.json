@@ -1,0 +1,35 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "type": "object",
+  "description": "Single automated patron block",
+  "properties": {
+    "patronBlockConditionId": {
+      "type": "string",
+      "$ref": "raml-util/schemas/uuid.schema",
+      "description": "Unique ID of patron block condition"
+    },
+    "blockBorrowing": {
+      "type": "boolean",
+      "description": "Indicates that borrowing is not allowed for patron"
+    },
+    "blockRenewals": {
+      "type": "boolean",
+      "description": "Indicates that renewals are not allowed for patron"
+    },
+    "blockRequests": {
+      "type": "boolean",
+      "description": "Indicates that requests are not allowed for patron"
+    },
+    "message": {
+      "type": "string",
+      "description": "Message to be displayed if the patron should be blocked"
+    }
+  },
+  "additionalProperties": false,
+  "required": [
+    "blockBorrowing",
+    "blockRenewals",
+    "blockRequests",
+    "message"
+  ]
+}

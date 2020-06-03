@@ -152,7 +152,7 @@ public class TestBase {
       .encodeToString(payload.getBytes()));
   }
 
-  private static String getMockedOkapiUrl() {
+  protected static String getMockedOkapiUrl() {
     return "http://localhost:" + wireMock.port();
   }
 

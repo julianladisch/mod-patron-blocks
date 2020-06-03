@@ -2,16 +2,22 @@ package org.folio.repository;
 
 import static java.math.BigDecimal.ONE;
 import static java.math.BigDecimal.TEN;
+import static java.util.Arrays.asList;
+import static org.folio.repository.UserSummaryRepository.USER_SUMMARY_TABLE_NAME;
+import static org.joda.time.DateTime.now;
 
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
 
+import org.folio.domain.OpenFeeFine;
+import org.folio.domain.OpenLoan;
 import org.folio.domain.UserSummary;
 import org.folio.rest.TestBase;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+
 
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
@@ -20,24 +26,24 @@ import io.vertx.ext.unit.junit.VertxUnitRunner;
 import io.vertx.pgclient.PgException;
 
 @RunWith(VertxUnitRunner.class)
-public class UserSummaryRepositoryImplTest extends TestBase {
-
-  private static final String USER_SUMMARY_TABLE = "user_summary";
-  private final UserSummaryRepository repository = new UserSummaryRepositoryImpl(postgresClient);
+public class UserSummaryRepositoryTest extends TestBase {
+  private final UserSummaryRepository repository = new UserSummaryRepository(postgresClient);
 
   @Before
   public void setUp() {
     resetMocks();
-    deleteAllFromTable(USER_SUMMARY_TABLE);
+    deleteAllFromTable(USER_SUMMARY_TABLE_NAME);
   }
 
   @Test
   public void shouldAddUserSummary(TestContext context) {
     String summaryId = randomId();
     UserSummary userSummaryToSave =  createUserSummary(summaryId, randomId(), ONE, 2);
-    waitFor(repository.saveUserSummary(userSummaryToSave));
+    waitFor(repository.save(userSummaryToSave));
 
-    Optional<UserSummary> retrievedUserSummary = waitFor(repository.getUserSummaryById(summaryId));
+    Future<Optional<UserSummary>> optionalFuture = repository.get(summaryId);
+
+    Optional<UserSummary> retrievedUserSummary = waitFor(optionalFuture);
 
     context.assertTrue(retrievedUserSummary.isPresent());
     assertSummariesAreEqual(userSummaryToSave, retrievedUserSummary.get(), context);
@@ -49,8 +55,8 @@ public class UserSummaryRepositoryImplTest extends TestBase {
     UserSummary userSummaryToSave1 =  createUserSummary(sameSummaryId, randomId(), ONE, 2);
     UserSummary userSummaryToSave2 =  createUserSummary(sameSummaryId, randomId(), ONE, 3);
 
-    waitFor(repository.saveUserSummary(userSummaryToSave1));
-    Future<String> saveDuplicateSummary = repository.saveUserSummary(userSummaryToSave2);
+    waitFor(repository.save(userSummaryToSave1));
+    Future<String> saveDuplicateSummary = repository.save(userSummaryToSave2);
     waitFor(saveDuplicateSummary);
 
     context.assertTrue(saveDuplicateSummary.failed());
@@ -65,8 +71,8 @@ public class UserSummaryRepositoryImplTest extends TestBase {
     UserSummary userSummaryToSave1 =  createUserSummary(randomId(), sameUserId, ONE, 2);
     UserSummary userSummaryToSave2 =  createUserSummary(randomId(), sameUserId, ONE, 3);
 
-    waitFor(repository.saveUserSummary(userSummaryToSave1));
-    Future<String> saveDuplicateSummary = repository.saveUserSummary(userSummaryToSave2);
+    waitFor(repository.save(userSummaryToSave1));
+    Future<String> saveDuplicateSummary = repository.save(userSummaryToSave2);
     waitFor(saveDuplicateSummary);
 
     context.assertTrue(saveDuplicateSummary.failed());
@@ -76,17 +82,34 @@ public class UserSummaryRepositoryImplTest extends TestBase {
   }
 
   @Test
+  public void shouldGetUserSummaryById(TestContext context) {
+    UserSummary expectedUserSummary = createUserSummary(randomId(), randomId(), ONE, 1);
+
+    waitFor(CompositeFuture.all(
+      repository.save(createUserSummary(randomId(), randomId(), ONE, 3)),
+      repository.save(expectedUserSummary),
+      repository.save(createUserSummary(randomId(), randomId(), ONE, 5)))
+    );
+
+    Optional<UserSummary> retrievedUserSummary =
+      waitFor(repository.get(expectedUserSummary.getId()));
+
+    context.assertTrue(retrievedUserSummary.isPresent());
+    assertSummariesAreEqual(expectedUserSummary, retrievedUserSummary.get(), context);
+  }
+
+  @Test
   public void shouldGetUserSummaryByUserId(TestContext context) {
     UserSummary expectedUserSummary = createUserSummary(randomId(), randomId(), ONE, 1);
 
     waitFor(CompositeFuture.all(
-      repository.saveUserSummary(createUserSummary(randomId(), randomId(), ONE, 3)),
-      repository.saveUserSummary(expectedUserSummary),
-      repository.saveUserSummary(createUserSummary(randomId(), randomId(), ONE, 5)))
+      repository.save(createUserSummary(randomId(), randomId(), ONE, 3)),
+      repository.save(expectedUserSummary),
+      repository.save(createUserSummary(randomId(), randomId(), ONE, 5)))
     );
 
     Optional<UserSummary> retrievedUserSummary =
-      waitFor(repository.getUserSummaryByUserId(expectedUserSummary.getUserId()));
+      waitFor(repository.getByUserId(expectedUserSummary.getUserId()));
 
     context.assertTrue(retrievedUserSummary.isPresent());
     assertSummariesAreEqual(expectedUserSummary, retrievedUserSummary.get(), context);
@@ -96,14 +119,14 @@ public class UserSummaryRepositoryImplTest extends TestBase {
   public void shouldUpdateUserSummary(TestContext context) {
     String userSummaryId = randomId();
 
-    waitFor(repository.saveUserSummary(
+    waitFor(repository.save(
       createUserSummary(userSummaryId, randomId(), new BigDecimal(2), 4)));
 
     UserSummary updatedUserSummary = createUserSummary(userSummaryId, randomId(),
       new BigDecimal("10.3"), 3);
 
-    waitFor(repository.updateUserSummary(updatedUserSummary));
-    Optional<UserSummary> userSummary = waitFor(repository.getUserSummaryById(userSummaryId));
+    waitFor(repository.update(updatedUserSummary));
+    Optional<UserSummary> userSummary = waitFor(repository.get(userSummaryId));
 
     context.assertTrue(userSummary.isPresent());
     assertSummariesAreEqual(updatedUserSummary, userSummary.get(), context);
@@ -119,25 +142,25 @@ public class UserSummaryRepositoryImplTest extends TestBase {
       userSummaryId2, randomId(), new BigDecimal("3.25"), 3);
 
     waitFor(CompositeFuture.all(
-      repository.saveUserSummary(
+      repository.save(
         createUserSummary(userSummaryId1, randomId(), new BigDecimal(2), 4)),
-      repository.saveUserSummary(userSummary),
-      repository.saveUserSummary(
+      repository.save(userSummary),
+      repository.save(
         createUserSummary(userSummaryId3, randomId(), new BigDecimal(4), 2)))
     );
 
     List<UserSummary> retrievedSummaries =
-      waitFor(repository.getUserSummaries(null, 0, 100));
+      waitFor(repository.get(null, 0, 100));
 
     context.assertEquals(3, retrievedSummaries.size());
 
     waitFor(CompositeFuture.all(
-      repository.deleteUserSummary(userSummaryId1),
-      repository.deleteUserSummary(userSummaryId3))
+      repository.delete(userSummaryId1),
+      repository.delete(userSummaryId3))
     );
 
     List<UserSummary> remainingUserSummaries =
-      waitFor(repository.getUserSummaries(null, 0, 100));
+      waitFor(repository.get(null, 0, 100));
 
     context.assertEquals(1, remainingUserSummaries.size());
     assertSummariesAreEqual(userSummary, remainingUserSummaries.get(0), context);
@@ -148,18 +171,18 @@ public class UserSummaryRepositoryImplTest extends TestBase {
     String summaryId = randomId();
     UserSummary initialUserSummary = createUserSummary(summaryId, randomId(), ONE, 1);
 
-    waitFor(repository.upsertUserSummary(initialUserSummary));
+    waitFor(repository.upsert(initialUserSummary));
     Optional<UserSummary> retrievedInitialSummary =
-      waitFor(repository.getUserSummaryById(summaryId));
+      waitFor(repository.get(summaryId));
 
     context.assertTrue(retrievedInitialSummary.isPresent());
     assertSummariesAreEqual(initialUserSummary, retrievedInitialSummary.get(), context);
 
     UserSummary updatedSummary = initialUserSummary.withOutstandingFeeFineBalance(TEN);
-    waitFor(repository.upsertUserSummary(updatedSummary));
+    waitFor(repository.upsert(updatedSummary));
 
     Optional<UserSummary> retrievedUpdatedSummary =
-      waitFor(repository.getUserSummaryById(summaryId));
+      waitFor(repository.get(summaryId));
 
     context.assertTrue(retrievedUpdatedSummary.isPresent());
     assertSummariesAreEqual(updatedSummary, retrievedUpdatedSummary.get(), context);
@@ -168,11 +191,24 @@ public class UserSummaryRepositoryImplTest extends TestBase {
   private UserSummary createUserSummary(String id, String userId, BigDecimal balance,
     int lostItems) {
 
+    OpenLoan openLoan = new OpenLoan()
+      .withLoanId(randomId())
+      .withRecall(false)
+      .withDueDate(now())
+      .withReturnedDate(now());
+
+    OpenFeeFine openFeeFine = new OpenFeeFine()
+      .withFeeFineId(randomId())
+      .withFeeFineTypeId(randomId())
+      .withBalance(TEN);
+
     return new UserSummary()
       .withId(id)
       .withUserId(userId)
       .withNumberOfLostItems(lostItems)
-      .withOutstandingFeeFineBalance(balance);
+      .withOutstandingFeeFineBalance(balance)
+      .withOpenLoans(asList(openLoan, openLoan))
+      .withOpenFeesFines(asList(openFeeFine, openFeeFine));
   }
 
   private void assertSummariesAreEqual(UserSummary expected, UserSummary actual, TestContext ctx) {
