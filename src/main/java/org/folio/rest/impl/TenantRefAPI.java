@@ -26,6 +26,7 @@ import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
+import io.vertx.core.http.HttpClientResponse;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
@@ -75,7 +76,7 @@ public class TenantRefAPI extends TenantAPI {
             .findAny();
 
           if (failedEvent.isPresent()) {
-            String message = "Failed to unsubscribe from events " + eventToStatus.toString();
+            String message = "Failed to unregister. Event types: " + eventToStatus.toString();
             log.error("deleteTenant execution failed: " + message);
             handler.handle(
               succeededFuture(DeleteTenantResponse.respond500WithTextPlain(message)));
@@ -99,31 +100,44 @@ public class TenantRefAPI extends TenantAPI {
 
     try {
       for (EventType eventType: EventType.values()) {
-        Promise<EventType> promise = Promise.promise();
-        allFutures.add(promise.future());
+        Promise<EventType> subscriberUnregisteringPromise = Promise.promise();
+        allFutures.add(subscriberUnregisteringPromise.future());
+        Promise<EventType> publisherUnregisteringPromise = Promise.promise();
+        allFutures.add(publisherUnregisteringPromise.future());
 
         client.deletePubsubEventTypesSubscribersByEventTypeName(
-          eventType.name(), PubSubClientUtils.constructModuleName(), ar -> {
-            int statusCode = ar.statusCode();
-            if (statusCode != HttpStatus.HTTP_NO_CONTENT.toInt()) {
-              log.error("Failed to unsubscribe from {} events. Response status: {}",
-                eventType.name(), statusCode);
-            } else {
-              log.info("Successfully unsubscribed from {} events. Response status: {}",
-                eventType.name(), statusCode);
-            }
-            eventToResponseStatus.put(eventType, statusCode);
-            promise.complete(eventType);
-          }
-        );
+          eventType.name(), PubSubClientUtils.constructModuleName(), ar ->
+            handleUnregisteringResponse(eventType, eventToResponseStatus, ar,
+              subscriberUnregisteringPromise, "subscriber"));
+
+        client.deletePubsubEventTypesPublishersByEventTypeName(
+          eventType.name(), PubSubClientUtils.constructModuleName(), ar ->
+            handleUnregisteringResponse(eventType, eventToResponseStatus, ar,
+              publisherUnregisteringPromise, "publisher"));
       }
     } catch (Exception exception) {
-      log.error("Failed to unsubscribe from events", exception);
+      log.error("Failed to unregister module from PubSub", exception);
       return Future.failedFuture(exception);
     }
 
-     return CompositeFuture.all(allFutures)
-       .map(r -> eventToResponseStatus);
+    return CompositeFuture.all(allFutures)
+      .map(r -> eventToResponseStatus);
+  }
+
+  private static void handleUnregisteringResponse(EventType eventType,
+    Map<EventType, Integer> eventToResponseStatus, HttpClientResponse response,
+    Promise<EventType> promise, String role) {
+
+    int statusCode = response.statusCode();
+    if (statusCode != HttpStatus.HTTP_NO_CONTENT.toInt()) {
+      log.error("Failed to unregister as {} {}. Response status: {}",
+        eventType.name(), role, statusCode);
+    } else {
+      log.info("Successfully unregistered as {} {}. Response status: {}",
+        eventType.name(), role, statusCode);
+    }
+    eventToResponseStatus.put(eventType, statusCode);
+    promise.complete(eventType);
   }
 
 }

@@ -104,6 +104,7 @@
           ],
           "pathPattern": "/_/tenant",
           "modulePermissions": [
+            "pubsub.publishers.delete",
             "pubsub.subscribers.delete"
           ]
         }
