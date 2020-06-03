@@ -1,6 +1,5 @@
 package org.folio.rest.impl;
 
-import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.drools.core.util.StringUtils.EMPTY;
 
@@ -32,8 +31,8 @@ public class EventHandlersAPITest extends TestBase {
     "/automated-patron-blocks/handlers/item-checked-in";
   private static final String ITEM_DECLARED_LOST_HANDLER_URL =
     "/automated-patron-blocks/handlers/item-declared-lost";
-  private static final String LOAN_DUE_DATE_UPDATED_HANDLER_URL =
-    "/automated-patron-blocks/handlers/loan-due-date-updated";
+  private static final String LOAN_DUE_DATE_CHANGED_HANDLER_URL =
+    "/automated-patron-blocks/handlers/loan-due-date-changed";
 
   final UserSummaryRepository userSummaryRepository = new UserSummaryRepositoryImpl(postgresClient);
 
@@ -84,7 +83,7 @@ public class EventHandlersAPITest extends TestBase {
   @Test
   public void postAutomatedPatronBlocksHandlersLoanDueDateUpdated(TestContext context) {
     // TODO: replace with real test once event handler is implemented
-    sendEvent(LOAN_DUE_DATE_UPDATED_HANDLER_URL, EMPTY, context);
+    sendEvent(LOAN_DUE_DATE_CHANGED_HANDLER_URL, EMPTY, context);
   }
 
   private void sendEvent(String url, String payload, TestContext context) {

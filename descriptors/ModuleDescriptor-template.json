@@ -60,7 +60,7 @@
           "methods":[
             "POST"
           ],
-          "pathPattern":"/automated-patron-blocks/handlers/loan-due-date-updated",
+          "pathPattern":"/automated-patron-blocks/handlers/loan-due-date-changed",
           "permissionsRequired": [
             "patron-blocks.events.post"
           ]

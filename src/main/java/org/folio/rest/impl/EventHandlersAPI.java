@@ -69,14 +69,14 @@ public class EventHandlersAPI implements AutomatedPatronBlocksHandlers {
   }
 
   @Override
-  public void postAutomatedPatronBlocksHandlersLoanDueDateUpdated(String payload,
+  public void postAutomatedPatronBlocksHandlersLoanDueDateChanged(String payload,
     Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler,
     Context vertxContext) {
 
     asyncResultHandler.handle(Future.succeededFuture(
-      PostAutomatedPatronBlocksHandlersLoanDueDateUpdatedResponse.respond204()));
+      PostAutomatedPatronBlocksHandlersLoanDueDateChangedResponse.respond204()));
 
-    logEventReceived(EventType.LOAN_DUE_DATE_UPDATED, payload);
+    logEventReceived(EventType.LOAN_DUE_DATE_CHANGED, payload);
   }
 
   private static void logEventReceived(EventType eventType, String payload) {
