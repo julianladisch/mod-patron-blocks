@@ -3,6 +3,7 @@ package org.folio.service;
 import static io.vertx.core.Future.succeededFuture;
 import static java.lang.String.format;
 import static org.folio.domain.Condition.isConditionLimitExceeded;
+import static org.folio.okapi.common.XOkapiHeaders.TENANT;
 
 import java.lang.invoke.MethodHandles;
 import java.util.ArrayList;
@@ -31,7 +32,6 @@ import io.vertx.core.logging.LoggerFactory;
 
 public class PatronBlocksService {
   private static final Logger log = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
-  private static final String OKAPI_HEADER_TENANT = "x-okapi-tenant";
 
   private final UserSummaryRepository userSummaryRepository;
   private final PatronBlockConditionsRepository conditionsRepository;
@@ -39,9 +39,8 @@ public class PatronBlocksService {
   private final UsersClient usersClient;
 
   public PatronBlocksService(Map<String, String> okapiHeaders, Vertx vertx) {
-    String tenantId = TenantTool.calculateTenantId(okapiHeaders.get(OKAPI_HEADER_TENANT));
+    String tenantId = TenantTool.calculateTenantId(okapiHeaders.get(TENANT));
     PostgresClient postgresClient = PostgresClient.getInstance(vertx, tenantId);
-
     userSummaryRepository = new UserSummaryRepository(postgresClient);
     conditionsRepository = new PatronBlockConditionsRepository(postgresClient);
     limitsRepository = new PatronBlockLimitsRepository(postgresClient);
@@ -75,7 +74,6 @@ public class PatronBlocksService {
       .filter(limit -> isConditionLimitExceeded(summary, limit))
       .map(this::createBlockForLimit)
       .collect(Collectors.toList());
-
 
     return CompositeFuture.all(new ArrayList<>(futures))
       .onFailure(log::error)

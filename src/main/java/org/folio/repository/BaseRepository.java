@@ -30,7 +30,6 @@ public class BaseRepository<T> {
     this.entityType = entityType;
   }
 
-
   public Future<List<T>> get(String query, int offset, int limit) {
     Promise<Results<T>> promise = Promise.promise();
     try {
