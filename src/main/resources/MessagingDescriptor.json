@@ -50,7 +50,7 @@
     },
     {
       "eventType": "LOAN_DUE_DATE_CHANGED",
-      "callbackAddress": "/automated-patron-blocks/handlers/loan-due-date-updated"
+      "callbackAddress": "/automated-patron-blocks/handlers/loan-due-date-changed"
     }
   ]
 }
