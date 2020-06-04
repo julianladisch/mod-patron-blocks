@@ -10,11 +10,14 @@ import java.util.Map;
 
 import org.apache.commons.collections4.map.CaseInsensitiveMap;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 import io.vertx.core.buffer.Buffer;
 import io.vertx.ext.web.client.HttpRequest;
 import io.vertx.ext.web.client.WebClient;
 
 public class OkapiClient {
+  static final ObjectMapper objectMapper = new ObjectMapper();
   private final WebClient webClient;
   private final String okapiUrl;
   private final String tenant;

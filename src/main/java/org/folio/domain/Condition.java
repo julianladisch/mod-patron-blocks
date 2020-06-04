@@ -25,7 +25,8 @@ public enum Condition {
 
   MAX_NUMBER_OF_OVERDUE_RECALLS("e5b45031-a202-4abb-917b-e1df9346fe2c",
     (summary, limit) -> summary.getOpenLoans().stream()
-      .filter(loan -> loan.isOverdue() && loan.getRecall())
+      .filter(OpenLoan::isOverdue)
+      .filter(OpenLoan::getRecall)
       .count() > limit.getValue()
   ),
 

@@ -18,7 +18,6 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
-
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.ext.unit.TestContext;
@@ -41,9 +40,7 @@ public class UserSummaryRepositoryTest extends TestBase {
     UserSummary userSummaryToSave =  createUserSummary(summaryId, randomId(), ONE, 2);
     waitFor(repository.save(userSummaryToSave));
 
-    Future<Optional<UserSummary>> optionalFuture = repository.get(summaryId);
-
-    Optional<UserSummary> retrievedUserSummary = waitFor(optionalFuture);
+    Optional<UserSummary> retrievedUserSummary = waitFor(repository.get(summaryId));
 
     context.assertTrue(retrievedUserSummary.isPresent());
     assertSummariesAreEqual(userSummaryToSave, retrievedUserSummary.get(), context);

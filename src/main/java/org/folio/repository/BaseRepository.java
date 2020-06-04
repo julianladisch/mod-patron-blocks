@@ -56,10 +56,10 @@ public class BaseRepository<T> {
   }
 
   public Future<List<T>> getAllWithDefaultLimit() {
-    return getAll(DEFAULT_LIMIT);
+    return getAllWithLimit(DEFAULT_LIMIT);
   }
 
-  public Future<List<T>> getAll(int limit) {
+  public Future<List<T>> getAllWithLimit(int limit) {
     return get(null, 0, limit);
   }
 

@@ -2,6 +2,7 @@ package org.folio.rest.impl;
 
 import static io.vertx.core.Future.succeededFuture;
 import static java.lang.String.format;
+import static org.folio.util.UuidUtil.isUuid;
 
 import java.util.Map;
 
@@ -9,7 +10,6 @@ import javax.ws.rs.core.Response;
 
 import org.folio.rest.jaxrs.resource.AutomatedPatronBlocksUserId;
 import org.folio.service.PatronBlocksService;
-import org.folio.util.UuidUtil;
 
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Context;
@@ -21,7 +21,7 @@ public class AutomatedPatronBlocksAPI implements AutomatedPatronBlocksUserId {
     Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler,
     Context vertxContext) {
 
-    if (!UuidUtil.isUuid(userId)) {
+    if (!isUuid(userId)) {
       asyncResultHandler.handle(succeededFuture(GetAutomatedPatronBlocksByUserIdResponse
         .respond400WithTextPlain(format("Invalid user UUID: \"%s\"", userId))));
       return;

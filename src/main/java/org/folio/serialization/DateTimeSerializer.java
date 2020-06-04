@@ -12,6 +12,7 @@ public class DateTimeSerializer extends JsonSerializer<DateTime> {
   @Override
   public void serialize(DateTime dateTime, JsonGenerator jsonGenerator,
     SerializerProvider serializerProvider) throws IOException {
+
     jsonGenerator.writeString(dateTime.toString());
   }
 }
