@@ -62,15 +62,16 @@ public class UsersClientTest extends TestBase {
 
     String userId = randomId();
     int responseCode = 404;
+    String responseBody = "User not found";
 
-    mockUsersResponse(responseCode, "User not found");
+    mockUsersResponse(responseCode, responseBody);
 
     usersClient.findPatronGroupIdForUser(userId)
       .onSuccess(context::fail)
       .onFailure(throwable -> {
         context.assertTrue(throwable instanceof EntityNotFoundException);
-        context.assertEquals(format("Failed to fetch user with ID %s. Response status code: %d",
-          userId, responseCode), throwable.getMessage());
+        context.assertEquals(format("Failed to fetch user with ID %s. Response: %d %s",
+          userId, responseCode, responseBody), throwable.getMessage());
         async.complete();
       });
   }
