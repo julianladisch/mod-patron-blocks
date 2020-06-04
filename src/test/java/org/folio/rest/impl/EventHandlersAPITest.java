@@ -2,13 +2,13 @@ package org.folio.rest.impl;
 
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.drools.core.util.StringUtils.EMPTY;
+import static org.folio.repository.UserSummaryRepository.USER_SUMMARY_TABLE_NAME;
 
 import java.util.Optional;
 
 import org.awaitility.Awaitility;
 import org.folio.domain.UserSummary;
 import org.folio.repository.UserSummaryRepository;
-import org.folio.repository.UserSummaryRepositoryImpl;
 import org.folio.rest.TestBase;
 import org.junit.Before;
 import org.junit.Test;
@@ -21,8 +21,6 @@ import io.vertx.ext.unit.junit.VertxUnitRunner;
 
 @RunWith(VertxUnitRunner.class)
 public class EventHandlersAPITest extends TestBase {
-  private static final String USER_SUMMARY_TABLE_NAME = "user_summary";
-
   private static final String FEE_FINE_BALANCE_CHANGED_HANDLER_URL =
     "/automated-patron-blocks/handlers/fee-fine-balance-changed";
   private static final String ITEM_CHECKED_OUT_HANDLER_URL =
@@ -34,7 +32,7 @@ public class EventHandlersAPITest extends TestBase {
   private static final String LOAN_DUE_DATE_CHANGED_HANDLER_URL =
     "/automated-patron-blocks/handlers/loan-due-date-changed";
 
-  final UserSummaryRepository userSummaryRepository = new UserSummaryRepositoryImpl(postgresClient);
+  final UserSummaryRepository userSummaryRepository = new UserSummaryRepository(postgresClient);
 
   @Before
   public void beforeEach() {
@@ -47,7 +45,7 @@ public class EventHandlersAPITest extends TestBase {
     String userId = randomId();
 
     Optional<UserSummary> userSummaryBeforeEvent =
-      waitFor(userSummaryRepository.getUserSummaryByUserId(userId));
+      waitFor(userSummaryRepository.getByUserId(userId));
 
     context.assertFalse(userSummaryBeforeEvent.isPresent());
 
@@ -95,7 +93,7 @@ public class EventHandlersAPITest extends TestBase {
   private void assertThatUserSummaryWasCreated(String userId) {
     Awaitility.await()
       .atMost(5, SECONDS)
-      .until(() -> waitFor(userSummaryRepository.getUserSummaryByUserId(userId)).isPresent());
+      .until(() -> waitFor(userSummaryRepository.getByUserId(userId)).isPresent());
   }
 
 }

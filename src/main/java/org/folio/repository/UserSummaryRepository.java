@@ -1,73 +1,68 @@
 package org.folio.repository;
 
-import java.util.List;
+import java.math.BigDecimal;
 import java.util.Optional;
-
+import java.util.UUID;
 
 import org.folio.domain.UserSummary;
+import org.folio.rest.persist.Criteria.Criteria;
+import org.folio.rest.persist.Criteria.Criterion;
+import org.folio.rest.persist.PostgresClient;
 
 import io.vertx.core.Future;
 
-/**
- * Repository for UserSummary
- */
-public interface UserSummaryRepository {
+public class UserSummaryRepository extends BaseRepository<UserSummary> {
+  public static final String USER_SUMMARY_TABLE_NAME = "user_summary";
+  private static final String USER_ID_FIELD = "'userId'";
+  private static final String OPERATION_EQUALS = "=";
+  private static final String FIND_SUMMARY_BY_FEE_FINE_ID_QUERY_TEMPLATE =
+    "openFeesFines == \"*\\\"feeFineId\\\": \\\"%s\\\"*\"";
 
-  /**
-   * Searches for UserSummaries in database
-   *
-   * @param query CQL query
-   * @param offset offset
-   * @param limit limit
-   * @return future with list of UserSummary
-   */
-  Future<List<UserSummary>> getUserSummaries(String query, int offset, int limit);
+  public UserSummaryRepository(PostgresClient pgClient) {
+    super(pgClient, USER_SUMMARY_TABLE_NAME, UserSummary.class);
+  }
 
-  /**
-   * Searches for UserSummary by id
-   *
-   * @param id UserSummary id
-   * @return future with UserSummary
-   */
-  Future<Optional<UserSummary>> getUserSummaryById(String id);
+  public Future<String> upsert(UserSummary entity) {
+    return super.upsert(entity, entity.getId());
+  }
 
-  /**
-   * Searches for UserSummary by user id
-   *
-   * @param userId user id
-   * @return future with optional UserSummary
-   */
-  Future<Optional<UserSummary>> getUserSummaryByUserId(String userId);
+  public Future<String> save(UserSummary entity) {
+    return super.save(entity, entity.getId());
+  }
 
-  /**
-   * Saves UserSummary to database
-   *
-   * @param userSummary UserSummary to save
-   * @return future with id of saved UserSummary
-   */
-  Future<String> saveUserSummary(UserSummary userSummary);
+  public Future<Boolean> update(UserSummary entity) {
+    return super.update(entity, entity.getId());
+  }
 
-  /**
-   * Update UserSummary if it already exists in the DB, insert otherwise
-   *
-   * @param userSummary UserSummary to update or insert
-   * @return future with id of saved UserSummary
-   */
-  Future<String> upsertUserSummary(UserSummary userSummary);
+  public Future<Optional<UserSummary>> getByUserId(String userId) {
+    Criterion criterion = new Criterion(new Criteria()
+        .addField(USER_ID_FIELD)
+        .setOperation(OPERATION_EQUALS)
+        .setVal(userId)
+        .setJSONB(true));
 
-  /**
-   * Updates UserSummary in database
-   *
-   * @param userSummary UserSummary to update
-   * @return future with true if succeeded
-   */
-  Future<Boolean> updateUserSummary(UserSummary userSummary);
+    return this.get(criterion)
+      .map(results -> results.stream().findFirst());
+  }
 
-  /**
-   * Deletes UserSummary from database
-   *
-   * @param id UserSummary id to delete
-   * @return future with true is succeeded
-   */
-  Future<Boolean> deleteUserSummary(String id);
+  public Future<UserSummary> findByUserIdOrBuildNew(String userId) {
+    return getByUserId(userId)
+      .map(summary -> summary.orElseGet(() -> buildEmptyUserSummary(userId)));
+  }
+
+  public Future<Optional<UserSummary>> findByFeeFineId(String feeFineId) {
+    String query = String.format(FIND_SUMMARY_BY_FEE_FINE_ID_QUERY_TEMPLATE, feeFineId);
+
+    return get(query, 0, 1)
+      .map(result -> result.stream().findFirst());
+  }
+
+  private UserSummary buildEmptyUserSummary(String userId) {
+    return new UserSummary()
+      .withId(UUID.randomUUID().toString())
+      .withUserId(userId)
+      .withOutstandingFeeFineBalance(BigDecimal.ZERO)
+      .withNumberOfLostItems(0);
+  }
+
 }

@@ -80,6 +80,6 @@ public class EventHandlersAPI implements AutomatedPatronBlocksHandlers {
   }
 
   private static void logEventReceived(EventType eventType, String payload) {
-    log.info("Received {} event with payload:\n\"{}\"", eventType.name(), payload);
+    log.info("Received {} event with payload:\n{}", eventType.name(), payload);
   }
 }

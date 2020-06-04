@@ -1,0 +1,35 @@
+#%RAML 1.0
+title: Automated patron blocks
+version: v0.1
+baseUri: http://github.com/org/folio/mod-feesfines
+
+documentation:
+  - title: API for checking if any automated patron blocks exist for patron
+    content: <b>Automated patron blocks API</b>
+
+types:
+  user: !include user.json
+  errors: !include raml-util/schemas/errors.schema
+  automatedPatronBlocks: !include automated-patron-blocks.json
+
+traits:
+  validate: !include raml-util/traits/validation.raml
+
+/automated-patron-blocks/{userId}:
+  get:
+    responses:
+      200:
+        body:
+          application/json:
+            schema: automatedPatronBlocks
+            example: !include examples/automated-patron-blocks.sample
+      400:
+        description: "Invalid user ID in request"
+        body:
+          text/plain:
+            example: "Bad request, e.g. invalid user UUID"
+      500:
+        description: "Internal server error, e.g. due to misconfiguration"
+        body:
+          text/plain:
+            example: "Internal server error, contact administrator"

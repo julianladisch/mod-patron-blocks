@@ -1,5 +1,7 @@
 package org.folio.rest.handlers;
 
+import static org.folio.repository.UserSummaryRepository.USER_SUMMARY_TABLE_NAME;
+
 import java.math.BigDecimal;
 import java.util.Arrays;
 
@@ -7,8 +9,8 @@ import javax.validation.ValidationException;
 
 import org.folio.domain.OpenFeeFine;
 import org.folio.domain.UserSummary;
+import org.folio.exception.EntityNotFoundException;
 import org.folio.repository.UserSummaryRepository;
-import org.folio.repository.UserSummaryRepositoryImpl;
 import org.folio.rest.TestBase;
 import org.junit.Before;
 import org.junit.Test;
@@ -22,11 +24,10 @@ import io.vertx.ext.unit.junit.VertxUnitRunner;
 
 @RunWith(VertxUnitRunner.class)
 public class FeeFineBalanceChangedEventHandlerTest extends TestBase {
-  private static final String USER_SUMMARY_TABLE_NAME = "user_summary";
-  private static final AbstractEventHandler eventHandler =
+  private static final FeeFineBalanceChangedEventHandler eventHandler =
     new FeeFineBalanceChangedEventHandler(postgresClient);
   private static final UserSummaryRepository userSummaryRepository =
-    new UserSummaryRepositoryImpl(postgresClient);
+    new UserSummaryRepository(postgresClient);
 
   @Before
   public void beforeEach(TestContext context) {
@@ -72,7 +73,7 @@ public class FeeFineBalanceChangedEventHandlerTest extends TestBase {
 
     initialUserSummary.getOpenFeeFines().add(existingFeeFine);
 
-    userSummaryRepository.saveUserSummary(initialUserSummary)
+    userSummaryRepository.save(initialUserSummary)
       .onFailure(context::fail)
       .onSuccess(summaryId -> {
         final String feeFineId = randomId();
@@ -112,7 +113,7 @@ public class FeeFineBalanceChangedEventHandlerTest extends TestBase {
 
     existingUserSummary.getOpenFeeFines().add(existingFeeFine);
 
-    userSummaryRepository.saveUserSummary(existingUserSummary)
+    userSummaryRepository.save(existingUserSummary)
       .onFailure(context::fail)
       .onSuccess(summaryId -> {
         final BigDecimal eventBalance = new BigDecimal("2.75");
@@ -157,7 +158,7 @@ public class FeeFineBalanceChangedEventHandlerTest extends TestBase {
       .withOutstandingFeeFineBalance(feeFineBalance1.add(feeFineBalance2))
       .withOpenFeesFines(Arrays.asList(existingFeeFine1, existingFeeFine2));
 
-    userSummaryRepository.saveUserSummary(existingUserSummary)
+    userSummaryRepository.save(existingUserSummary)
       .onFailure(context::fail)
       .onSuccess(summaryId -> {
         String payload = createPayloadString(null, feeFineId2, null, BigDecimal.ZERO);
@@ -169,7 +170,20 @@ public class FeeFineBalanceChangedEventHandlerTest extends TestBase {
             async.complete();
           });
       });
+  }
 
+  @Test
+  public void closedFeeFineEventForNonExistingSummaryShouldBeIgnored(TestContext context) {
+    Async async = context.async();
+
+    String payload = createPayloadString(null, randomId(), null, BigDecimal.ZERO);
+    eventHandler.handle(payload)
+      .onSuccess(context::fail)
+      .onFailure(throwable -> {
+        context.assertTrue(throwable instanceof EntityNotFoundException);
+        context.assertTrue(throwable.getMessage().contains("event is ignored"));
+        async.complete();
+      });
   }
 
   @Test
@@ -240,15 +254,15 @@ public class FeeFineBalanceChangedEventHandlerTest extends TestBase {
     String expectedFeeFineId, String expectedFeeFineTypeId,
     BigDecimal expectedFeeFineBalance, TestContext context) {
 
-    userSummaryRepository.getUserSummaryById(summaryId)
+    userSummaryRepository.get(summaryId)
       .onFailure(context::fail)
       .onSuccess(optionalSummary -> {
         UserSummary userSummary = optionalSummary.orElseThrow(() ->
           new AssertionError("User summary was not found: " + summaryId));
 
         context.assertEquals(userId, userSummary.getUserId());
-        context.assertEquals(expectedOutstandingFeeFineBalance,
-          userSummary.getOutstandingFeeFineBalance());
+        context.assertEquals(0, expectedOutstandingFeeFineBalance.compareTo(
+          userSummary.getOutstandingFeeFineBalance()));
         context.assertTrue(userSummary.getOpenLoans().isEmpty());
         context.assertEquals(0, userSummary.getNumberOfLostItems());
         context.assertEquals(expectedNumberOfOpenFeesFines, userSummary.getOpenFeeFines().size());

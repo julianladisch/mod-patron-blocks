@@ -1,6 +1,7 @@
 package org.folio.rest.impl;
 
 import static io.vertx.core.Future.succeededFuture;
+import static org.folio.repository.PatronBlockLimitsRepository.PATRON_BLOCK_LIMITS_TABLE_NAME;
 import static org.folio.rest.tools.utils.ValidationHelper.createValidationErrorMessage;
 
 import java.util.List;
@@ -22,7 +23,6 @@ import io.vertx.core.Handler;
 
 public class PatronBlockLimitsAPI implements PatronBlockLimits {
 
-  private static final String PATRON_BLOCK_LIMITS = "patron_block_limits";
   // IDs come from predefined data (see resources/db_scripts/populate-patron-block-conditions.sql/*)
   private static final List<String> CONDITIONS_IDS_WITH_DOUBLE_VALUE_TYPE =
     ImmutableList.of("cf7a0d5f-a327-4ca1-aa9e-dc55ec006b8a");
@@ -38,7 +38,7 @@ public class PatronBlockLimitsAPI implements PatronBlockLimits {
     Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler,
     Context vertxContext) {
 
-    PgUtil.get(PATRON_BLOCK_LIMITS, PatronBlockLimit.class,
+    PgUtil.get(PATRON_BLOCK_LIMITS_TABLE_NAME, PatronBlockLimit.class,
       org.folio.rest.jaxrs.model.PatronBlockLimits.class, query, offset, limit,
       okapiHeaders, vertxContext, GetPatronBlockLimitsResponse.class, asyncResultHandler);
   }
@@ -56,7 +56,7 @@ public class PatronBlockLimitsAPI implements PatronBlockLimits {
       return;
     }
 
-    PgUtil.post(PATRON_BLOCK_LIMITS, entity, okapiHeaders, vertxContext,
+    PgUtil.post(PATRON_BLOCK_LIMITS_TABLE_NAME, entity, okapiHeaders, vertxContext,
       PostPatronBlockLimitsResponse.class, asyncResultHandler);
   }
 
@@ -73,7 +73,7 @@ public class PatronBlockLimitsAPI implements PatronBlockLimits {
       return;
     }
 
-    PgUtil.put(PATRON_BLOCK_LIMITS, entity, patronBlockLimitId, okapiHeaders,
+    PgUtil.put(PATRON_BLOCK_LIMITS_TABLE_NAME, entity, patronBlockLimitId, okapiHeaders,
       vertxContext, PutPatronBlockLimitsByPatronBlockLimitIdResponse.class, asyncResultHandler);
   }
 
@@ -83,7 +83,7 @@ public class PatronBlockLimitsAPI implements PatronBlockLimits {
     String lang, Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler,
     Context vertxContext) {
 
-    PgUtil.getById(PATRON_BLOCK_LIMITS, PatronBlockLimit.class, patronBlockLimitId,
+    PgUtil.getById(PATRON_BLOCK_LIMITS_TABLE_NAME, PatronBlockLimit.class, patronBlockLimitId,
       okapiHeaders, vertxContext, GetPatronBlockLimitsByPatronBlockLimitIdResponse.class,
       asyncResultHandler);
   }
@@ -94,7 +94,7 @@ public class PatronBlockLimitsAPI implements PatronBlockLimits {
     String lang, Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler,
     Context vertxContext) {
 
-    PgUtil.deleteById(PATRON_BLOCK_LIMITS, patronBlockLimitId, okapiHeaders,
+    PgUtil.deleteById(PATRON_BLOCK_LIMITS_TABLE_NAME, patronBlockLimitId, okapiHeaders,
       vertxContext, DeletePatronBlockLimitsByPatronBlockLimitIdResponse.class,
       asyncResultHandler);
   }

@@ -9,8 +9,12 @@ public class UuidHelper {
 
   public static void validateUUID(String uuid, boolean isRequired) {
     if ((isRequired || uuid != null) && !UuidUtil.isUuid(uuid)) {
-      String message = String.format("Invalid %sUUID: \"%s\"", isRequired ? "required " : "", uuid);
+      String message = String.format("Invalid UUID: \"%s\"",  uuid);
       throw new ValidationException(message);
     }
+  }
+
+  public static void validateUUID(String uuid) {
+    validateUUID(uuid, true);
   }
 }
