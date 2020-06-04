@@ -30,17 +30,18 @@ public class UsersClient {
   public Future<String> findPatronGroupIdForUser(String userId) {
     try {
       validateUUID(userId);
-      log.info("Calling mod-users to find patron group ID for user " + userId);
 
       Promise<HttpResponse<Buffer>> promise = Promise.promise();
       okapiClient.getAbs("/users/" + userId)
         .send(promise);
 
       return promise.future().compose(response -> {
-        if (response.statusCode() != 200) {
-          return failedFuture(new EntityNotFoundException(
-            String.format("Failed to fetch user with ID %s. Response status code: %d",
-              userId, response.statusCode())));
+        int responseStatus = response.statusCode();
+        if (responseStatus != 200) {
+          String errorMessage = String.format("Failed to fetch user with ID %s. Response: %d %s",
+            userId, responseStatus, response.bodyAsString());
+          log.error(errorMessage);
+          return failedFuture(new EntityNotFoundException(errorMessage));
         } else {
           try {
             JsonObject responseJson = new JsonObject(response.bodyAsString());

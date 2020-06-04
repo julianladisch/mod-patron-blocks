@@ -8,25 +8,24 @@ import static org.folio.okapi.common.XOkapiHeaders.URL;
 
 import java.util.Map;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.commons.collections4.map.CaseInsensitiveMap;
 
 import io.vertx.core.buffer.Buffer;
 import io.vertx.ext.web.client.HttpRequest;
 import io.vertx.ext.web.client.WebClient;
 
 public class OkapiClient {
-  static final ObjectMapper objectMapper = new ObjectMapper();
-
   private final WebClient webClient;
   private final String okapiUrl;
   private final String tenant;
   private final String token;
 
   OkapiClient(WebClient webClient, Map<String, String> okapiHeaders) {
+    CaseInsensitiveMap<String, String> headers = new CaseInsensitiveMap<>(okapiHeaders);
     this.webClient = webClient;
-    okapiUrl = okapiHeaders.get(URL);
-    tenant = okapiHeaders.get(TENANT);
-    token = okapiHeaders.get(TOKEN);
+    okapiUrl = headers.get(URL);
+    tenant = headers.get(TENANT);
+    token = headers.get(TOKEN);
   }
 
   HttpRequest<Buffer> getAbs(String path) {
