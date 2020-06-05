@@ -12,6 +12,7 @@ import org.folio.domain.UserSummary;
 import org.folio.exception.EntityNotFoundException;
 import org.folio.repository.UserSummaryRepository;
 import org.folio.rest.TestBase;
+import org.folio.rest.jaxrs.model.FeeFineBalanceChangedEvent;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -44,8 +45,9 @@ public class FeeFineBalanceChangedEventHandlerTest extends TestBase {
     final String feeFineTypeId = randomId();
     final BigDecimal balance = new BigDecimal("1.55");
 
-    String payload = createPayloadString(userId, feeFineId, feeFineTypeId, balance);
-    eventHandler.handle(payload)
+    FeeFineBalanceChangedEvent event = createEvent(userId, feeFineId, feeFineTypeId, balance);
+
+    eventHandler.handle(event)
       .onFailure(context::fail)
       .onSuccess(summaryId -> {
         checkResult(summaryId, userId, balance, 1, feeFineId, feeFineTypeId, balance, context);
@@ -79,9 +81,9 @@ public class FeeFineBalanceChangedEventHandlerTest extends TestBase {
         final String feeFineId = randomId();
         final String feeFineTypeId = randomId();
         final BigDecimal eventBalance = new BigDecimal("7.45");
-        String payload = createPayloadString(userId, feeFineId, feeFineTypeId, eventBalance);
+        FeeFineBalanceChangedEvent event = createEvent(userId, feeFineId, feeFineTypeId, eventBalance);
 
-        eventHandler.handle(payload)
+        eventHandler.handle(event)
           .onFailure(context::fail)
           .onSuccess(id -> {
             checkResult(id, userId, initialOutstandingFeeFineBalance.add(eventBalance),
@@ -117,9 +119,9 @@ public class FeeFineBalanceChangedEventHandlerTest extends TestBase {
       .onFailure(context::fail)
       .onSuccess(summaryId -> {
         final BigDecimal eventBalance = new BigDecimal("2.75");
-        String payload = createPayloadString(userId, feeFineId, feeFineTypeId, eventBalance);
+        FeeFineBalanceChangedEvent event = createEvent(userId, feeFineId, feeFineTypeId, eventBalance);
 
-        eventHandler.handle(payload)
+        eventHandler.handle(event)
           .onFailure(context::fail)
           .onSuccess(id -> {
             checkResult(id, userId, eventBalance, 1, feeFineId, feeFineTypeId, eventBalance, context);
@@ -161,8 +163,9 @@ public class FeeFineBalanceChangedEventHandlerTest extends TestBase {
     userSummaryRepository.save(existingUserSummary)
       .onFailure(context::fail)
       .onSuccess(summaryId -> {
-        String payload = createPayloadString(null, feeFineId2, null, BigDecimal.ZERO);
-        eventHandler.handle(payload)
+        FeeFineBalanceChangedEvent event = createEvent(null, feeFineId2, null, BigDecimal.ZERO);
+
+        eventHandler.handle(event)
           .onFailure(context::fail)
           .onSuccess(id -> {
             checkResult(id, userId, feeFineBalance1, 1, feeFineId1,
@@ -176,8 +179,9 @@ public class FeeFineBalanceChangedEventHandlerTest extends TestBase {
   public void closedFeeFineEventForNonExistingSummaryShouldBeIgnored(TestContext context) {
     Async async = context.async();
 
-    String payload = createPayloadString(null, randomId(), null, BigDecimal.ZERO);
-    eventHandler.handle(payload)
+    FeeFineBalanceChangedEvent event = createEvent(null, randomId(), null, BigDecimal.ZERO);
+
+    eventHandler.handle(event)
       .onSuccess(context::fail)
       .onFailure(throwable -> {
         context.assertTrue(throwable instanceof EntityNotFoundException);
@@ -186,67 +190,14 @@ public class FeeFineBalanceChangedEventHandlerTest extends TestBase {
       });
   }
 
-  @Test
-  public void eventWithInvalidJsonPayload(TestContext context) {
-    Async async = context.async();
+  private static FeeFineBalanceChangedEvent createEvent(String userId, String feeFineId,
+    String feeFineTypeId, BigDecimal balance) {
 
-    String payload = "not a json";
-    eventHandler.handle(payload)
-      .onSuccess(context::fail)
-      .onFailure(throwable -> {
-        context.assertTrue(throwable instanceof DecodeException);
-        async.complete();
-      });
-  }
-
-  @Test
-  public void eventWithInvalidBalance(TestContext context) {
-    Async async = context.async();
-
-    String payload = createPayloadJson(randomId(), randomId(), randomId(), BigDecimal.ZERO)
-      .put("balance", "zero")
-      .encodePrettily();
-
-    eventHandler.handle(payload)
-      .onSuccess(context::fail)
-      .onFailure(throwable -> {
-        context.assertTrue(throwable instanceof IllegalArgumentException);
-        context.assertTrue(throwable.getMessage().startsWith(
-          "Invalid fee/fine balance value in event payload"));
-        async.complete();
-      });
-  }
-
-  @Test
-  public void eventWithInvalidUserId(TestContext context) {
-    Async async = context.async();
-
-    String invalidUserId = randomId() + "z";
-    String payload = createPayloadString(invalidUserId, randomId(), randomId(), BigDecimal.ZERO);
-
-    eventHandler.handle(payload)
-      .onSuccess(context::fail)
-      .onFailure(throwable -> {
-        context.assertTrue(throwable instanceof ValidationException);
-        async.complete();
-      });
-  }
-
-  private static String createPayloadString(String userId, String feeFineId, String feeFineTypeId,
-    BigDecimal balance) {
-
-    return createPayloadJson(userId, feeFineId, feeFineTypeId, balance)
-      .encodePrettily();
-  }
-
-  private static JsonObject createPayloadJson(String userId, String feeFineId, String feeFineTypeId,
-    BigDecimal balance) {
-
-    return new JsonObject()
-      .put("userId", userId)
-      .put("feeFineId", feeFineId)
-      .put("feeFineTypeId", feeFineTypeId)
-      .put("balance", balance.doubleValue());
+    return new FeeFineBalanceChangedEvent()
+      .withUserId(userId)
+      .withFeeFineId(feeFineId)
+      .withFeeFineTypeId(feeFineTypeId)
+      .withBalance(balance);
   }
 
   private void checkResult(String summaryId, String userId,

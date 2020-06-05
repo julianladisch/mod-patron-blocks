@@ -355,11 +355,6 @@ public class AutomatedPatronBlocksAPITest extends TestBase {
       ));
   }
 
-  private static String toJson(Object object) {
-    return JsonObject.mapFrom(object)
-      .encodePrettily();
-  }
-
   private String createLimit(Condition condition, String patronGroupId, double value) {
     PatronBlockLimit limit = new PatronBlockLimit()
       .withId(randomId())

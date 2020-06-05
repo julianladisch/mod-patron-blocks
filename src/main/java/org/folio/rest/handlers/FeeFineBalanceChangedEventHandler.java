@@ -11,7 +11,6 @@ import java.util.Map;
 
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
-import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
@@ -25,7 +24,7 @@ import org.folio.rest.jaxrs.model.FeeFineBalanceChangedEvent;
 import org.folio.rest.persist.PostgresClient;
 import org.folio.rest.tools.utils.TenantTool;
 
-public class FeeFineBalanceChangedEventHandler implements Handler<FeeFineBalanceChangedEvent> {
+public class FeeFineBalanceChangedEventHandler implements EventHandler<FeeFineBalanceChangedEvent> {
   private static final Logger log = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
   private static final String OKAPI_HEADER_TENANT = "x-okapi-tenant";
 
@@ -41,8 +40,8 @@ public class FeeFineBalanceChangedEventHandler implements Handler<FeeFineBalance
     userSummaryRepository = new UserSummaryRepository(postgresClient);
   }
 
-  public void handle(FeeFineBalanceChangedEvent event) {
-    succeededFuture(event)
+  public Future<String> handle(FeeFineBalanceChangedEvent event) {
+    return succeededFuture(event)
       .compose(this::updateUserSummary)
       .onComplete(this::logResult);
   }

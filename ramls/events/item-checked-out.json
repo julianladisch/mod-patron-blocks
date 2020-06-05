@@ -1,34 +1,12 @@
 {
   "$schema": "http://json-schema.org/draft-04/schema#",
   "type": "object",
-  "description": "Fee/fine balance changed event",
+  "description": "Item checked out event",
   "properties": {
-    "feeFineId": {
-      "description": "Unique ID a fee/fine",
-      "type": "string",
-      "$ref": "../raml-util/schemas/uuid.schema"
-    },
-    "userId": {
-      "description": "Unique ID of a user",
-      "type": "string",
-      "$ref": "../raml-util/schemas/uuid.schema"
-    },
-    "feeFineTypeId": {
-      "description": "Unique ID of a fee/fine type",
-      "type": "string",
-      "$ref": "../raml-util/schemas/uuid.schema"
-    },
-    "balance": {
-      "description": "Current balance of a fee/fine",
-      "type": "number",
-      "javaType" : "java.math.BigDecimal"
-    }
+
   },
   "additionalProperties": false,
   "required": [
-    "blockBorrowing",
-    "blockRenewals",
-    "blockRequests",
-    "message"
+
   ]
 }
