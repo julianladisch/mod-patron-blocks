@@ -2,7 +2,6 @@ package org.folio.rest.handlers;
 
 import static io.vertx.core.Future.succeededFuture;
 import static java.lang.String.format;
-import static org.folio.domain.EventType.FEE_FINE_BALANCE_CHANGED;
 
 import java.lang.invoke.MethodHandles;
 import java.math.BigDecimal;
@@ -12,10 +11,12 @@ import java.util.Map;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
+import io.vertx.core.json.JsonObject;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
 
 import org.apache.commons.lang3.StringUtils;
+import org.folio.domain.EventType;
 import org.folio.domain.OpenFeeFine;
 import org.folio.domain.UserSummary;
 import org.folio.exception.EntityNotFoundException;
@@ -43,7 +44,7 @@ public class FeeFineBalanceChangedEventHandler implements EventHandler<FeeFineBa
   public Future<String> handle(FeeFineBalanceChangedEvent event) {
     return succeededFuture(event)
       .compose(this::updateUserSummary)
-      .onComplete(this::logResult);
+      .onComplete(summaryId -> logResult(summaryId, event));
   }
 
   private Future<String> updateUserSummary(FeeFineBalanceChangedEvent event) {
@@ -103,11 +104,11 @@ public class FeeFineBalanceChangedEventHandler implements EventHandler<FeeFineBa
         format("User summary with feeFine %s was not found, event is ignored", feeFineId))));
   }
 
-  protected void logResult(AsyncResult<String> result) {
-    String eventType = FEE_FINE_BALANCE_CHANGED.name();
-
+  protected void logResult(AsyncResult<String> result, FeeFineBalanceChangedEvent event) {
+    String eventType = EventType.getNameByEvent(event);
     if (result.failed()) {
-      log.error("Failed to process event {}", result.cause(), eventType);
+      log.error("Failed to process event {} with payload:\n{}",
+        result.cause(), eventType, JsonObject.mapFrom(event).encodePrettily());
     } else {
       log.info("Event {} processed successfully. Affected user summary: {}",
         eventType, result.result());
