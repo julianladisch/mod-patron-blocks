@@ -1,7 +1,6 @@
 package org.folio.rest.impl;
 
 import static java.util.concurrent.TimeUnit.SECONDS;
-import static org.drools.core.util.StringUtils.EMPTY;
 import static org.folio.repository.UserSummaryRepository.USER_SUMMARY_TABLE_NAME;
 
 import java.util.Optional;
@@ -28,12 +27,6 @@ public class EventHandlersAPITest extends TestBase {
     "/automated-patron-blocks/handlers/fee-fine-balance-changed";
   private static final String ITEM_CHECKED_OUT_HANDLER_URL =
     "/automated-patron-blocks/handlers/item-checked-out";
-  private static final String ITEM_CHECKED_IN_HANDLER_URL =
-    "/automated-patron-blocks/handlers/item-checked-in";
-  private static final String ITEM_DECLARED_LOST_HANDLER_URL =
-    "/automated-patron-blocks/handlers/item-declared-lost";
-  private static final String LOAN_DUE_DATE_CHANGED_HANDLER_URL =
-    "/automated-patron-blocks/handlers/loan-due-date-changed";
 
   final UserSummaryRepository userSummaryRepository = new UserSummaryRepository(postgresClient);
 
@@ -93,24 +86,6 @@ public class EventHandlersAPITest extends TestBase {
     context.assertEquals(openLoan.getRecall(), false);
     context.assertEquals(openLoan.getDueDate(), dueDate.toDate());
     context.assertEquals(openLoan.getReturnedDate(), null);
-  }
-
-  @Test
-  public void postAutomatedPatronBlocksHandlersItemCheckedIn(TestContext context) {
-    // TODO: replace with real test once event handler is implemented
-    sendEvent(ITEM_CHECKED_IN_HANDLER_URL, EMPTY, context);
-  }
-
-  @Test
-  public void postAutomatedPatronBlocksHandlersItemDeclaredLost(TestContext context) {
-    // TODO: replace with real test once event handler is implemented
-    sendEvent(ITEM_DECLARED_LOST_HANDLER_URL, EMPTY, context);
-  }
-
-  @Test
-  public void postAutomatedPatronBlocksHandlersLoanDueDateUpdated(TestContext context) {
-    // TODO: replace with real test once event handler is implemented
-    sendEvent(LOAN_DUE_DATE_CHANGED_HANDLER_URL, EMPTY, context);
   }
 
   private void sendEvent(String url, String payload, TestContext context) {
