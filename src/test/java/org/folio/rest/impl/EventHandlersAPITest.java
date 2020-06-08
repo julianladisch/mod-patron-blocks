@@ -7,9 +7,12 @@ import static org.folio.repository.UserSummaryRepository.USER_SUMMARY_TABLE_NAME
 import java.util.Optional;
 
 import org.awaitility.Awaitility;
+import org.folio.domain.OpenLoan;
 import org.folio.domain.UserSummary;
 import org.folio.repository.UserSummaryRepository;
 import org.folio.rest.TestBase;
+import org.joda.time.DateTime;
+import org.joda.time.format.ISODateTimeFormat;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -62,8 +65,34 @@ public class EventHandlersAPITest extends TestBase {
 
   @Test
   public void postAutomatedPatronBlocksHandlersItemCheckedOut(TestContext context) {
-    // TODO: replace with real test once event handler is implemented
-    sendEvent(ITEM_CHECKED_OUT_HANDLER_URL, EMPTY, context);
+    String userId = randomId();
+    String loanId = randomId();
+    DateTime dueDate = DateTime.now();
+
+    Optional<UserSummary> userSummaryBeforeEvent =
+      waitFor(userSummaryRepository.getByUserId(userId));
+
+    context.assertFalse(userSummaryBeforeEvent.isPresent());
+
+    String payload = new JsonObject()
+      .put("userId", userId)
+      .put("loanId", loanId)
+      .put("dueDate", dueDate.toString(ISODateTimeFormat.dateTime()))
+      .encodePrettily();
+
+    sendEvent(ITEM_CHECKED_OUT_HANDLER_URL, payload, context);
+    assertThatUserSummaryWasCreated(userId);
+
+    UserSummary userSummary = waitFor(userSummaryRepository.getByUserId(userId), 1).orElse(null);
+    context.assertNotNull(userSummary);
+    context.assertEquals(userSummary.getUserId(), userId);
+    context.assertEquals(userSummary.getOpenLoans().size(), 1);
+
+    OpenLoan openLoan = userSummary.getOpenLoans().get(0);
+    context.assertEquals(openLoan.getLoanId(), loanId);
+    context.assertEquals(openLoan.getRecall(), false);
+    context.assertEquals(openLoan.getDueDate(), dueDate.toDate());
+    context.assertEquals(openLoan.getReturnedDate(), null);
   }
 
   @Test

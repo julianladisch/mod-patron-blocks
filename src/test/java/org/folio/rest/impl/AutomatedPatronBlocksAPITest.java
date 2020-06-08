@@ -20,7 +20,7 @@ import static org.joda.time.DateTime.now;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
+import java.util.Date;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Optional;
@@ -121,7 +121,7 @@ public class AutomatedPatronBlocksAPITest extends TestBase {
     OpenLoan openLoan = new OpenLoan()
       .withLoanId(randomId())
       .withRecall(false)
-      .withDueDate(now())
+      .withDueDate(new Date())
       .withReturnedDate(null);
 
     List<OpenLoan> threeOpenLoans = fillListOfSize(openLoan, limitValue + 1);
@@ -166,8 +166,8 @@ public class AutomatedPatronBlocksAPITest extends TestBase {
     OpenLoan overdueLoan = new OpenLoan()
       .withLoanId(randomId())
       .withRecall(false)
-      .withDueDate(dueDate)
-      .withReturnedDate(returnedDate);
+      .withDueDate(dueDate.toDate())
+      .withReturnedDate(returnedDate.toDate());
 
     List<OpenLoan> overdueLoans = fillListOfSize(overdueLoan, limitValue + 1);
     createSummary(USER_ID, BigDecimal.ZERO, 0, new ArrayList<>(), overdueLoans);
@@ -194,8 +194,8 @@ public class AutomatedPatronBlocksAPITest extends TestBase {
     OpenLoan overdueLoan = new OpenLoan()
       .withLoanId(randomId())
       .withRecall(true)
-      .withDueDate(dueDate)
-      .withReturnedDate(returnedDate);
+      .withDueDate(dueDate.toDate())
+      .withReturnedDate(returnedDate.toDate());
 
     List<OpenLoan> loans = fillListOfSize(overdueLoan, limitValue + 1);
     createSummary(USER_ID, BigDecimal.ZERO, 0, new ArrayList<>(), loans);
@@ -223,14 +223,14 @@ public class AutomatedPatronBlocksAPITest extends TestBase {
     OpenLoan overdueLoan1 = new OpenLoan()
       .withLoanId(randomId())
       .withRecall(true)
-      .withDueDate(dueDate)
-      .withReturnedDate(returnedDate1);
+      .withDueDate(dueDate.toDate())
+      .withReturnedDate(returnedDate1.toDate());
 
     OpenLoan overdueLoan2 = new OpenLoan()
       .withLoanId(randomId())
       .withRecall(true)
-      .withDueDate(dueDate)
-      .withReturnedDate(returnedDate2);
+      .withDueDate(dueDate.toDate())
+      .withReturnedDate(returnedDate2.toDate());
 
     List<OpenLoan> openLoans = Arrays.asList(overdueLoan1, overdueLoan2);
     createSummary(USER_ID, BigDecimal.ZERO, 0, new ArrayList<>(), openLoans);
@@ -277,8 +277,8 @@ public class AutomatedPatronBlocksAPITest extends TestBase {
     OpenLoan overdueRecalledLoan = new OpenLoan()
       .withLoanId(randomId())
       .withRecall(true)
-      .withDueDate(dueDate)
-      .withReturnedDate(returnedDate);
+      .withDueDate(dueDate.toDate())
+      .withReturnedDate(returnedDate.toDate());
 
     int numberOfOpenLoans = Math.max(
       LIMIT_VALUES.get(MAX_NUMBER_OF_ITEMS_CHARGED_OUT), Math.max(

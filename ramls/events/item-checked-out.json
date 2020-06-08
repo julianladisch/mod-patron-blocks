@@ -3,32 +3,26 @@
   "type": "object",
   "description": "Fee/fine balance changed event",
   "properties": {
-    "feeFineId": {
-      "description": "Unique ID a fee/fine",
-      "type": "string",
-      "$ref": "../raml-util/schemas/uuid.schema"
-    },
     "userId": {
-      "description": "Unique ID of a user",
+      "description": "ID of the user that checked out an item",
       "type": "string",
       "$ref": "../raml-util/schemas/uuid.schema"
     },
-    "feeFineTypeId": {
-      "description": "Unique ID of a fee/fine type",
+    "loanId": {
+      "description": "ID of the loan created during a check out",
       "type": "string",
       "$ref": "../raml-util/schemas/uuid.schema"
     },
-    "balance": {
-      "description": "Current balance of a fee/fine",
-      "type": "number",
-      "javaType" : "java.math.BigDecimal"
+    "dueDate": {
+      "description": "Due date of the loan",
+      "type": "string",
+      "format": "date-time"
     }
   },
   "additionalProperties": false,
   "required": [
-    "blockBorrowing",
-    "blockRenewals",
-    "blockRequests",
-    "message"
+    "userId",
+    "loanId",
+    "dueDate"
   ]
 }
