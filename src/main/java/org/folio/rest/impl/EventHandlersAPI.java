@@ -8,14 +8,11 @@ import java.util.Map;
 import javax.ws.rs.core.Response;
 
 import org.folio.domain.EventType;
+import org.folio.rest.handlers.FeeFineBalanceChangedEventHandler;
 import org.folio.rest.handlers.ItemCheckedOutEventHandler;
 import org.folio.rest.jaxrs.model.FeeFineBalanceChangedEvent;
-import org.folio.rest.jaxrs.model.ItemCheckedInEvent;
 import org.folio.rest.jaxrs.model.ItemCheckedOutEvent;
-import org.folio.rest.jaxrs.model.ItemDeclaredLostEvent;
-import org.folio.rest.jaxrs.model.LoanDueDateChangedEvent;
 import org.folio.rest.jaxrs.resource.AutomatedPatronBlocksHandlers;
-import org.folio.rest.handlers.FeeFineBalanceChangedEventHandler;
 
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Context;
@@ -52,39 +49,6 @@ public class EventHandlersAPI implements AutomatedPatronBlocksHandlers {
     logEventReceived(EventType.ITEM_CHECKED_OUT);
 
     new ItemCheckedOutEventHandler(okapiHeaders, vertxContext.owner()).handle(payload);
-  }
-
-  @Override
-  public void postAutomatedPatronBlocksHandlersItemCheckedIn(ItemCheckedInEvent payload,
-    Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler,
-    Context vertxContext) {
-
-    asyncResultHandler.handle(Future.succeededFuture(
-      PostAutomatedPatronBlocksHandlersItemCheckedInResponse.respond204()));
-
-    logEventReceived(EventType.ITEM_CHECKED_IN);
-  }
-
-  @Override
-  public void postAutomatedPatronBlocksHandlersItemDeclaredLost(ItemDeclaredLostEvent payload,
-    Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler,
-    Context vertxContext) {
-
-    asyncResultHandler.handle(Future.succeededFuture(
-      PostAutomatedPatronBlocksHandlersItemDeclaredLostResponse.respond204()));
-
-    logEventReceived(EventType.ITEM_DECLARED_LOST);
-  }
-
-  @Override
-  public void postAutomatedPatronBlocksHandlersLoanDueDateChanged(LoanDueDateChangedEvent payload,
-    Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler,
-    Context vertxContext) {
-
-    asyncResultHandler.handle(Future.succeededFuture(
-      PostAutomatedPatronBlocksHandlersLoanDueDateChangedResponse.respond204()));
-
-    logEventReceived(EventType.LOAN_DUE_DATE_CHANGED);
   }
 
   private static void logEventReceived(EventType eventType) {
