@@ -107,7 +107,7 @@ public class EventHandlersAPITest extends TestBase {
   @Test
   public void postAutomatedPatronBlocksHandlersItemCheckedIn(TestContext context) {
     // TODO: replace with real test once event handler is implemented
-    sendEvent(ITEM_CHECKED_OUT_HANDLER_URL, toJson(new ItemCheckedInEvent()), SC_NO_CONTENT);
+    sendEvent(ITEM_CHECKED_IN_HANDLER_URL, toJson(new ItemCheckedInEvent()), SC_NO_CONTENT);
   }
 
   @Test
