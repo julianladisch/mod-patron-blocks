@@ -52,18 +52,16 @@ public class ItemCheckedOutEventHandler implements Handler<ItemCheckedOutEvent> 
 
     List<OpenLoan> openLoans = userSummary.getOpenLoans();
 
-    openLoans.stream()
+    OpenLoan newOpenLoan = openLoans.stream()
       .filter(loan -> StringUtils.equals(loan.getLoanId(), event.getLoanId()))
       .findFirst()
-      .orElseGet(() -> {
-        OpenLoan newOpenLoan = new OpenLoan()
-          .withLoanId(event.getLoanId())
-          .withDueDate(event.getDueDate())
-          .withRecall(false)
-          .withReturnedDate(null);
-        openLoans.add(newOpenLoan);
-        return newOpenLoan;
-      });
+      .orElse(new OpenLoan()
+        .withLoanId(event.getLoanId())
+        .withDueDate(event.getDueDate())
+        .withRecall(false)
+        .withReturnedDate(null));
+
+    openLoans.add(newOpenLoan);
 
     return userSummaryRepository.upsert(userSummary, userSummary.getId());
   }
