@@ -16,6 +16,9 @@ types:
   errors: !include raml-util/schemas/errors.schema
   fee-fine-balance-changed-event: !include events/fee-fine-balance-changed.json
   item-checked-out-event: !include events/item-checked-out.json
+  item-checked-in-event: !include events/item-checked-in.json
+  item-declared-lost-event: !include events/item-declared-lost.json
+  loan-due-date-changed-event: !include events/loan-due-date-changed.json
 
 resourceTypes:
   event-handler:
@@ -44,4 +47,10 @@ resourceTypes:
   /fee-fine-balance-changed:
     type: event-handler
   /item-checked-out:
+    type: event-handler
+  /item-checked-in:
+    type: event-handler
+  /item-declared-lost:
+    type: event-handler
+  /loan-due-date-changed:
     type: event-handler
