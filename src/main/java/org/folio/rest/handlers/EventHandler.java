@@ -13,7 +13,7 @@ import org.folio.rest.persist.PostgresClient;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
-import io.vertx.core.json.JsonObject;
+import io.vertx.core.json.Json;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
 
@@ -43,7 +43,7 @@ public abstract class EventHandler<E> {
     String eventType = EventType.getNameByEvent(event);
     if (result.failed()) {
       log.error("Failed to process event {} with payload:\n{}",
-        result.cause(), eventType, JsonObject.mapFrom(event).encodePrettily());
+        result.cause(), eventType, Json.encodePrettily(event));
     } else {
       log.info("Event {} processed successfully. Affected user summary: {}",
         eventType, result.result());

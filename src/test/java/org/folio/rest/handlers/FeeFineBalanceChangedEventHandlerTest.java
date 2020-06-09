@@ -5,8 +5,6 @@ import static org.folio.repository.UserSummaryRepository.USER_SUMMARY_TABLE_NAME
 import java.math.BigDecimal;
 import java.util.Arrays;
 
-import javax.validation.ValidationException;
-
 import org.folio.domain.OpenFeeFine;
 import org.folio.domain.UserSummary;
 import org.folio.exception.EntityNotFoundException;
@@ -17,8 +15,6 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
-import io.vertx.core.json.DecodeException;
-import io.vertx.core.json.JsonObject;
 import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;

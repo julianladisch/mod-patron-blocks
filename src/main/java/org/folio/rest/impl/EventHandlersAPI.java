@@ -7,6 +7,7 @@ import java.util.Map;
 import javax.ws.rs.core.Response;
 
 import org.folio.domain.EventType;
+import org.folio.rest.handlers.ItemCheckedInEventHandler;
 import org.folio.rest.jaxrs.model.FeeFineBalanceChangedEvent;
 import org.folio.rest.jaxrs.model.ItemCheckedInEvent;
 import org.folio.rest.jaxrs.model.ItemCheckedOutEvent;
@@ -19,7 +20,7 @@ import io.vertx.core.AsyncResult;
 import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
-import io.vertx.core.json.JsonObject;
+import io.vertx.core.json.Json;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
 
@@ -87,6 +88,6 @@ public class EventHandlersAPI implements AutomatedPatronBlocksHandlers {
   private static void logEventReceived(Object event) {
     log.info("Received {} event with payload:\n{}",
       EventType.getNameByEvent(event),
-      JsonObject.mapFrom(event).encodePrettily());
+      Json.encodePrettily(event));
   }
 }
