@@ -20,22 +20,23 @@ import static org.joda.time.DateTime.now;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Date;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Optional;
 
 import org.folio.domain.Condition;
-import org.folio.domain.OpenFeeFine;
-import org.folio.domain.OpenLoan;
-import org.folio.domain.UserSummary;
 import org.folio.repository.PatronBlockConditionsRepository;
 import org.folio.repository.PatronBlockLimitsRepository;
 import org.folio.repository.UserSummaryRepository;
 import org.folio.rest.TestBase;
 import org.folio.rest.jaxrs.model.AutomatedPatronBlock;
 import org.folio.rest.jaxrs.model.AutomatedPatronBlocks;
+import org.folio.rest.jaxrs.model.OpenFeeFine;
+import org.folio.rest.jaxrs.model.OpenLoan;
 import org.folio.rest.jaxrs.model.PatronBlockCondition;
 import org.folio.rest.jaxrs.model.PatronBlockLimit;
+import org.folio.rest.jaxrs.model.UserSummary;
 import org.joda.time.DateTime;
 import org.junit.Before;
 import org.junit.Test;
@@ -120,8 +121,7 @@ public class AutomatedPatronBlocksAPITest extends TestBase {
     OpenLoan openLoan = new OpenLoan()
       .withLoanId(randomId())
       .withRecall(false)
-      .withDueDate(now())
-      .withReturnedDate(null);
+      .withDueDate(now().plusHours(1).toDate());
 
     List<OpenLoan> threeOpenLoans = fillListOfSize(openLoan, limitValue + 1);
     createSummary(USER_ID, BigDecimal.ZERO, 0, new ArrayList<>(), threeOpenLoans);
@@ -165,8 +165,7 @@ public class AutomatedPatronBlocksAPITest extends TestBase {
     OpenLoan overdueLoan = new OpenLoan()
       .withLoanId(randomId())
       .withRecall(false)
-      .withDueDate(dueDate)
-      .withReturnedDate(returnedDate);
+      .withDueDate(new Date());
 
     List<OpenLoan> overdueLoans = fillListOfSize(overdueLoan, limitValue + 1);
     createSummary(USER_ID, BigDecimal.ZERO, 0, new ArrayList<>(), overdueLoans);
@@ -193,8 +192,7 @@ public class AutomatedPatronBlocksAPITest extends TestBase {
     OpenLoan overdueLoan = new OpenLoan()
       .withLoanId(randomId())
       .withRecall(true)
-      .withDueDate(dueDate)
-      .withReturnedDate(returnedDate);
+      .withDueDate(new Date());
 
     List<OpenLoan> loans = fillListOfSize(overdueLoan, limitValue + 1);
     createSummary(USER_ID, BigDecimal.ZERO, 0, new ArrayList<>(), loans);
@@ -215,21 +213,20 @@ public class AutomatedPatronBlocksAPITest extends TestBase {
 
     createLimitsForAllConditions();
 
-    DateTime dueDate = now();
-    DateTime returnedDate1 = dueDate.plusDays(limitValue - 1);
-    DateTime returnedDate2 = dueDate.plusDays(limitValue + 1);
+    DateTime now = now();
+
+    DateTime dueDateBelowLimit = now.minusDays(limitValue - 1);
+    DateTime dueDateAboveLimit = now.minusDays(limitValue + 1);
 
     OpenLoan overdueLoan1 = new OpenLoan()
       .withLoanId(randomId())
       .withRecall(true)
-      .withDueDate(dueDate)
-      .withReturnedDate(returnedDate1);
+      .withDueDate(dueDateBelowLimit.toDate());
 
     OpenLoan overdueLoan2 = new OpenLoan()
       .withLoanId(randomId())
       .withRecall(true)
-      .withDueDate(dueDate)
-      .withReturnedDate(returnedDate2);
+      .withDueDate(dueDateAboveLimit.toDate());
 
     List<OpenLoan> openLoans = Arrays.asList(overdueLoan1, overdueLoan2);
     createSummary(USER_ID, BigDecimal.ZERO, 0, new ArrayList<>(), openLoans);
@@ -270,14 +267,12 @@ public class AutomatedPatronBlocksAPITest extends TestBase {
       LIMIT_VALUES.get(MAX_OUTSTANDING_FEE_FINE_BALANCE) + 5);
 
     int maxOverdueRecallLimit = LIMIT_VALUES.get(RECALL_OVERDUE_BY_MAX_NUMBER_OF_DAYS);
-    DateTime dueDate = now();
-    DateTime returnedDate = dueDate.plusDays(maxOverdueRecallLimit + 1);
+    DateTime dueDate = now().minusDays(maxOverdueRecallLimit + 1);
 
     OpenLoan overdueRecalledLoan = new OpenLoan()
       .withLoanId(randomId())
       .withRecall(true)
-      .withDueDate(dueDate)
-      .withReturnedDate(returnedDate);
+      .withDueDate(dueDate.toDate());
 
     int numberOfOpenLoans = Math.max(
       LIMIT_VALUES.get(MAX_NUMBER_OF_ITEMS_CHARGED_OUT), Math.max(

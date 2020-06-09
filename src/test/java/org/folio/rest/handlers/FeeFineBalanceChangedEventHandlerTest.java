@@ -5,12 +5,12 @@ import static org.folio.repository.UserSummaryRepository.USER_SUMMARY_TABLE_NAME
 import java.math.BigDecimal;
 import java.util.Arrays;
 
-import org.folio.domain.OpenFeeFine;
-import org.folio.domain.UserSummary;
 import org.folio.exception.EntityNotFoundException;
 import org.folio.repository.UserSummaryRepository;
 import org.folio.rest.TestBase;
 import org.folio.rest.jaxrs.model.FeeFineBalanceChangedEvent;
+import org.folio.rest.jaxrs.model.OpenFeeFine;
+import org.folio.rest.jaxrs.model.UserSummary;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -69,7 +69,7 @@ public class FeeFineBalanceChangedEventHandlerTest extends TestBase {
       .withFeeFineTypeId(randomId())
       .withFeeFineId(randomId());
 
-    initialUserSummary.getOpenFeeFines().add(existingFeeFine);
+    initialUserSummary.getOpenFeesFines().add(existingFeeFine);
 
     userSummaryRepository.save(initialUserSummary)
       .onFailure(context::fail)
@@ -109,7 +109,7 @@ public class FeeFineBalanceChangedEventHandlerTest extends TestBase {
       .withFeeFineTypeId(feeFineTypeId)
       .withFeeFineId(feeFineId);
 
-    existingUserSummary.getOpenFeeFines().add(existingFeeFine);
+    existingUserSummary.getOpenFeesFines().add(existingFeeFine);
 
     userSummaryRepository.save(existingUserSummary)
       .onFailure(context::fail)
@@ -212,9 +212,9 @@ public class FeeFineBalanceChangedEventHandlerTest extends TestBase {
           userSummary.getOutstandingFeeFineBalance()));
         context.assertTrue(userSummary.getOpenLoans().isEmpty());
         context.assertEquals(0, userSummary.getNumberOfLostItems());
-        context.assertEquals(expectedNumberOfOpenFeesFines, userSummary.getOpenFeeFines().size());
+        context.assertEquals(expectedNumberOfOpenFeesFines, userSummary.getOpenFeesFines().size());
 
-        OpenFeeFine openFeeFine = userSummary.getOpenFeeFines().stream()
+        OpenFeeFine openFeeFine = userSummary.getOpenFeesFines().stream()
           .filter(feeFine -> feeFine.getFeeFineId().equals(expectedFeeFineId))
           .findFirst()
           .orElseThrow(() -> new AssertionError("Fee/fine was not found: " + expectedFeeFineId));

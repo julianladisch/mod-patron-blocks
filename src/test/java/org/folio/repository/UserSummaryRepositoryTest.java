@@ -7,13 +7,14 @@ import static org.folio.repository.UserSummaryRepository.USER_SUMMARY_TABLE_NAME
 import static org.joda.time.DateTime.now;
 
 import java.math.BigDecimal;
+import java.util.Date;
 import java.util.List;
 import java.util.Optional;
 
-import org.folio.domain.OpenFeeFine;
-import org.folio.domain.OpenLoan;
-import org.folio.domain.UserSummary;
 import org.folio.rest.TestBase;
+import org.folio.rest.jaxrs.model.OpenFeeFine;
+import org.folio.rest.jaxrs.model.OpenLoan;
+import org.folio.rest.jaxrs.model.UserSummary;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -191,8 +192,7 @@ public class UserSummaryRepositoryTest extends TestBase {
     OpenLoan openLoan = new OpenLoan()
       .withLoanId(randomId())
       .withRecall(false)
-      .withDueDate(now())
-      .withReturnedDate(now());
+      .withDueDate(new Date());
 
     OpenFeeFine openFeeFine = new OpenFeeFine()
       .withFeeFineId(randomId())
@@ -213,7 +213,7 @@ public class UserSummaryRepositoryTest extends TestBase {
     ctx.assertEquals(expected.getUserId(), actual.getUserId());
     ctx.assertEquals(expected.getNumberOfLostItems(), actual.getNumberOfLostItems());
     ctx.assertEquals(expected.getOutstandingFeeFineBalance(), actual.getOutstandingFeeFineBalance());
-    ctx.assertEquals(expected.getOpenFeeFines().size(), actual.getOpenFeeFines().size());
+    ctx.assertEquals(expected.getOpenFeesFines().size(), actual.getOpenFeesFines().size());
     ctx.assertEquals(expected.getOpenLoans().size(), actual.getOpenLoans().size());
   }
 
