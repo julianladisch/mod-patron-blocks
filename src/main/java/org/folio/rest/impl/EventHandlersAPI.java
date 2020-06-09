@@ -7,7 +7,6 @@ import java.util.Map;
 import javax.ws.rs.core.Response;
 
 import org.folio.domain.EventType;
-import org.folio.rest.handlers.ItemCheckedInEventHandler;
 import org.folio.rest.jaxrs.model.FeeFineBalanceChangedEvent;
 import org.folio.rest.jaxrs.model.ItemCheckedInEvent;
 import org.folio.rest.jaxrs.model.ItemCheckedOutEvent;
