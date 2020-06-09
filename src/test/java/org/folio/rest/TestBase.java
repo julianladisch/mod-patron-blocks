@@ -171,4 +171,8 @@ public class TestBase {
 
     return future.result();
   }
+
+  protected static String toJson(Object event) {
+    return JsonObject.mapFrom(event).encodePrettily();
+  }
 }
