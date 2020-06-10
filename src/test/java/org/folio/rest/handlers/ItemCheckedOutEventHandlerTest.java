@@ -7,6 +7,7 @@ import java.util.List;
 
 import org.folio.domain.OpenLoan;
 import org.folio.domain.UserSummary;
+import org.folio.repository.UserSummaryRepository;
 import org.folio.rest.jaxrs.model.ItemCheckedOutEvent;
 import org.joda.time.DateTime;
 import org.junit.Test;
@@ -19,6 +20,8 @@ import io.vertx.ext.unit.junit.VertxUnitRunner;
 public class ItemCheckedOutEventHandlerTest extends AbstractEventHandlerTest {
   private static final ItemCheckedOutEventHandler eventHandler =
     new ItemCheckedOutEventHandler(postgresClient);
+  protected static final UserSummaryRepository userSummaryRepository =
+    new UserSummaryRepository(postgresClient);
 
   @Test
   public void userSummaryShouldBeCreatedWhenDoesntExist(TestContext context) {
@@ -42,7 +45,7 @@ public class ItemCheckedOutEventHandlerTest extends AbstractEventHandlerTest {
         .withDueDate(dueDate.toDate())
         .withRecall(false)));
 
-    checkUserSummary(summaryId, userSummaryToCompare, context);
+    checkUserSummary(summaryId, userSummaryToCompare, context, userSummaryRepository);
   }
 
   @Test
@@ -77,7 +80,7 @@ public class ItemCheckedOutEventHandlerTest extends AbstractEventHandlerTest {
       .withDueDate(dueDate.toDate())
       .withRecall(false));
 
-    checkUserSummary(summaryId, existingUserSummary, context);
+    checkUserSummary(summaryId, existingUserSummary, context, userSummaryRepository);
   }
 
   @Test

@@ -13,9 +13,6 @@ import org.junit.Before;
 import io.vertx.ext.unit.TestContext;
 
 public class AbstractEventHandlerTest extends TestBase {
-  protected static final UserSummaryRepository userSummaryRepository =
-    new UserSummaryRepository(postgresClient);
-
   @Before
   public void beforeEach(TestContext context) {
     super.resetMocks();
@@ -23,7 +20,7 @@ public class AbstractEventHandlerTest extends TestBase {
   }
 
   protected void checkUserSummary(String summaryId, UserSummary userSummaryToCompare,
-    TestContext context) {
+    TestContext context, UserSummaryRepository userSummaryRepository) {
 
     UserSummary userSummary = waitFor(userSummaryRepository.get(summaryId)).orElseThrow(() ->
       new AssertionError("User summary was not found: " + summaryId));

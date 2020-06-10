@@ -6,6 +6,7 @@ import java.util.List;
 
 import org.folio.domain.OpenLoan;
 import org.folio.domain.UserSummary;
+import org.folio.repository.UserSummaryRepository;
 import org.folio.rest.jaxrs.model.ItemDeclaredLostEvent;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -15,9 +16,10 @@ import io.vertx.ext.unit.junit.VertxUnitRunner;
 
 @RunWith(VertxUnitRunner.class)
 public class ItemDeclaredLostEventHandlerTest extends AbstractEventHandlerTest {
-
   private static final ItemDeclaredLostEventHandler eventHandler =
     new ItemDeclaredLostEventHandler(postgresClient);
+  protected static final UserSummaryRepository userSummaryRepository =
+    new UserSummaryRepository(postgresClient);
 
   @Test
   public void userSummaryShouldBeCreatedWhenDoesntExist(TestContext context) {
@@ -35,7 +37,7 @@ public class ItemDeclaredLostEventHandlerTest extends AbstractEventHandlerTest {
       .withNumberOfLostItems(1)
       .withOutstandingFeeFineBalance(BigDecimal.ZERO);
 
-    checkUserSummary(summaryId, userSummaryToCompare, context);
+    checkUserSummary(summaryId, userSummaryToCompare, context, userSummaryRepository);
   }
 
   @Test
@@ -61,7 +63,7 @@ public class ItemDeclaredLostEventHandlerTest extends AbstractEventHandlerTest {
       .withNumberOfLostItems(1)
       .withOutstandingFeeFineBalance(BigDecimal.ZERO);
 
-    checkUserSummary(summaryId, userSummaryToCompare, context);
+    checkUserSummary(summaryId, userSummaryToCompare, context, userSummaryRepository);
   }
 
   @Test
@@ -93,6 +95,6 @@ public class ItemDeclaredLostEventHandlerTest extends AbstractEventHandlerTest {
       .withNumberOfLostItems(1)
       .withOutstandingFeeFineBalance(BigDecimal.ZERO);
 
-    checkUserSummary(summaryId, userSummaryToCompare, context);
+    checkUserSummary(summaryId, userSummaryToCompare, context, userSummaryRepository);
   }
 }
