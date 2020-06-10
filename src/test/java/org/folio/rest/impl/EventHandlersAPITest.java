@@ -138,15 +138,54 @@ public class EventHandlersAPITest extends TestBase {
   }
 
   @Test
-  public void postAutomatedPatronBlocksHandlersItemDeclaredLost(TestContext context) {
-    // TODO: replace with real test once event handler is implemented
-    sendEvent(ITEM_DECLARED_LOST_HANDLER_URL, toJson(new ItemDeclaredLostEvent()), SC_NO_CONTENT);
+  public void loanDueDateChangedEventProcessedSuccessfully(TestContext context) {
+    String userId = randomId();
+
+    Optional<UserSummary> userSummaryBeforeEvent =
+      waitFor(userSummaryRepository.getByUserId(userId));
+
+    context.assertFalse(userSummaryBeforeEvent.isPresent());
+
+    LoanDueDateChangedEvent event = new LoanDueDateChangedEvent()
+      .withUserId(userId)
+      .withLoanId(randomId())
+      .withDueDate(new Date())
+      .withDueDateChangedByRecall(false);
+
+    sendEvent(LOAN_DUE_DATE_CHANGED_HANDLER_URL, toJson(event), SC_NO_CONTENT);
+    assertThatUserSummaryWasCreated(userId);
   }
 
   @Test
-  public void postAutomatedPatronBlocksHandlersLoanDueDateUpdated(TestContext context) {
+  public void loanDueDateChangedEventWithMalformedJsonRequest(TestContext context) {
+    sendEvent(LOAN_DUE_DATE_CHANGED_HANDLER_URL, "not json", SC_BAD_REQUEST);
+  }
+
+  @Test
+  public void loanDueDateChangedEventWithInvalidValue(TestContext context) {
+    LoanDueDateChangedEvent event = new LoanDueDateChangedEvent()
+      .withUserId(randomId() + "oops")
+      .withLoanId(randomId())
+      .withDueDate(new Date())
+      .withDueDateChangedByRecall(false);
+
+    sendEvent(LOAN_DUE_DATE_CHANGED_HANDLER_URL, toJson(event), SC_UNPROCESSABLE_ENTITY);
+  }
+
+  @Test
+  public void loanDueDateChangedEventWithMissingRequiredDueDateProperty(TestContext context) {
+    LoanDueDateChangedEvent event = new LoanDueDateChangedEvent()
+      .withUserId(randomId())
+      .withLoanId(randomId())
+      .withDueDateChangedByRecall(false);
+
+    sendEvent(LOAN_DUE_DATE_CHANGED_HANDLER_URL, toJson(event), SC_UNPROCESSABLE_ENTITY);
+  }
+
+  @Test
+  public void postAutomatedPatronBlocksHandlersItemDeclaredLost(TestContext context) {
     // TODO: replace with real test once event handler is implemented
-    sendEvent(LOAN_DUE_DATE_CHANGED_HANDLER_URL, toJson(new LoanDueDateChangedEvent()), SC_NO_CONTENT);
+    sendEvent(ITEM_DECLARED_LOST_HANDLER_URL, toJson(new ItemDeclaredLostEvent()), SC_NO_CONTENT);
   }
 
   private ValidatableResponse sendEvent(String url, String payload, int expectedStatus) {
