@@ -112,8 +112,20 @@ public class EventHandlersAPITest extends TestBase {
 
   @Test
   public void postAutomatedPatronBlocksHandlersItemDeclaredLost(TestContext context) {
-    // TODO: replace with real test once event handler is implemented
-    sendEvent(ITEM_DECLARED_LOST_HANDLER_URL, toJson(new ItemDeclaredLostEvent()), SC_NO_CONTENT);
+    String userId = randomId();
+    String loanId = randomId();
+
+    Optional<UserSummary> userSummaryBeforeEvent =
+      waitFor(userSummaryRepository.getByUserId(userId));
+
+    context.assertFalse(userSummaryBeforeEvent.isPresent());
+
+    ItemDeclaredLostEvent event = new ItemDeclaredLostEvent()
+      .withUserId(userId)
+      .withLoanId(loanId);
+
+    sendEvent(ITEM_DECLARED_LOST_HANDLER_URL, toJson(event), SC_NO_CONTENT);
+    assertThatUserSummaryWasCreated(userId);
   }
 
   @Test
