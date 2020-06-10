@@ -1,6 +1,4 @@
-package org.folio.rest.handlers;
-
-import static org.folio.repository.UserSummaryRepository.USER_SUMMARY_TABLE_NAME;
+package org.folio.rest.utils;
 
 import java.util.stream.IntStream;
 
@@ -8,16 +6,10 @@ import org.folio.domain.OpenLoan;
 import org.folio.domain.UserSummary;
 import org.folio.repository.UserSummaryRepository;
 import org.folio.rest.TestBase;
-import org.junit.Before;
 
 import io.vertx.ext.unit.TestContext;
 
-public class AbstractEventHandlerTest extends TestBase {
-  @Before
-  public void beforeEach(TestContext context) {
-    super.resetMocks();
-    deleteAllFromTable(USER_SUMMARY_TABLE_NAME);
-  }
+public class UserSummaryUtils extends TestBase {
 
   protected void checkUserSummary(String summaryId, UserSummary userSummaryToCompare,
     TestContext context, UserSummaryRepository userSummaryRepository) {
@@ -43,4 +35,5 @@ public class AbstractEventHandlerTest extends TestBase {
         context.assertEquals(openLoanToCompare.getRecall(), openLoan.getRecall());
       });
   }
+
 }

@@ -1,5 +1,7 @@
 package org.folio.rest.handlers;
 
+import static org.folio.repository.UserSummaryRepository.USER_SUMMARY_TABLE_NAME;
+
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -9,7 +11,9 @@ import org.folio.domain.OpenLoan;
 import org.folio.domain.UserSummary;
 import org.folio.repository.UserSummaryRepository;
 import org.folio.rest.jaxrs.model.ItemCheckedOutEvent;
+import org.folio.rest.utils.UserSummaryUtils;
 import org.joda.time.DateTime;
+import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
@@ -17,11 +21,17 @@ import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
 
 @RunWith(VertxUnitRunner.class)
-public class ItemCheckedOutEventHandlerTest extends AbstractEventHandlerTest {
+public class ItemCheckedOutEventHandlerTest extends UserSummaryUtils {
   private static final ItemCheckedOutEventHandler eventHandler =
     new ItemCheckedOutEventHandler(postgresClient);
   protected static final UserSummaryRepository userSummaryRepository =
     new UserSummaryRepository(postgresClient);
+
+  @Before
+  public void beforeEach(TestContext context) {
+    super.resetMocks();
+    deleteAllFromTable(USER_SUMMARY_TABLE_NAME);
+  }
 
   @Test
   public void userSummaryShouldBeCreatedWhenDoesntExist(TestContext context) {
