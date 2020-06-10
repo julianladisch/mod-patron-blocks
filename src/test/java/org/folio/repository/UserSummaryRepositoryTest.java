@@ -4,9 +4,9 @@ import static java.math.BigDecimal.ONE;
 import static java.math.BigDecimal.TEN;
 import static java.util.Arrays.asList;
 import static org.folio.repository.UserSummaryRepository.USER_SUMMARY_TABLE_NAME;
-import static org.joda.time.DateTime.now;
 
 import java.math.BigDecimal;
+import java.util.Date;
 import java.util.List;
 import java.util.Optional;
 
@@ -191,8 +191,8 @@ public class UserSummaryRepositoryTest extends TestBase {
     OpenLoan openLoan = new OpenLoan()
       .withLoanId(randomId())
       .withRecall(false)
-      .withDueDate(now())
-      .withReturnedDate(now());
+      .withDueDate(new Date())
+      .withReturnedDate(new Date());
 
     OpenFeeFine openFeeFine = new OpenFeeFine()
       .withFeeFineId(randomId())

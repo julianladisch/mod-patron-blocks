@@ -1,0 +1,28 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "type": "object",
+  "description": "Fee/fine balance changed event",
+  "properties": {
+    "userId": {
+      "description": "ID of the user that checked out an item",
+      "type": "string",
+      "$ref": "../raml-util/schemas/uuid.schema"
+    },
+    "loanId": {
+      "description": "ID of the loan created during a check out",
+      "type": "string",
+      "$ref": "../raml-util/schemas/uuid.schema"
+    },
+    "dueDate": {
+      "description": "Due date of the loan",
+      "type": "string",
+      "format": "date-time"
+    }
+  },
+  "additionalProperties": false,
+  "required": [
+    "userId",
+    "loanId",
+    "dueDate"
+  ]
+}

@@ -1,11 +1,11 @@
 
 package org.folio.domain;
 
+import java.util.Date;
+
 import javax.validation.constraints.Pattern;
 
 import org.apache.commons.lang3.ObjectUtils;
-import org.folio.serialization.DateTimeDeserializer;
-import org.folio.serialization.DateTimeSerializer;
 import org.joda.time.DateTime;
 import org.joda.time.Days;
 
@@ -14,8 +14,6 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyDescription;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
-import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
-import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 
 /**
  * Collection of open loans
@@ -44,18 +42,14 @@ public class OpenLoan {
      */
     @JsonProperty("dueDate")
     @JsonPropertyDescription("Loan due date")
-    @JsonSerialize(using = DateTimeSerializer.class)
-    @JsonDeserialize(using = DateTimeDeserializer.class)
-    private DateTime dueDate;
+    private Date dueDate;
     /**
      * Loan return date
      *
      */
     @JsonProperty("returnedDate")
     @JsonPropertyDescription("Loan return date")
-    @JsonSerialize(using = DateTimeSerializer.class)
-    @JsonDeserialize(using = DateTimeDeserializer.class)
-    private DateTime returnedDate;
+    private Date returnedDate;
     /**
      * Due date has been changed by a recall
      *
@@ -92,7 +86,7 @@ public class OpenLoan {
      *
      */
     @JsonProperty("dueDate")
-    public DateTime getDueDate() {
+    public Date getDueDate() {
         return dueDate;
     }
 
@@ -101,11 +95,11 @@ public class OpenLoan {
      *
      */
     @JsonProperty("dueDate")
-    public void setDueDate(DateTime dueDate) {
+    public void setDueDate(Date dueDate) {
         this.dueDate = dueDate;
     }
 
-    public OpenLoan withDueDate(DateTime dueDate) {
+    public OpenLoan withDueDate(Date dueDate) {
         this.dueDate = dueDate;
         return this;
     }
@@ -115,7 +109,7 @@ public class OpenLoan {
      *
      */
     @JsonProperty("returnedDate")
-    public DateTime getReturnedDate() {
+    public Date getReturnedDate() {
         return returnedDate;
     }
 
@@ -124,11 +118,11 @@ public class OpenLoan {
      *
      */
     @JsonProperty("returnedDate")
-    public void setReturnedDate(DateTime returnedDate) {
+    public void setReturnedDate(Date returnedDate) {
         this.returnedDate = returnedDate;
     }
 
-    public OpenLoan withReturnedDate(DateTime returnedDate) {
+    public OpenLoan withReturnedDate(Date returnedDate) {
         this.returnedDate = returnedDate;
         return this;
     }
@@ -159,13 +153,14 @@ public class OpenLoan {
     @JsonIgnore
     public boolean isOverdue() {
         return ObjectUtils.allNotNull(dueDate, returnedDate)
-          && returnedDate.isAfter(dueDate);
+          && returnedDate.after(dueDate);
     }
 
     @JsonIgnore
     public int getOverdueDays() {
         return isOverdue()
-          ? Days.daysBetween(dueDate.toLocalDate(), returnedDate.toLocalDate()).getDays()
+          ? Days.daysBetween(
+            new DateTime(dueDate).toLocalDate(), new DateTime(returnedDate).toLocalDate()).getDays()
           : 0;
     }
 
