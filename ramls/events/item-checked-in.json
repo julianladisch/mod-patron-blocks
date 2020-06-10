@@ -22,7 +22,7 @@
   },
   "additionalProperties": false,
   "required": [
-    "feeFineId",
-    "balance"
+    "userId",
+    "loanId"
   ]
 }
