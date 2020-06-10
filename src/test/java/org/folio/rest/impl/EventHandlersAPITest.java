@@ -19,6 +19,7 @@ import org.folio.rest.jaxrs.model.ItemCheckedOutEvent;
 import org.folio.rest.jaxrs.model.ItemDeclaredLostEvent;
 import org.folio.rest.jaxrs.model.LoanDueDateChangedEvent;
 import org.folio.rest.jaxrs.model.UserSummary;
+import org.joda.time.DateTime;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -118,8 +119,22 @@ public class EventHandlersAPITest extends TestBase {
 
   @Test
   public void postAutomatedPatronBlocksHandlersItemCheckedOut(TestContext context) {
-    // TODO: replace with real test once event handler is implemented
-    sendEvent(ITEM_CHECKED_OUT_HANDLER_URL, toJson(new ItemCheckedOutEvent()), SC_NO_CONTENT);
+    String userId = randomId();
+    String loanId = randomId();
+    DateTime dueDate = DateTime.now();
+
+    Optional<UserSummary> userSummaryBeforeEvent =
+      waitFor(userSummaryRepository.getByUserId(userId));
+
+    context.assertFalse(userSummaryBeforeEvent.isPresent());
+
+    ItemCheckedOutEvent event = new ItemCheckedOutEvent()
+      .withUserId(userId)
+      .withLoanId(loanId)
+      .withDueDate(dueDate.toDate());
+
+    sendEvent(ITEM_CHECKED_OUT_HANDLER_URL, toJson(event), SC_NO_CONTENT);
+    assertThatUserSummaryWasCreated(userId);
   }
 
   @Test

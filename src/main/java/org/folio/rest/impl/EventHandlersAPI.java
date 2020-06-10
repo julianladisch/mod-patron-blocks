@@ -9,6 +9,7 @@ import javax.ws.rs.core.Response;
 import org.folio.domain.Event;
 import org.folio.domain.EventType;
 import org.folio.rest.handlers.ItemCheckedInEventHandler;
+import org.folio.rest.handlers.ItemCheckedOutEventHandler;
 import org.folio.rest.jaxrs.model.FeeFineBalanceChangedEvent;
 import org.folio.rest.jaxrs.model.ItemCheckedInEvent;
 import org.folio.rest.jaxrs.model.ItemCheckedOutEvent;
@@ -50,7 +51,9 @@ public class EventHandlersAPI implements AutomatedPatronBlocksHandlers {
     asyncResultHandler.handle(Future.succeededFuture(
       PostAutomatedPatronBlocksHandlersItemCheckedOutResponse.respond204()));
 
-    logEventReceived(event);
+    logEventReceived(event)
+
+    new ItemCheckedOutEventHandler(okapiHeaders, vertxContext.owner()).handle(event);
   }
 
   @Override

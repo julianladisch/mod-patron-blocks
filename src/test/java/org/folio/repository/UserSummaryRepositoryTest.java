@@ -4,7 +4,6 @@ import static java.math.BigDecimal.ONE;
 import static java.math.BigDecimal.TEN;
 import static java.util.Arrays.asList;
 import static org.folio.repository.UserSummaryRepository.USER_SUMMARY_TABLE_NAME;
-import static org.joda.time.DateTime.now;
 
 import java.math.BigDecimal;
 import java.util.Date;
