@@ -7,9 +7,9 @@ import java.util.List;
 import java.util.Map;
 
 import org.apache.commons.lang3.StringUtils;
-import org.folio.domain.OpenLoan;
-import org.folio.domain.UserSummary;
 import org.folio.rest.jaxrs.model.ItemCheckedOutEvent;
+import org.folio.rest.jaxrs.model.OpenLoan;
+import org.folio.rest.jaxrs.model.UserSummary;
 import org.folio.rest.persist.PostgresClient;
 
 import io.vertx.core.Future;
@@ -43,8 +43,7 @@ public class ItemCheckedOutEventHandler extends EventHandler<ItemCheckedOutEvent
       openLoans.add(new OpenLoan()
         .withLoanId(event.getLoanId())
         .withDueDate(event.getDueDate())
-        .withRecall(false)
-        .withReturnedDate(null));
+        .withRecall(false));
 
       return userSummaryRepository.upsert(userSummary, userSummary.getId());
     }

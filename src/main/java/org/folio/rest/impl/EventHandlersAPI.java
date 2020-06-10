@@ -51,7 +51,7 @@ public class EventHandlersAPI implements AutomatedPatronBlocksHandlers {
     asyncResultHandler.handle(Future.succeededFuture(
       PostAutomatedPatronBlocksHandlersItemCheckedOutResponse.respond204()));
 
-    logEventReceived(event)
+    logEventReceived(event);
 
     new ItemCheckedOutEventHandler(okapiHeaders, vertxContext.owner()).handle(event);
   }

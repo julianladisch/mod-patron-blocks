@@ -8,11 +8,11 @@ import java.util.Collections;
 import java.util.List;
 import java.util.stream.IntStream;
 
-import org.folio.domain.OpenLoan;
-import org.folio.domain.UserSummary;
 import org.folio.repository.UserSummaryRepository;
 import org.folio.rest.TestBase;
 import org.folio.rest.jaxrs.model.ItemCheckedOutEvent;
+import org.folio.rest.jaxrs.model.OpenLoan;
+import org.folio.rest.jaxrs.model.UserSummary;
 import org.joda.time.DateTime;
 import org.junit.Before;
 import org.junit.Test;
@@ -141,7 +141,6 @@ public class ItemCheckedOutEventHandlerTest extends TestBase {
         OpenLoan openLoanToCompare = userSummaryToCompare.getOpenLoans().get(i);
         context.assertEquals(openLoanToCompare.getLoanId(), openLoan.getLoanId());
         context.assertEquals(openLoanToCompare.getDueDate(), openLoan.getDueDate());
-        context.assertEquals(openLoanToCompare.getReturnedDate(), openLoan.getReturnedDate());
         context.assertEquals(openLoanToCompare.getRecall(), openLoan.getRecall());
       });
   }
