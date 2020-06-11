@@ -1,4 +1,4 @@
-package org.folio.rest.utils;
+package org.folio.rest.handlers;
 
 import java.util.stream.IntStream;
 
@@ -9,10 +9,13 @@ import org.folio.rest.TestBase;
 
 import io.vertx.ext.unit.TestContext;
 
-public class UserSummaryUtils extends TestBase {
+public class EventHandlerTest extends TestBase {
+
+  protected final UserSummaryRepository userSummaryRepository =
+    new UserSummaryRepository(postgresClient);
 
   protected void checkUserSummary(String summaryId, UserSummary userSummaryToCompare,
-    TestContext context, UserSummaryRepository userSummaryRepository) {
+    TestContext context) {
 
     UserSummary userSummary = waitFor(userSummaryRepository.get(summaryId)).orElseThrow(() ->
       new AssertionError("User summary was not found: " + summaryId));

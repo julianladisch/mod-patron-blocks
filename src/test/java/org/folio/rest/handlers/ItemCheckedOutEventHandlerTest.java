@@ -9,9 +9,7 @@ import java.util.List;
 
 import org.folio.domain.OpenLoan;
 import org.folio.domain.UserSummary;
-import org.folio.repository.UserSummaryRepository;
 import org.folio.rest.jaxrs.model.ItemCheckedOutEvent;
-import org.folio.rest.utils.UserSummaryUtils;
 import org.joda.time.DateTime;
 import org.junit.Before;
 import org.junit.Test;
@@ -21,11 +19,9 @@ import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
 
 @RunWith(VertxUnitRunner.class)
-public class ItemCheckedOutEventHandlerTest extends UserSummaryUtils {
+public class ItemCheckedOutEventHandlerTest extends EventHandlerTest {
   private static final ItemCheckedOutEventHandler eventHandler =
     new ItemCheckedOutEventHandler(postgresClient);
-  protected static final UserSummaryRepository userSummaryRepository =
-    new UserSummaryRepository(postgresClient);
 
   @Before
   public void beforeEach(TestContext context) {
@@ -55,7 +51,7 @@ public class ItemCheckedOutEventHandlerTest extends UserSummaryUtils {
         .withDueDate(dueDate.toDate())
         .withRecall(false)));
 
-    checkUserSummary(summaryId, userSummaryToCompare, context, userSummaryRepository);
+    checkUserSummary(summaryId, userSummaryToCompare, context);
   }
 
   @Test
@@ -90,7 +86,7 @@ public class ItemCheckedOutEventHandlerTest extends UserSummaryUtils {
       .withDueDate(dueDate.toDate())
       .withRecall(false));
 
-    checkUserSummary(summaryId, existingUserSummary, context, userSummaryRepository);
+    checkUserSummary(summaryId, existingUserSummary, context);
   }
 
   @Test

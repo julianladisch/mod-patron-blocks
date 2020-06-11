@@ -20,11 +20,9 @@ import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
 
 @RunWith(VertxUnitRunner.class)
-public class FeeFineBalanceChangedEventHandlerTest extends TestBase {
+public class FeeFineBalanceChangedEventHandlerTest extends EventHandlerTest {
   private static final FeeFineBalanceChangedEventHandler eventHandler =
     new FeeFineBalanceChangedEventHandler(postgresClient);
-  private static final UserSummaryRepository userSummaryRepository =
-    new UserSummaryRepository(postgresClient);
 
   @Before
   public void beforeEach(TestContext context) {

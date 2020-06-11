@@ -39,10 +39,7 @@ public class ItemDeclaredLostEventHandler extends EventHandler<ItemDeclaredLostE
     userSummary.setNumberOfLostItems(userSummary.getNumberOfLostItems() + 1);
 
     // remove open loan from a summary
-    List<OpenLoan> newOpenLoans = userSummary.getOpenLoans().stream()
-      .filter(loan -> !loan.getLoanId().equals(event.getLoanId()))
-      .collect(Collectors.toList());
-    userSummary.setOpenLoans(newOpenLoans);
+    userSummary.getOpenLoans().removeIf(loan -> loan.getLoanId().equals(event.getLoanId()));
 
     return userSummaryRepository.upsert(userSummary, userSummary.getId());
   }
