@@ -47,7 +47,7 @@ public class LoanDueDateChangedEventHandlerTest extends EventHandlerTestBase {
 
     String summaryId = waitFor(eventHandler.handle(event));
 
-    UserSummary expectedSumamry = new UserSummary()
+    UserSummary expectedSummary = new UserSummary()
       .withId(summaryId)
       .withUserId(userId)
       .withOutstandingFeeFineBalance(BigDecimal.ZERO)
@@ -57,7 +57,7 @@ public class LoanDueDateChangedEventHandlerTest extends EventHandlerTestBase {
         .withDueDate(event.getDueDate())
         .withRecall(event.getDueDateChangedByRecall())));
 
-    checkUserSummary(summaryId, expectedSumamry, context);
+    checkUserSummary(summaryId, expectedSummary, context);
   }
 
   @Test
