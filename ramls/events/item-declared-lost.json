@@ -4,10 +4,20 @@
   "javaInterfaces" : ["org.folio.domain.Event"],
   "description": "Item declared lost event",
   "properties": {
-
+    "userId": {
+      "description": "ID of the user that declared an item lost",
+      "type": "string",
+      "$ref": "../raml-util/schemas/uuid.schema"
+    },
+    "loanId": {
+      "description": "ID of the loan associated with a lost item",
+      "type": "string",
+      "$ref": "../raml-util/schemas/uuid.schema"
+    }
   },
   "additionalProperties": false,
   "required": [
-
+    "userId",
+    "loanId"
   ]
 }

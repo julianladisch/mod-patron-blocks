@@ -1,15 +1,13 @@
 package org.folio.rest.handlers;
 
+import static java.util.Collections.singletonList;
 import static org.folio.repository.UserSummaryRepository.USER_SUMMARY_TABLE_NAME;
 
 import java.math.BigDecimal;
 import java.util.Arrays;
 import java.util.Date;
-import java.util.List;
 import java.util.Optional;
 
-import org.folio.repository.UserSummaryRepository;
-import org.folio.rest.TestBase;
 import org.folio.rest.jaxrs.model.ItemCheckedInEvent;
 import org.folio.rest.jaxrs.model.OpenLoan;
 import org.folio.rest.jaxrs.model.UserSummary;
@@ -21,11 +19,9 @@ import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
 
 @RunWith(VertxUnitRunner.class)
-public class ItemCheckedInHandlerTest extends TestBase {
+public class ItemCheckedInHandlerTest extends EventHandlerTestBase {
   private static final ItemCheckedInEventHandler eventHandler =
     new ItemCheckedInEventHandler(postgresClient);
-  private static final UserSummaryRepository userSummaryRepository =
-    new UserSummaryRepository(postgresClient);
 
   @Before
   public void beforeEach(TestContext context) {
@@ -60,12 +56,8 @@ public class ItemCheckedInHandlerTest extends TestBase {
     String handledSummaryId = waitFor(eventHandler.handle(event));
     context.assertEquals(savedSummaryId, handledSummaryId);
 
-    Optional<UserSummary> optionalSummary = waitFor(userSummaryRepository.get(savedSummaryId));
-
-    context.assertTrue(optionalSummary.isPresent());
-    List<OpenLoan> openLoans = optionalSummary.get().getOpenLoans();
-    context.assertEquals(1, openLoans.size());
-    context.assertEquals(existingLoan1.getLoanId(), openLoans.get(0).getLoanId());
+    UserSummary expectedSummary = initialUserSummary.withOpenLoans(singletonList(existingLoan1));
+    checkUserSummary(savedSummaryId, expectedSummary, context);
   }
 
   @Test
@@ -90,13 +82,7 @@ public class ItemCheckedInHandlerTest extends TestBase {
     String handledSummaryId = waitFor(eventHandler.handle(event));
 
     context.assertNull(handledSummaryId);
-
-    Optional<UserSummary> optionalSummary = waitFor(userSummaryRepository.get(savedSummaryId));
-
-    context.assertTrue(optionalSummary.isPresent());
-    List<OpenLoan> openLoans = optionalSummary.get().getOpenLoans();
-    context.assertEquals(1, openLoans.size());
-    context.assertEquals(existingLoan.getLoanId(), openLoans.get(0).getLoanId());
+    checkUserSummary(savedSummaryId, initialUserSummary, context);
   }
 
   @Test

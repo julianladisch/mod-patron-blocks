@@ -4,13 +4,11 @@ import static org.folio.repository.UserSummaryRepository.USER_SUMMARY_TABLE_NAME
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
-import org.folio.rest.jaxrs.model.ItemCheckedOutEvent;
+import org.folio.rest.jaxrs.model.ItemDeclaredLostEvent;
 import org.folio.rest.jaxrs.model.OpenLoan;
 import org.folio.rest.jaxrs.model.UserSummary;
-import org.joda.time.DateTime;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -19,9 +17,9 @@ import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
 
 @RunWith(VertxUnitRunner.class)
-public class ItemCheckedOutEventHandlerTest extends EventHandlerTestBase {
-  private static final ItemCheckedOutEventHandler eventHandler =
-    new ItemCheckedOutEventHandler(postgresClient);
+public class ItemDeclaredLostEventHandlerTest extends EventHandlerTestBase {
+  private static final ItemDeclaredLostEventHandler eventHandler =
+    new ItemDeclaredLostEventHandler(postgresClient);
 
   @Before
   public void beforeEach(TestContext context) {
@@ -33,72 +31,55 @@ public class ItemCheckedOutEventHandlerTest extends EventHandlerTestBase {
   public void userSummaryShouldBeCreatedWhenDoesntExist(TestContext context) {
     String userId = randomId();
     String loanId = randomId();
-    DateTime dueDate = DateTime.now();
 
-    ItemCheckedOutEvent event = new ItemCheckedOutEvent()
+    ItemDeclaredLostEvent event = new ItemDeclaredLostEvent()
       .withUserId(userId)
-      .withLoanId(loanId)
-      .withDueDate(dueDate.toDate());
+      .withLoanId(loanId);
 
     String summaryId = waitFor(eventHandler.handle(event));
 
     UserSummary userSummaryToCompare = new UserSummary()
       .withUserId(userId)
-      .withNumberOfLostItems(0)
-      .withOutstandingFeeFineBalance(BigDecimal.ZERO)
-      .withOpenLoans(Collections.singletonList(new OpenLoan()
-        .withLoanId(loanId)
-        .withDueDate(dueDate.toDate())
-        .withRecall(false)));
+      .withNumberOfLostItems(1)
+      .withOutstandingFeeFineBalance(BigDecimal.ZERO);
 
     checkUserSummary(summaryId, userSummaryToCompare, context);
   }
 
   @Test
-  public void shouldAddOpenLoanWhenUserSummaryExists(TestContext context) {
+  public void shouldIncrementLostItemsWhenUserSummaryExists(TestContext context) {
     String userId = randomId();
     String loanId = randomId();
-    DateTime dueDate = DateTime.now();
-
-    List<OpenLoan> existingOpenLoans = new ArrayList<>();
-    existingOpenLoans.add(new OpenLoan()
-      .withLoanId(randomId())
-      .withDueDate(dueDate.toDate())
-      .withRecall(false));
 
     UserSummary existingUserSummary = new UserSummary()
       .withUserId(userId)
       .withNumberOfLostItems(0)
-      .withOutstandingFeeFineBalance(BigDecimal.ZERO)
-      .withOpenLoans(existingOpenLoans);
+      .withOutstandingFeeFineBalance(BigDecimal.ZERO);
 
     waitFor(userSummaryRepository.save(existingUserSummary));
 
-    ItemCheckedOutEvent event = new ItemCheckedOutEvent()
+    ItemDeclaredLostEvent event = new ItemDeclaredLostEvent()
       .withUserId(userId)
-      .withLoanId(loanId)
-      .withDueDate(dueDate.toDate());
+      .withLoanId(loanId);
 
     String summaryId = waitFor(eventHandler.handle(event));
 
-    existingOpenLoans.add(new OpenLoan()
-      .withLoanId(loanId)
-      .withDueDate(dueDate.toDate())
-      .withRecall(false));
+    UserSummary userSummaryToCompare = new UserSummary()
+      .withUserId(userId)
+      .withNumberOfLostItems(1)
+      .withOutstandingFeeFineBalance(BigDecimal.ZERO);
 
-    checkUserSummary(summaryId, existingUserSummary, context);
+    checkUserSummary(summaryId, userSummaryToCompare, context);
   }
 
   @Test
-  public void shouldFailWhenOpenLoanWithTheSameLoanIdExists(TestContext context) {
+  public void shouldRemoveOpenLoanFromUserSummaryWhenItExists(TestContext context) {
     String userId = randomId();
     String loanId = randomId();
-    DateTime dueDate = DateTime.now();
 
     List<OpenLoan> existingOpenLoans = new ArrayList<>();
     existingOpenLoans.add(new OpenLoan()
       .withLoanId(loanId)
-      .withDueDate(dueDate.toDate())
       .withRecall(false));
 
     UserSummary existingUserSummary = new UserSummary()
@@ -109,11 +90,17 @@ public class ItemCheckedOutEventHandlerTest extends EventHandlerTestBase {
 
     waitFor(userSummaryRepository.save(existingUserSummary));
 
-    ItemCheckedOutEvent event = new ItemCheckedOutEvent()
+    ItemDeclaredLostEvent event = new ItemDeclaredLostEvent()
       .withUserId(userId)
-      .withLoanId(loanId)
-      .withDueDate(dueDate.toDate());
+      .withLoanId(loanId);
 
-    context.assertNull(waitFor(eventHandler.handle(event)));
+    String summaryId = waitFor(eventHandler.handle(event));
+
+    UserSummary userSummaryToCompare = new UserSummary()
+      .withUserId(userId)
+      .withNumberOfLostItems(1)
+      .withOutstandingFeeFineBalance(BigDecimal.ZERO);
+
+    checkUserSummary(summaryId, userSummaryToCompare, context);
   }
 }
