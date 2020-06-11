@@ -6,8 +6,6 @@ import java.math.BigDecimal;
 import java.util.Arrays;
 
 import org.folio.exception.EntityNotFoundException;
-import org.folio.repository.UserSummaryRepository;
-import org.folio.rest.TestBase;
 import org.folio.rest.jaxrs.model.FeeFineBalanceChangedEvent;
 import org.folio.rest.jaxrs.model.OpenFeeFine;
 import org.folio.rest.jaxrs.model.UserSummary;
@@ -20,11 +18,9 @@ import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
 
 @RunWith(VertxUnitRunner.class)
-public class FeeFineBalanceChangedEventHandlerTest extends TestBase {
+public class FeeFineBalanceChangedEventHandlerTest extends EventHandlerTestBase {
   private static final FeeFineBalanceChangedEventHandler eventHandler =
     new FeeFineBalanceChangedEventHandler(postgresClient);
-  private static final UserSummaryRepository userSummaryRepository =
-    new UserSummaryRepository(postgresClient);
 
   @Before
   public void beforeEach(TestContext context) {
