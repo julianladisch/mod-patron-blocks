@@ -7,9 +7,9 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-import org.folio.domain.OpenLoan;
-import org.folio.domain.UserSummary;
 import org.folio.rest.jaxrs.model.ItemCheckedOutEvent;
+import org.folio.rest.jaxrs.model.OpenLoan;
+import org.folio.rest.jaxrs.model.UserSummary;
 import org.joda.time.DateTime;
 import org.junit.Before;
 import org.junit.Test;

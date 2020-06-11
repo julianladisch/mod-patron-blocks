@@ -1,12 +1,28 @@
 {
   "$schema": "http://json-schema.org/draft-04/schema#",
   "type": "object",
+  "javaInterfaces" : ["org.folio.domain.Event"],
   "description": "Item checked in event",
   "properties": {
-
+    "userId": {
+      "description": "Unique ID of a user",
+      "type": "string",
+      "$ref": "../raml-util/schemas/uuid.schema"
+    },
+    "loanId": {
+      "description": "Unique ID of a loan",
+      "type": "string",
+      "$ref": "../raml-util/schemas/uuid.schema"
+    },
+    "returnDate": {
+      "description": "Loan return date",
+      "type": "string",
+      "format": "date-time"
+    }
   },
   "additionalProperties": false,
   "required": [
-
+    "userId",
+    "loanId"
   ]
 }

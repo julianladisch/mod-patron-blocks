@@ -11,7 +11,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-import org.folio.domain.UserSummary;
 import org.folio.exception.EntityNotFoundException;
 import org.folio.repository.PatronBlockConditionsRepository;
 import org.folio.repository.PatronBlockLimitsRepository;
@@ -21,6 +20,7 @@ import org.folio.rest.jaxrs.model.AutomatedPatronBlock;
 import org.folio.rest.jaxrs.model.AutomatedPatronBlocks;
 import org.folio.rest.jaxrs.model.PatronBlockCondition;
 import org.folio.rest.jaxrs.model.PatronBlockLimit;
+import org.folio.rest.jaxrs.model.UserSummary;
 import org.folio.rest.persist.PostgresClient;
 import org.folio.rest.tools.utils.TenantTool;
 

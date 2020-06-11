@@ -7,10 +7,10 @@ import static org.apache.http.HttpStatus.SC_UNPROCESSABLE_ENTITY;
 import static org.folio.repository.UserSummaryRepository.USER_SUMMARY_TABLE_NAME;
 
 import java.math.BigDecimal;
+import java.util.Date;
 import java.util.Optional;
 
 import org.awaitility.Awaitility;
-import org.folio.domain.UserSummary;
 import org.folio.repository.UserSummaryRepository;
 import org.folio.rest.TestBase;
 import org.folio.rest.jaxrs.model.FeeFineBalanceChangedEvent;
@@ -18,6 +18,7 @@ import org.folio.rest.jaxrs.model.ItemCheckedInEvent;
 import org.folio.rest.jaxrs.model.ItemCheckedOutEvent;
 import org.folio.rest.jaxrs.model.ItemDeclaredLostEvent;
 import org.folio.rest.jaxrs.model.LoanDueDateChangedEvent;
+import org.folio.rest.jaxrs.model.UserSummary;
 import org.joda.time.DateTime;
 import org.junit.Before;
 import org.junit.Test;
@@ -85,6 +86,38 @@ public class EventHandlersAPITest extends TestBase {
   }
 
   @Test
+  public void itemCheckedInEventProcessedSuccessfully(TestContext context) {
+    String userId = randomId();
+
+    Optional<UserSummary> userSummaryBeforeEvent =
+      waitFor(userSummaryRepository.getByUserId(userId));
+
+    context.assertFalse(userSummaryBeforeEvent.isPresent());
+
+    ItemCheckedInEvent event = new ItemCheckedInEvent()
+      .withUserId(userId)
+      .withLoanId(randomId())
+      .withReturnDate(new Date());
+
+    sendEvent(ITEM_CHECKED_IN_HANDLER_URL, toJson(event), SC_NO_CONTENT);
+  }
+
+  @Test
+  public void itemCheckedInEventWithMalformedJsonRequest(TestContext context) {
+    sendEvent(ITEM_CHECKED_IN_HANDLER_URL, "not json", SC_BAD_REQUEST);
+  }
+
+  @Test
+  public void itemCheckedInEventWithInvalidValue(TestContext context) {
+    ItemCheckedInEvent event = new ItemCheckedInEvent()
+      .withUserId(randomId() + "oops")
+      .withLoanId(randomId())
+      .withReturnDate(new Date());
+
+    sendEvent(ITEM_CHECKED_IN_HANDLER_URL, toJson(event), SC_UNPROCESSABLE_ENTITY);
+  }
+
+  @Test
   public void postAutomatedPatronBlocksHandlersItemCheckedOut(TestContext context) {
     String userId = randomId();
     String loanId = randomId();
@@ -102,12 +135,6 @@ public class EventHandlersAPITest extends TestBase {
 
     sendEvent(ITEM_CHECKED_OUT_HANDLER_URL, toJson(event), SC_NO_CONTENT);
     assertThatUserSummaryWasCreated(userId);
-  }
-
-  @Test
-  public void postAutomatedPatronBlocksHandlersItemCheckedIn(TestContext context) {
-    // TODO: replace with real test once event handler is implemented
-    sendEvent(ITEM_CHECKED_IN_HANDLER_URL, toJson(new ItemCheckedInEvent()), SC_NO_CONTENT);
   }
 
   @Test

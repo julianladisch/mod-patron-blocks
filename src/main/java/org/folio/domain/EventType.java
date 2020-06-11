@@ -17,7 +17,7 @@ public enum EventType {
   LOAN_DUE_DATE_CHANGED(LoanDueDateChangedEvent.class),
   UNKNOWN(null);
 
-  private static final Map<Class<?>, EventType> eventToType;
+  private static final Map<Class<? extends Event>, EventType> eventToType;
   static {
     eventToType = new HashMap<>(values().length);
     for (EventType eventType : values()) {
@@ -25,13 +25,13 @@ public enum EventType {
     }
   }
 
-  private final Class<?> eventClass;
+  private final Class<? extends Event> eventClass;
 
-  EventType(Class<?> eventClass) {
+  EventType(Class<? extends Event> eventClass) {
     this.eventClass = eventClass;
   }
 
-  public Class<?> getEventClass() {
+  public Class<? extends Event> getEventClass() {
     return eventClass;
   }
 

@@ -6,7 +6,9 @@ import java.util.Map;
 
 import javax.ws.rs.core.Response;
 
+import org.folio.domain.Event;
 import org.folio.domain.EventType;
+import org.folio.rest.handlers.ItemCheckedInEventHandler;
 import org.folio.rest.handlers.ItemCheckedOutEventHandler;
 import org.folio.rest.handlers.ItemDeclaredLostEventHandler;
 import org.folio.rest.jaxrs.model.FeeFineBalanceChangedEvent;
@@ -64,6 +66,9 @@ public class EventHandlersAPI implements AutomatedPatronBlocksHandlers {
       PostAutomatedPatronBlocksHandlersItemCheckedInResponse.respond204()));
 
     logEventReceived(event);
+
+    new ItemCheckedInEventHandler(okapiHeaders, vertxContext.owner())
+      .handle(event);
   }
 
   @Override
@@ -90,7 +95,7 @@ public class EventHandlersAPI implements AutomatedPatronBlocksHandlers {
     logEventReceived(event);
   }
 
-  private static void logEventReceived(Object event) {
+  private static void logEventReceived(Event event) {
     log.info("Received {} event with payload:\n{}",
       EventType.getNameByEvent(event),
       Json.encodePrettily(event));

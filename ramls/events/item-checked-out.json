@@ -1,7 +1,8 @@
 {
   "$schema": "http://json-schema.org/draft-04/schema#",
   "type": "object",
-  "description": "Fee/fine balance changed event",
+  "javaInterfaces" : ["org.folio.domain.Event"],
+  "description": "Item checked out event",
   "properties": {
     "userId": {
       "description": "ID of the user that checked out an item",

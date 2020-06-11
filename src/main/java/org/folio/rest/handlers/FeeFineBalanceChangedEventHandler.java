@@ -10,10 +10,10 @@ import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 
 import org.apache.commons.lang3.StringUtils;
-import org.folio.domain.OpenFeeFine;
-import org.folio.domain.UserSummary;
 import org.folio.exception.EntityNotFoundException;
 import org.folio.rest.jaxrs.model.FeeFineBalanceChangedEvent;
+import org.folio.rest.jaxrs.model.OpenFeeFine;
+import org.folio.rest.jaxrs.model.UserSummary;
 import org.folio.rest.persist.PostgresClient;
 
 public class FeeFineBalanceChangedEventHandler extends EventHandler<FeeFineBalanceChangedEvent> {
@@ -36,9 +36,9 @@ public class FeeFineBalanceChangedEventHandler extends EventHandler<FeeFineBalan
   private Future<String> updateUserSummary(UserSummary userSummary,
     FeeFineBalanceChangedEvent event) {
 
-    List<OpenFeeFine> openFeeFines = userSummary.getOpenFeeFines();
+    List<OpenFeeFine> openFeesFines = userSummary.getOpenFeesFines();
 
-    OpenFeeFine openFeeFine = openFeeFines.stream()
+    OpenFeeFine openFeeFine = openFeesFines.stream()
       .filter(feeFine -> StringUtils.equals(feeFine.getFeeFineId(), event.getFeeFineId()))
       .findFirst()
       .orElseGet(() -> {
@@ -46,12 +46,12 @@ public class FeeFineBalanceChangedEventHandler extends EventHandler<FeeFineBalan
           .withFeeFineId( event.getFeeFineId())
           .withFeeFineTypeId(event.getFeeFineTypeId())
           .withBalance(event.getBalance());
-        openFeeFines.add(newFeeFine);
+        openFeesFines.add(newFeeFine);
         return newFeeFine;
       });
 
     if (feeFineIsClosed(event)) {
-      openFeeFines.remove(openFeeFine);
+      openFeesFines.remove(openFeeFine);
     } else {
       openFeeFine.setBalance(event.getBalance());
     }
@@ -67,7 +67,7 @@ public class FeeFineBalanceChangedEventHandler extends EventHandler<FeeFineBalan
 
   private void refreshOutstandingFeeFineBalance(UserSummary userSummary) {
     userSummary.setOutstandingFeeFineBalance(
-      userSummary.getOpenFeeFines().stream()
+      userSummary.getOpenFeesFines().stream()
       .map(OpenFeeFine::getBalance)
       .reduce(BigDecimal.ZERO, BigDecimal::add)
     );
