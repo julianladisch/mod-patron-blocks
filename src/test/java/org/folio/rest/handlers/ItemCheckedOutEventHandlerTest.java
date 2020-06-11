@@ -19,7 +19,7 @@ import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
 
 @RunWith(VertxUnitRunner.class)
-public class ItemCheckedOutEventHandlerTest extends EventHandlerTest {
+public class ItemCheckedOutEventHandlerTest extends EventHandlerTestBase {
   private static final ItemCheckedOutEventHandler eventHandler =
     new ItemCheckedOutEventHandler(postgresClient);
 

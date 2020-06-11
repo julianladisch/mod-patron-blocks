@@ -9,7 +9,7 @@ import org.folio.rest.TestBase;
 
 import io.vertx.ext.unit.TestContext;
 
-public class EventHandlerTest extends TestBase {
+public class EventHandlerTestBase extends TestBase {
 
   protected final UserSummaryRepository userSummaryRepository =
     new UserSummaryRepository(postgresClient);

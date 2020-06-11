@@ -1,10 +1,7 @@
 package org.folio.rest.handlers;
 
-import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
-import org.folio.domain.OpenLoan;
 import org.folio.domain.UserSummary;
 import org.folio.rest.jaxrs.model.ItemDeclaredLostEvent;
 import org.folio.rest.persist.PostgresClient;
