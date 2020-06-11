@@ -2,8 +2,8 @@ package org.folio.rest.handlers;
 
 import java.util.Map;
 
-import org.folio.domain.UserSummary;
 import org.folio.rest.jaxrs.model.ItemDeclaredLostEvent;
+import org.folio.rest.jaxrs.model.UserSummary;
 import org.folio.rest.persist.PostgresClient;
 
 import io.vertx.core.Future;

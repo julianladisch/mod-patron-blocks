@@ -7,8 +7,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-import org.folio.repository.UserSummaryRepository;
-import org.folio.rest.TestBase;
 import org.folio.rest.jaxrs.model.ItemCheckedOutEvent;
 import org.folio.rest.jaxrs.model.OpenLoan;
 import org.folio.rest.jaxrs.model.UserSummary;

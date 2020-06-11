@@ -2,10 +2,10 @@ package org.folio.rest.handlers;
 
 import java.util.stream.IntStream;
 
-import org.folio.domain.OpenLoan;
-import org.folio.domain.UserSummary;
 import org.folio.repository.UserSummaryRepository;
 import org.folio.rest.TestBase;
+import org.folio.rest.jaxrs.model.OpenLoan;
+import org.folio.rest.jaxrs.model.UserSummary;
 
 import io.vertx.ext.unit.TestContext;
 
@@ -34,7 +34,6 @@ public class EventHandlerTestBase extends TestBase {
         OpenLoan openLoanToCompare = userSummaryToCompare.getOpenLoans().get(i);
         context.assertEquals(openLoanToCompare.getLoanId(), openLoan.getLoanId());
         context.assertEquals(openLoanToCompare.getDueDate(), openLoan.getDueDate());
-        context.assertEquals(openLoanToCompare.getReturnedDate(), openLoan.getReturnedDate());
         context.assertEquals(openLoanToCompare.getRecall(), openLoan.getRecall());
       });
   }
