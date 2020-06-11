@@ -23,6 +23,7 @@
       "type": "integer"
     },
     "openLoans": {
+      "description": "User's open loans",
       "type": "array",
       "items": {
         "description": "Collection of user's open loans",
@@ -52,6 +53,7 @@
       }
     },
     "openFeesFines": {
+      "description": "User's open fees/fines",
       "type": "array",
       "items": {
         "description": "Collection of user's open fees/fines",

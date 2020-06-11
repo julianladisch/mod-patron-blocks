@@ -27,7 +27,7 @@ public class ItemCheckedInEventHandler extends EventHandler<ItemCheckedInEvent> 
     return succeededFuture(event.getUserId())
       .compose(userSummaryRepository::getByUserId)
       .compose(optionalSummary -> optionalSummary
-        .map(summary -> updateUserSummary(summary,event))
+        .map(summary -> updateUserSummary(summary, event))
         .orElseGet(() -> {
           log.info("Summary for user {} was not found. Event is ignored.", event.getUserId());
           return succeededFuture();

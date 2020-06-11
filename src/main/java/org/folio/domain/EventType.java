@@ -39,7 +39,7 @@ public enum EventType {
     return eventToType.getOrDefault(event.getClass(), UNKNOWN);
   }
 
-  public static String getNameByEvent(Object event) {
+  public static String getNameByEvent(Event event) {
     return getByEvent(event).name();
   }
 

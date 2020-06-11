@@ -10,6 +10,7 @@ import org.folio.domain.Event;
 import org.folio.domain.EventType;
 import org.folio.rest.handlers.ItemCheckedInEventHandler;
 import org.folio.rest.handlers.ItemCheckedOutEventHandler;
+import org.folio.rest.handlers.LoanDueDateChangedEventHandler;
 import org.folio.rest.handlers.ItemDeclaredLostEventHandler;
 import org.folio.rest.jaxrs.model.FeeFineBalanceChangedEvent;
 import org.folio.rest.jaxrs.model.ItemCheckedInEvent;
@@ -93,6 +94,9 @@ public class EventHandlersAPI implements AutomatedPatronBlocksHandlers {
       PostAutomatedPatronBlocksHandlersLoanDueDateChangedResponse.respond204()));
 
     logEventReceived(event);
+
+    new LoanDueDateChangedEventHandler(okapiHeaders, vertxContext.owner())
+      .handle(event);
   }
 
   private static void logEventReceived(Event event) {
