@@ -1,5 +1,6 @@
 package org.folio.rest.handlers;
 
+import static java.util.Collections.singletonList;
 import static org.folio.repository.UserSummaryRepository.USER_SUMMARY_TABLE_NAME;
 
 import java.math.BigDecimal;
@@ -20,12 +21,10 @@ import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
 
 @RunWith(VertxUnitRunner.class)
-public class LoanDueDateChangedEventHandlerTest extends TestBase {
+public class LoanDueDateChangedEventHandlerTest extends EventHandlerTestBase {
 
   private static final LoanDueDateChangedEventHandler eventHandler =
     new LoanDueDateChangedEventHandler(postgresClient);
-  private static final UserSummaryRepository userSummaryRepository =
-    new UserSummaryRepository(postgresClient);
 
   @Before
   public void beforeEach(TestContext context) {
@@ -48,19 +47,17 @@ public class LoanDueDateChangedEventHandlerTest extends TestBase {
 
     String summaryId = waitFor(eventHandler.handle(event));
 
-    Optional<UserSummary> optionalSummary = waitFor(userSummaryRepository.get(summaryId));
-    context.assertTrue(optionalSummary.isPresent());
+    UserSummary expectedSumamry = new UserSummary()
+      .withId(summaryId)
+      .withUserId(userId)
+      .withOutstandingFeeFineBalance(BigDecimal.ZERO)
+      .withNumberOfLostItems(0)
+      .withOpenLoans(singletonList(new OpenLoan()
+        .withLoanId(event.getLoanId())
+        .withDueDate(event.getDueDate())
+        .withRecall(event.getDueDateChangedByRecall())));
 
-    UserSummary createdSummary = optionalSummary.get();
-
-    context.assertEquals(userId, createdSummary.getUserId());
-    context.assertEquals(1, createdSummary.getOpenLoans().size());
-
-    OpenLoan openLoan = createdSummary.getOpenLoans().get(0);
-
-    context.assertEquals(event.getLoanId(), openLoan.getLoanId());
-    context.assertEquals(event.getDueDate(), openLoan.getDueDate());
-    context.assertEquals(event.getDueDateChangedByRecall(), openLoan.getRecall());
+    checkUserSummary(summaryId, expectedSumamry, context);
   }
 
   @Test
@@ -88,19 +85,13 @@ public class LoanDueDateChangedEventHandlerTest extends TestBase {
     String updatedSummaryId = waitFor(eventHandler.handle(event));
     context.assertEquals(createdSummaryId, updatedSummaryId);
 
-    Optional<UserSummary> optionalSummary = waitFor(userSummaryRepository.get(updatedSummaryId));
-    context.assertTrue(optionalSummary.isPresent());
+    UserSummary expectedSummary = existingSummary
+      .withOpenLoans(singletonList(new OpenLoan()
+        .withLoanId(event.getLoanId())
+        .withDueDate(event.getDueDate())
+        .withRecall(event.getDueDateChangedByRecall())));
 
-    UserSummary updatedSummary = optionalSummary.get();
-
-    context.assertEquals(userId, updatedSummary.getUserId());
-    context.assertEquals(1, updatedSummary.getOpenLoans().size());
-
-    OpenLoan openLoan = updatedSummary.getOpenLoans().get(0);
-
-    context.assertEquals(event.getLoanId(), openLoan.getLoanId());
-    context.assertEquals(event.getDueDate(), openLoan.getDueDate());
-    context.assertEquals(event.getDueDateChangedByRecall(), openLoan.getRecall());
+    checkUserSummary(updatedSummaryId, expectedSummary, context);
   }
 
   @Test
@@ -138,18 +129,11 @@ public class LoanDueDateChangedEventHandlerTest extends TestBase {
     String updatedSummaryId = waitFor(eventHandler.handle(event));
     context.assertEquals(createdSummaryId, updatedSummaryId);
 
-    Optional<UserSummary> optionalSummary = waitFor(userSummaryRepository.get(updatedSummaryId));
-    context.assertTrue(optionalSummary.isPresent());
+    UserSummary updatedSummary = existingSummary
+      .withOpenLoans(singletonList(
+        existingLoan.withDueDate(event.getDueDate())
+          .withRecall(event.getDueDateChangedByRecall())));
 
-    UserSummary updatedSummary = optionalSummary.get();
-
-    context.assertEquals(userId, updatedSummary.getUserId());
-    context.assertEquals(1, updatedSummary.getOpenLoans().size());
-
-    OpenLoan openLoan = updatedSummary.getOpenLoans().get(0);
-
-    context.assertEquals(event.getLoanId(), openLoan.getLoanId());
-    context.assertEquals(event.getDueDate(), openLoan.getDueDate());
-    context.assertEquals(event.getDueDateChangedByRecall(), openLoan.getRecall());
+    checkUserSummary(updatedSummaryId, updatedSummary, context);
   }
 }
