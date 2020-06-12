@@ -1,4 +1,4 @@
-## 0.0.1
+## 1.0.0
 * Register module as a publisher (MODPATBLK-17)
 * Handle events published by mod-circulation and mod-feesfines (MODPATBLK-14, MODPATBLK-13, MODPATBLK-11, MODPATBLK-12, MODPATBLK-5, MODPATBLK-4)
 * Add license statement (FOLIO-360)
