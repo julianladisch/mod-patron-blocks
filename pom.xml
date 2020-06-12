@@ -3,7 +3,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>org.folio</groupId>
   <artifactId>mod-patron-blocks</artifactId>
-  <version>0.0.1-SNAPSHOT</version>
+  <version>0.0.1</version>
   <packaging>jar</packaging>
 
   <licenses>
@@ -309,7 +309,7 @@
             <configuration>
               <target>
                 <replaceregexp match="baseUri:.+$" replace="baseUri: http://localhost:{http.port}" byline="true">
-                  <fileset dir="${basedir}/target/classes/apidocs/raml" includes="**/*.raml"/>
+                  <fileset dir="${basedir}/target/classes/apidocs/raml" includes="**/*.raml" />
                 </replaceregexp>
               </target>
             </configuration>
@@ -362,7 +362,7 @@
     <url>https://github.com/folio-org/mod-patron-blocks</url>
     <connection>scm:git:git://github.com/folio-org/mod-patron-blocks</connection>
     <developerConnection>scm:git:git@github.com:folio-org/mod-patron-blocks.git</developerConnection>
-    <tag>HEAD</tag>
+    <tag>v0.0.1</tag>
   </scm>
 
   <repositories>
