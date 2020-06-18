@@ -13,6 +13,7 @@ import java.util.Map;
 
 import org.folio.exception.EntityNotFoundException;
 import org.folio.rest.TestBase;
+import org.folio.rest.jaxrs.model.User;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
@@ -69,8 +70,8 @@ public class UsersClientTest extends TestBase {
       .onSuccess(context::fail)
       .onFailure(throwable -> {
         context.assertTrue(throwable instanceof EntityNotFoundException);
-        context.assertEquals(format("Failed to fetch user with ID %s. Response: %d %s",
-          userId, responseCode, responseBody), throwable.getMessage());
+        context.assertEquals(format("Failed to fetch %s by ID: %s. Response: %d %s",
+          User.class.getName(), userId, responseCode, responseBody), throwable.getMessage());
         async.complete();
       });
   }
