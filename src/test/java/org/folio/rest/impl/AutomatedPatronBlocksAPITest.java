@@ -226,7 +226,7 @@ public class AutomatedPatronBlocksAPITest extends TestBase {
     OpenLoan overdueLoan = new OpenLoan()
       .withLoanId(randomId())
       .withRecall(false)
-      .withDueDate(new Date());
+      .withDueDate(now().minusHours(1).toDate());
 
     List<OpenLoan> overdueLoans = fillListOfSize(overdueLoan, limitValue + openLoansSizeDelta);
     createSummary(USER_ID, BigDecimal.ZERO, 0, new ArrayList<>(), overdueLoans);
@@ -280,7 +280,7 @@ public class AutomatedPatronBlocksAPITest extends TestBase {
     OpenLoan overdueLoan = new OpenLoan()
       .withLoanId(randomId())
       .withRecall(true)
-      .withDueDate(new Date());
+      .withDueDate(now().minusHours(1).toDate());
 
     List<OpenLoan> loans = fillListOfSize(overdueLoan, limitValue + openLoansSizeDelta);
     createSummary(USER_ID, BigDecimal.ZERO, 0, new ArrayList<>(), loans);
