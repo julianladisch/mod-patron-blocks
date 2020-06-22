@@ -27,7 +27,7 @@ public class AutomatedPatronBlocksAPI implements AutomatedPatronBlocksUserId {
       return;
     }
 
-    new PatronBlocksService(okapiHeaders, vertxContext.owner())
+    new PatronBlocksService(vertxContext.owner(), okapiHeaders)
       .getBlocksForUser(userId)
       .onSuccess(blocks -> asyncResultHandler.handle(succeededFuture(
         GetAutomatedPatronBlocksByUserIdResponse.respond200WithApplicationJson(blocks))))

@@ -6,13 +6,19 @@ import static io.vertx.core.Future.succeededFuture;
 import java.lang.invoke.MethodHandles;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Date;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
+import org.folio.domain.OpeningDayWithTimeZone;
 import org.folio.exception.EntityNotFoundException;
+import org.folio.rest.jaxrs.model.OpeningDay;
 import org.folio.rest.jaxrs.model.OpeningPeriod;
 import org.folio.rest.jaxrs.model.OpeningPeriods;
 import org.joda.time.DateTime;
+import org.joda.time.DateTimeZone;
 import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;
 
@@ -42,11 +48,15 @@ public class CalendarClient extends OkapiClient {
   private static final DateTimeFormatter DATE_TIME_FORMATTER =
     DateTimeFormat.forPattern(DATE_TIME_FORMAT).withZoneUTC();
 
+  private final ConfigurationsClient configurationsClient;
+
   public CalendarClient(Vertx vertx, Map<String, String> okapiHeaders) {
     super(WebClient.create(vertx), okapiHeaders);
+
+    configurationsClient = new ConfigurationsClient(vertx, okapiHeaders);
   }
 
-  public Future<Collection<OpeningPeriod>> fetchOpeningDaysBetweenDates(String servicePointId,
+  public Future<Collection<OpeningDayWithTimeZone>> fetchOpeningDaysBetweenDates(String servicePointId,
     DateTime startDate, DateTime endDate, boolean includeClosedDays) {
 
     Promise<HttpResponse<Buffer>> promise = Promise.promise();
@@ -69,9 +79,14 @@ public class CalendarClient extends OkapiClient {
           OpeningPeriods openingPeriods = objectMapper.readValue(
             response.bodyAsString(), OpeningPeriods.class);
 
-          return succeededFuture(Optional.ofNullable(openingPeriods)
+          List<OpeningPeriod> openingPeriodList = Optional.ofNullable(openingPeriods)
             .map(OpeningPeriods::getOpeningPeriods)
-            .orElse(new ArrayList<>()));
+            .orElse(new ArrayList<>());
+
+          return configurationsClient.findTimeZone()
+            .compose(tz -> succeededFuture(openingPeriodList.stream()
+                .map(period -> fromOpeningPeriodJson(period, tz))
+                .collect(Collectors.toList())));
 
         } catch (JsonProcessingException e) {
           log.error("Failed to parse response: " + response.bodyAsString());
@@ -81,14 +96,17 @@ public class CalendarClient extends OkapiClient {
     });
   }
 
-//  public static OpeningDay fromOpeningPeriodJson(JsonObject openingPeriod, DateTimeZone zone) {
-//    JsonObject openingDay = openingPeriod.getJsonObject(OPENING_DAY_KEY);
-//    String dateProperty = openingPeriod.getString(DATE_KEY);
-//    DateTime date = null;
-//    if (dateProperty != null) {
-//      date = DateTime.parse(dateProperty, DATE_TIME_FORMATTER).withZoneRetainFields(zone);
-//    }
-//
-//    return new OpeningDay(openingDay, date);
-//  }
+  public static OpeningDayWithTimeZone fromOpeningPeriodJson(OpeningPeriod openingPeriod,
+    DateTimeZone zone) {
+
+    OpeningDay openingDay = openingPeriod.getOpeningDay();
+    Date dateProperty = openingPeriod.getDate();
+
+    DateTime date = null;
+    if (dateProperty != null) {
+      date = new DateTime(dateProperty).withZoneRetainFields(zone);
+    }
+
+    return new OpeningDayWithTimeZone(openingDay, date);
+  }
 }
