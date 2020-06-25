@@ -8,7 +8,6 @@ import static org.joda.time.DateTime.now;
 
 import java.lang.invoke.MethodHandles;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -84,23 +83,32 @@ public class PatronBlocksService {
     OverduePeriodCalculatorService overduePeriodCalculatorService =
       new OverduePeriodCalculatorService(vertx, okapiHeaders);
 
-    Map<String, Integer> overdueMinutes = new HashMap<>();
+    List<Future> overdueMinutes = new ArrayList<>();
     summary.getOpenLoans().forEach(openLoan ->
-      overdueMinutes.put(openLoan.getLoanId(),
+      overdueMinutes.add(
         circulationStorageClient.findLoanById(openLoan.getLoanId())
         .compose(loan -> overduePeriodCalculatorService.getMinutes(loan, now()))
-        .result()));
+        .map(intValue -> new LoanOverdueMinutes(openLoan.getLoanId(), intValue))
+      ));
 
-    List<Future<AutomatedPatronBlock>> futures = limits.stream()
-      .filter(limit -> isConditionLimitExceeded(
-        new Condition.LimitEvaluationContext(summary, limit, overdueMinutes)))
-      .map(this::createBlockForLimit)
-      .collect(Collectors.toList());
+    return CompositeFuture.all(overdueMinutes)
+      .compose(ar -> {
+        Map<String, Integer> overdueMinutesMap = ar.list().stream()
+          .filter(e -> e instanceof LoanOverdueMinutes)
+          .map (e -> (LoanOverdueMinutes) e)
+          .collect(Collectors.toMap(e -> e.loanId, e -> e.overdueMinutes));
 
-    return CompositeFuture.all(new ArrayList<>(futures))
-      .onFailure(log::error)
-      .onSuccess(cf -> blocks.getAutomatedPatronBlocks().addAll(cf.list()))
-      .map(blocks);
+        List<Future<AutomatedPatronBlock>> futures = limits.stream()
+          .filter(limit -> isConditionLimitExceeded(
+            new Condition.LimitEvaluationContext(summary, limit, overdueMinutesMap)))
+          .map(this::createBlockForLimit)
+          .collect(Collectors.toList());
+
+        return CompositeFuture.all(new ArrayList<>(futures))
+          .onFailure(log::error)
+          .onSuccess(cf -> blocks.getAutomatedPatronBlocks().addAll(cf.list()))
+          .map(blocks);
+      });
   }
 
   private Future<AutomatedPatronBlock> createBlockForLimit(PatronBlockLimit limit) {
@@ -125,6 +133,16 @@ public class PatronBlocksService {
       .withBlockRenewals(condition.getBlockRenewals())
       .withBlockRequests(condition.getBlockRequests())
       .withMessage(condition.getMessage());
+  }
+
+  private static class LoanOverdueMinutes {
+    final String loanId;
+    final Integer overdueMinutes;
+
+    public LoanOverdueMinutes(String loanId, Integer overdueMinutes) {
+      this.loanId = loanId;
+      this.overdueMinutes = overdueMinutes;
+    }
   }
 
 }

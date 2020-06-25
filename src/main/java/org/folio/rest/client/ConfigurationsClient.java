@@ -4,7 +4,10 @@ import static io.vertx.core.Future.failedFuture;
 import static io.vertx.core.Future.succeededFuture;
 import static java.lang.String.format;
 
+import java.io.UnsupportedEncodingException;
 import java.lang.invoke.MethodHandles;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.Map;
 
 import org.apache.commons.lang3.StringUtils;
@@ -41,7 +44,17 @@ public class ConfigurationsClient extends OkapiClient {
     String query = cqlAnd(cqlExactMatch("module", "ORG"),
       cqlExactMatch("configName", "localeSettings"));
 
-    getAbs(format("/configurations/entries?query=%s", query)).send(promise);
+    try {
+      query = URLEncoder.encode(query, StandardCharsets.UTF_8.name());
+    }
+    catch (UnsupportedEncodingException e) {
+      String errorMessage = "Failed to encode query: " + query;
+      log.error(errorMessage);
+      return failedFuture(new EntityNotFoundException(errorMessage));
+    }
+
+    String url = format("/configurations/entries?query=%s", query);
+    getAbs(url).send(promise);
 
     return promise.future().compose(response -> {
       int responseStatus = response.statusCode();

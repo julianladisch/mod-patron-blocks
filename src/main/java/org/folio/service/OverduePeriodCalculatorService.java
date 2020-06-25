@@ -64,7 +64,7 @@ public class OverduePeriodCalculatorService {
       .compose(ctx -> {
         if (preconditionsAreMet(ctx, systemTime)) {
           return succeededFuture(ctx)
-            .compose(r ->  getOverdueMinutes(ctx, systemTime)
+            .compose(r -> getOverdueMinutes(ctx, systemTime)
               .map(om -> adjustOverdueWithGracePeriod(ctx, om)));
         }
         else {
@@ -99,11 +99,11 @@ public class OverduePeriodCalculatorService {
 
   private Future<Integer> minutesOverdueExcludingClosedPeriods(Loan loan, DateTime returnDate) {
     DateTime dueDate = new DateTime(loan.getDueDate());
-    String itemLocationPrimaryServicePoint = getItemLocationPrimaryServicePoint(loan).toString();
-    return calendarClient
-      .fetchOpeningDaysBetweenDates(itemLocationPrimaryServicePoint, dueDate, returnDate, false)
-      .map(openingDays -> getOpeningDaysDurationMinutes(openingDays, dueDate.toLocalDateTime(),
-        returnDate.toLocalDateTime()));
+    return getItemLocationPrimaryServicePoint(loan)
+      .compose(primaryServicePointId -> calendarClient
+        .fetchOpeningDaysBetweenDates(primaryServicePointId.toString(), dueDate, returnDate, false)
+        .map(openingDays -> getOpeningDaysDurationMinutes(openingDays, dueDate.toLocalDateTime(),
+          returnDate.toLocalDateTime())));
   }
 
   Integer getOpeningDaysDurationMinutes(
