@@ -3,12 +3,9 @@ package org.folio.rest.handlers;
 import static java.util.Collections.singletonList;
 import static org.folio.repository.UserSummaryRepository.USER_SUMMARY_TABLE_NAME;
 
-import java.math.BigDecimal;
 import java.util.Date;
 import java.util.Optional;
 
-import org.folio.repository.UserSummaryRepository;
-import org.folio.rest.TestBase;
 import org.folio.rest.jaxrs.model.LoanDueDateChangedEvent;
 import org.folio.rest.jaxrs.model.OpenLoan;
 import org.folio.rest.jaxrs.model.UserSummary;
@@ -50,8 +47,6 @@ public class LoanDueDateChangedEventHandlerTest extends EventHandlerTestBase {
     UserSummary expectedSummary = new UserSummary()
       .withId(summaryId)
       .withUserId(userId)
-      .withOutstandingFeeFineBalance(BigDecimal.ZERO)
-      .withNumberOfLostItems(0)
       .withOpenLoans(singletonList(new OpenLoan()
         .withLoanId(event.getLoanId())
         .withDueDate(event.getDueDate())
@@ -66,9 +61,7 @@ public class LoanDueDateChangedEventHandlerTest extends EventHandlerTestBase {
 
     UserSummary existingSummary = new UserSummary()
       .withId(randomId())
-      .withUserId(userId)
-      .withNumberOfLostItems(0)
-      .withOutstandingFeeFineBalance(BigDecimal.ZERO);
+      .withUserId(userId);
 
     String createdSummaryId = waitFor(userSummaryRepository.save(existingSummary));
 
@@ -105,9 +98,7 @@ public class LoanDueDateChangedEventHandlerTest extends EventHandlerTestBase {
 
     UserSummary existingSummary = new UserSummary()
       .withId(randomId())
-      .withUserId(userId)
-      .withNumberOfLostItems(0)
-      .withOutstandingFeeFineBalance(BigDecimal.ZERO);
+      .withUserId(userId);
 
     existingSummary.getOpenLoans().add(existingLoan);
 

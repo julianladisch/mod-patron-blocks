@@ -18,9 +18,10 @@ import static org.hamcrest.core.IsEqual.equalTo;
 import static org.joda.time.DateTime.now;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Date;
+import java.util.Collections;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Optional;
@@ -105,7 +106,7 @@ public class AutomatedPatronBlocksAPITest extends TestBase {
 
   @Test
   public void shouldReturnNoBlocksWhenNoLimitsExistForPatronGroup() {
-    createSummary(USER_ID, BigDecimal.TEN, 12);
+    createSummary(USER_ID);
     String emptyBlocksResponse = toJson(new AutomatedPatronBlocks());
 
     sendRequest(randomId())
@@ -124,10 +125,11 @@ public class AutomatedPatronBlocksAPITest extends TestBase {
     OpenLoan openLoan = new OpenLoan()
       .withLoanId(randomId())
       .withRecall(false)
+      .withItemLost(false)
       .withDueDate(now().plusHours(1).toDate());
 
     List<OpenLoan> openLoans = fillListOfSize(openLoan, limitValue + openLoansSizeDelta);
-    createSummary(USER_ID, BigDecimal.ZERO, 0, new ArrayList<>(), openLoans);
+    createSummary(USER_ID, new ArrayList<>(), openLoans);
 
     String expectedResponse = createLimitsAndBuildExpectedResponse(condition, singleLimit,
       blockShouldExist);
@@ -175,7 +177,15 @@ public class AutomatedPatronBlocksAPITest extends TestBase {
     final Condition condition = MAX_NUMBER_OF_LOST_ITEMS;
     int limitValue = LIMIT_VALUES.get(condition);
 
-    createSummary(USER_ID, BigDecimal.ZERO, limitValue + lostItemsDelta);
+    OpenLoan openLoan = new OpenLoan()
+      .withLoanId(randomId())
+      .withRecall(false)
+      .withItemLost(true)
+      .withDueDate(now().plusHours(1).toDate());
+
+    List<OpenLoan> openLoans = fillListOfSize(openLoan, limitValue + lostItemsDelta);
+
+    createSummary(USER_ID, new ArrayList<>(), openLoans);
 
     String expectedResponse = createLimitsAndBuildExpectedResponse(condition, singleLimit,
       blockShouldExist);
@@ -226,10 +236,11 @@ public class AutomatedPatronBlocksAPITest extends TestBase {
     OpenLoan overdueLoan = new OpenLoan()
       .withLoanId(randomId())
       .withRecall(false)
+      .withItemLost(false)
       .withDueDate(now().minusHours(1).toDate());
 
     List<OpenLoan> overdueLoans = fillListOfSize(overdueLoan, limitValue + openLoansSizeDelta);
-    createSummary(USER_ID, BigDecimal.ZERO, 0, new ArrayList<>(), overdueLoans);
+    createSummary(USER_ID, new ArrayList<>(), overdueLoans);
 
     String expectedResponse = createLimitsAndBuildExpectedResponse(condition, singleLimit,
       blockShouldExist);
@@ -280,10 +291,11 @@ public class AutomatedPatronBlocksAPITest extends TestBase {
     OpenLoan overdueLoan = new OpenLoan()
       .withLoanId(randomId())
       .withRecall(true)
+      .withItemLost(false)
       .withDueDate(now().minusHours(1).toDate());
 
     List<OpenLoan> loans = fillListOfSize(overdueLoan, limitValue + openLoansSizeDelta);
-    createSummary(USER_ID, BigDecimal.ZERO, 0, new ArrayList<>(), loans);
+    createSummary(USER_ID, new ArrayList<>(), loans);
 
     String expectedResponse = createLimitsAndBuildExpectedResponse(condition, singleLimit,
       blockShouldExist);
@@ -336,10 +348,11 @@ public class AutomatedPatronBlocksAPITest extends TestBase {
     OpenLoan overdueLoan = new OpenLoan()
       .withLoanId(randomId())
       .withRecall(true)
+      .withItemLost(false)
       .withDueDate(dueDateBelowLimit.toDate());
 
     List<OpenLoan> openLoans = singletonList(overdueLoan);
-    createSummary(USER_ID, BigDecimal.ZERO, 0, new ArrayList<>(), openLoans);
+    createSummary(USER_ID, new ArrayList<>(), openLoans);
 
     String expectedResponse = createLimitsAndBuildExpectedResponse(condition, singleLimit,
       blockShouldExist);
@@ -382,14 +395,25 @@ public class AutomatedPatronBlocksAPITest extends TestBase {
     validateRecallOverdueByMaximumNumberOfDaysBlockResponse(1, ALL_LIMITS, BLOCK_SHOULD_EXIST);
   }
 
-  private void validateMaxOutstandingFeeFineBalanceBlockResponse(int feeFineBalanceData,
+  private void validateMaxOutstandingFeeFineBalanceBlockResponse(int feeFineBalanceDelta,
     boolean singleLimit, boolean blockShouldExist) {
 
     final Condition condition = MAX_OUTSTANDING_FEE_FINE_BALANCE;
     int limitValue = LIMIT_VALUES.get(condition);
+    int numberOfFeesFines = 2;
 
-    BigDecimal outstandingFeeFineBalance =  BigDecimal.valueOf(limitValue + feeFineBalanceData);
-    createSummary(USER_ID, outstandingFeeFineBalance, 0);
+    BigDecimal balancePerFeeFine = BigDecimal.valueOf(limitValue + feeFineBalanceDelta)
+      .divide(BigDecimal.valueOf(numberOfFeesFines), 2, RoundingMode.UNNECESSARY);
+
+    OpenFeeFine openFeeFine = new OpenFeeFine()
+      .withFeeFineId(randomId())
+      .withFeeFineTypeId(randomId())
+      .withLoanId(randomId())
+      .withBalance(balancePerFeeFine);
+
+    List<OpenFeeFine> openFeeFines = fillListOfSize(openFeeFine, numberOfFeesFines);
+
+    createSummary(USER_ID, openFeeFines, new ArrayList<>());
 
     String expectedResponse = createLimitsAndBuildExpectedResponse(condition, singleLimit,
       blockShouldExist);
@@ -428,29 +452,34 @@ public class AutomatedPatronBlocksAPITest extends TestBase {
 
   @Test
   public void allLimitsAreExceeded() {
+    String loanId = randomId();
     createLimitsForAllConditions();
-
-    BigDecimal outstandingBalance = BigDecimal.valueOf(
-      LIMIT_VALUES.get(MAX_OUTSTANDING_FEE_FINE_BALANCE) + 5);
 
     int maxOverdueRecallLimit = LIMIT_VALUES.get(RECALL_OVERDUE_BY_MAX_NUMBER_OF_DAYS);
     DateTime dueDate = now().minusDays(maxOverdueRecallLimit + 1);
 
     OpenLoan overdueRecalledLoan = new OpenLoan()
-      .withLoanId(randomId())
+      .withLoanId(loanId)
       .withRecall(true)
+      .withItemLost(true)
       .withDueDate(dueDate.toDate());
 
-    int numberOfOpenLoans = Math.max(
-      LIMIT_VALUES.get(MAX_NUMBER_OF_ITEMS_CHARGED_OUT), Math.max(
-        LIMIT_VALUES.get(MAX_NUMBER_OF_OVERDUE_ITEMS),
-        LIMIT_VALUES.get(MAX_NUMBER_OF_OVERDUE_RECALLS))) + 1;
+    int numberOfOpenLoans = Collections.max(Arrays.asList(
+      LIMIT_VALUES.get(MAX_NUMBER_OF_LOST_ITEMS),
+      LIMIT_VALUES.get(MAX_NUMBER_OF_ITEMS_CHARGED_OUT),
+      LIMIT_VALUES.get(MAX_NUMBER_OF_OVERDUE_ITEMS),
+      LIMIT_VALUES.get(MAX_NUMBER_OF_OVERDUE_RECALLS))) + 1;
 
     List<OpenLoan> openLoans = fillListOfSize(overdueRecalledLoan, numberOfOpenLoans);
 
-    int numberOfLostItems = LIMIT_VALUES.get(MAX_NUMBER_OF_LOST_ITEMS) + 1;
+    List<OpenFeeFine> openFeeFines = singletonList(
+      new OpenFeeFine()
+        .withBalance(BigDecimal.valueOf(LIMIT_VALUES.get(MAX_OUTSTANDING_FEE_FINE_BALANCE) + 1))
+        .withLoanId(loanId)
+        .withFeeFineId(randomId())
+        .withFeeFineTypeId(randomId()));
 
-    createSummary(USER_ID, outstandingBalance, numberOfLostItems, new ArrayList<>(), openLoans);
+    createSummary(USER_ID, openFeeFines, openLoans);
 
     String expectedResponse = buildDefaultResponseFor(Condition.values());
 
@@ -463,11 +492,20 @@ public class AutomatedPatronBlocksAPITest extends TestBase {
 
   @Test
   public void updatedValuesFromConditionArePassedToResponse(TestContext context) {
-    final Condition condition = MAX_NUMBER_OF_LOST_ITEMS;
+    final Condition condition = MAX_NUMBER_OF_ITEMS_CHARGED_OUT;
     int limitValue = LIMIT_VALUES.get(condition);
 
     createLimitsForAllConditions();
-    createSummary(USER_ID, BigDecimal.ZERO, limitValue + 1);
+
+    OpenLoan openLoan = new OpenLoan()
+      .withLoanId(randomId())
+      .withDueDate(DateTime.now().plusHours(1).toDate())
+      .withRecall(false)
+      .withItemLost(false);
+
+    List<OpenLoan> openLoans = fillListOfSize(openLoan, limitValue + 1);
+
+    createSummary(USER_ID, new ArrayList<>(), openLoans);
 
     Optional<PatronBlockCondition> optionalResult =
       waitFor(conditionsRepository.get(condition.getId()));
@@ -526,26 +564,20 @@ public class AutomatedPatronBlocksAPITest extends TestBase {
     return waitFor(limitsRepository.save(limit));
   }
 
-  private String createSummary(String userId, BigDecimal outstandingFeeFineBalance,
-    int numberOfLostItems) {
-
+  private String createSummary(String userId) {
     UserSummary userSummary = new UserSummary()
       .withId(randomId())
-      .withOutstandingFeeFineBalance(outstandingFeeFineBalance)
-      .withUserId(userId)
-      .withNumberOfLostItems(numberOfLostItems);
+      .withUserId(userId);
 
     return waitFor(summaryRepository.save(userSummary));
   }
 
-  private String createSummary(String userId, BigDecimal outstandingFeeFineBalance,
-    int numberOfLostItems, List<OpenFeeFine> feesFines, List<OpenLoan> openLoans) {
+  private String createSummary(String userId, List<OpenFeeFine> feesFines,
+    List<OpenLoan> openLoans) {
 
     UserSummary userSummary = new UserSummary()
       .withId(randomId())
-      .withOutstandingFeeFineBalance(outstandingFeeFineBalance)
       .withUserId(userId)
-      .withNumberOfLostItems(numberOfLostItems)
       .withOpenFeesFines(feesFines)
       .withOpenLoans(openLoans);
 

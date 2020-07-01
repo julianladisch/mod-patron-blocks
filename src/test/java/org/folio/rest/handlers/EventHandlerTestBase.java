@@ -21,12 +21,10 @@ public class EventHandlerTestBase extends TestBase {
       new AssertionError("User summary was not found: " + summaryId));
 
     context.assertEquals(userSummaryToCompare.getUserId(), userSummary.getUserId());
-    context.assertEquals(0, userSummaryToCompare.getOutstandingFeeFineBalance().compareTo(
-      userSummary.getOutstandingFeeFineBalance()));
-    context.assertEquals(userSummaryToCompare.getNumberOfLostItems(),
-      userSummary.getNumberOfLostItems());
     context.assertEquals(userSummaryToCompare.getOpenLoans().size(),
       userSummary.getOpenLoans().size());
+    context.assertEquals(userSummaryToCompare.getOpenFeesFines().size(),
+      userSummary.getOpenFeesFines().size());
 
     IntStream.range(0, userSummary.getOpenLoans().size())
       .forEach(i -> {
@@ -35,6 +33,7 @@ public class EventHandlerTestBase extends TestBase {
         context.assertEquals(openLoanToCompare.getLoanId(), openLoan.getLoanId());
         context.assertEquals(openLoanToCompare.getDueDate(), openLoan.getDueDate());
         context.assertEquals(openLoanToCompare.getRecall(), openLoan.getRecall());
+        context.assertEquals(openLoanToCompare.getItemLost(), openLoan.getItemLost());
       });
   }
 

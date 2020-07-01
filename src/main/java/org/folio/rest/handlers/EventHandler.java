@@ -3,12 +3,14 @@ package org.folio.rest.handlers;
 import static org.folio.rest.tools.utils.TenantTool.calculateTenantId;
 
 import java.lang.invoke.MethodHandles;
+import java.util.Date;
 import java.util.Map;
 
 import org.folio.domain.Event;
 import org.folio.domain.EventType;
 import org.folio.okapi.common.XOkapiHeaders;
 import org.folio.repository.UserSummaryRepository;
+import org.folio.rest.jaxrs.model.OpenLoan;
 import org.folio.rest.persist.PostgresClient;
 
 import io.vertx.core.AsyncResult;
@@ -49,6 +51,14 @@ public abstract class EventHandler<E extends Event> {
       log.info("Event {} processed successfully. Affected user summary: {}",
         eventType, result.result());
     }
+  }
+
+  protected static OpenLoan createOpenLoan(String loanId, Date dueDate) {
+    return new OpenLoan()
+      .withLoanId(loanId)
+      .withDueDate(dueDate)
+      .withRecall(false)
+      .withItemLost(false);
   }
 
 }
