@@ -1,10 +1,9 @@
 package org.folio.rest.handlers;
 
+import static java.util.Collections.singletonList;
 import static org.folio.repository.UserSummaryRepository.USER_SUMMARY_TABLE_NAME;
 
-import java.math.BigDecimal;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.Date;
 
 import org.folio.rest.jaxrs.model.ItemDeclaredLostEvent;
 import org.folio.rest.jaxrs.model.OpenLoan;
@@ -28,7 +27,7 @@ public class ItemDeclaredLostEventHandlerTest extends EventHandlerTestBase {
   }
 
   @Test
-  public void userSummaryShouldBeCreatedWhenDoesntExist(TestContext context) {
+  public void userSummaryShouldBeCreatedWhenDoesNotExist(TestContext context) {
     String userId = randomId();
     String loanId = randomId();
 
@@ -40,23 +39,29 @@ public class ItemDeclaredLostEventHandlerTest extends EventHandlerTestBase {
 
     UserSummary userSummaryToCompare = new UserSummary()
       .withUserId(userId)
-      .withNumberOfLostItems(1)
-      .withOutstandingFeeFineBalance(BigDecimal.ZERO);
+      .withOpenLoans(singletonList(new OpenLoan()
+        .withLoanId(loanId)
+        .withRecall(false)
+        .withItemLost(true)));
 
     checkUserSummary(summaryId, userSummaryToCompare, context);
   }
 
   @Test
-  public void shouldIncrementLostItemsWhenUserSummaryExists(TestContext context) {
+  public void shouldFlipItemLostFlagWhenUserSummaryExists(TestContext context) {
     String userId = randomId();
     String loanId = randomId();
 
-    UserSummary existingUserSummary = new UserSummary()
+    UserSummary userSummary = new UserSummary()
       .withUserId(userId)
-      .withNumberOfLostItems(0)
-      .withOutstandingFeeFineBalance(BigDecimal.ZERO);
+      .withOpenLoans(singletonList(
+        new OpenLoan()
+          .withDueDate(new Date())
+          .withLoanId(loanId)
+          .withRecall(false)
+          .withItemLost(false)));
 
-    waitFor(userSummaryRepository.save(existingUserSummary));
+    waitFor(userSummaryRepository.save(userSummary));
 
     ItemDeclaredLostEvent event = new ItemDeclaredLostEvent()
       .withUserId(userId)
@@ -64,43 +69,8 @@ public class ItemDeclaredLostEventHandlerTest extends EventHandlerTestBase {
 
     String summaryId = waitFor(eventHandler.handle(event));
 
-    UserSummary userSummaryToCompare = new UserSummary()
-      .withUserId(userId)
-      .withNumberOfLostItems(1)
-      .withOutstandingFeeFineBalance(BigDecimal.ZERO);
+    userSummary.getOpenLoans().get(0).setItemLost(true);
 
-    checkUserSummary(summaryId, userSummaryToCompare, context);
-  }
-
-  @Test
-  public void shouldRemoveOpenLoanFromUserSummaryWhenItExists(TestContext context) {
-    String userId = randomId();
-    String loanId = randomId();
-
-    List<OpenLoan> existingOpenLoans = new ArrayList<>();
-    existingOpenLoans.add(new OpenLoan()
-      .withLoanId(loanId)
-      .withRecall(false));
-
-    UserSummary existingUserSummary = new UserSummary()
-      .withUserId(userId)
-      .withNumberOfLostItems(0)
-      .withOutstandingFeeFineBalance(BigDecimal.ZERO)
-      .withOpenLoans(existingOpenLoans);
-
-    waitFor(userSummaryRepository.save(existingUserSummary));
-
-    ItemDeclaredLostEvent event = new ItemDeclaredLostEvent()
-      .withUserId(userId)
-      .withLoanId(loanId);
-
-    String summaryId = waitFor(eventHandler.handle(event));
-
-    UserSummary userSummaryToCompare = new UserSummary()
-      .withUserId(userId)
-      .withNumberOfLostItems(1)
-      .withOutstandingFeeFineBalance(BigDecimal.ZERO);
-
-    checkUserSummary(summaryId, userSummaryToCompare, context);
+    checkUserSummary(summaryId, userSummary, context);
   }
 }

@@ -30,7 +30,7 @@ public class ItemCheckedOutEventHandlerTest extends EventHandlerTestBase {
   }
 
   @Test
-  public void userSummaryShouldBeCreatedWhenDoesntExist(TestContext context) {
+  public void userSummaryShouldBeCreatedWhenDoesNotExist(TestContext context) {
     String userId = randomId();
     String loanId = randomId();
     DateTime dueDate = DateTime.now();
@@ -44,12 +44,11 @@ public class ItemCheckedOutEventHandlerTest extends EventHandlerTestBase {
 
     UserSummary userSummaryToCompare = new UserSummary()
       .withUserId(userId)
-      .withNumberOfLostItems(0)
-      .withOutstandingFeeFineBalance(BigDecimal.ZERO)
       .withOpenLoans(Collections.singletonList(new OpenLoan()
         .withLoanId(loanId)
-        .withDueDate(dueDate.toDate())
-        .withRecall(false)));
+        .withRecall(false)
+        .withItemLost(false)
+        .withDueDate(dueDate.toDate())));
 
     checkUserSummary(summaryId, userSummaryToCompare, context);
   }
@@ -64,12 +63,11 @@ public class ItemCheckedOutEventHandlerTest extends EventHandlerTestBase {
     existingOpenLoans.add(new OpenLoan()
       .withLoanId(randomId())
       .withDueDate(dueDate.toDate())
-      .withRecall(false));
+      .withRecall(false)
+      .withItemLost(false));
 
     UserSummary existingUserSummary = new UserSummary()
       .withUserId(userId)
-      .withNumberOfLostItems(0)
-      .withOutstandingFeeFineBalance(BigDecimal.ZERO)
       .withOpenLoans(existingOpenLoans);
 
     waitFor(userSummaryRepository.save(existingUserSummary));
@@ -83,8 +81,9 @@ public class ItemCheckedOutEventHandlerTest extends EventHandlerTestBase {
 
     existingOpenLoans.add(new OpenLoan()
       .withLoanId(loanId)
-      .withDueDate(dueDate.toDate())
-      .withRecall(false));
+      .withRecall(false)
+      .withItemLost(false)
+      .withDueDate(dueDate.toDate()));
 
     checkUserSummary(summaryId, existingUserSummary, context);
   }
@@ -103,8 +102,6 @@ public class ItemCheckedOutEventHandlerTest extends EventHandlerTestBase {
 
     UserSummary existingUserSummary = new UserSummary()
       .withUserId(userId)
-      .withNumberOfLostItems(0)
-      .withOutstandingFeeFineBalance(BigDecimal.ZERO)
       .withOpenLoans(existingOpenLoans);
 
     waitFor(userSummaryRepository.save(existingUserSummary));

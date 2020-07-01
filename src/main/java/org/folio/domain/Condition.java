@@ -6,6 +6,8 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.function.BiPredicate;
 
+import org.apache.commons.lang3.BooleanUtils;
+import org.folio.rest.jaxrs.model.OpenFeeFine;
 import org.folio.rest.jaxrs.model.OpenLoan;
 import org.folio.rest.jaxrs.model.PatronBlockLimit;
 import org.folio.rest.jaxrs.model.UserSummary;
@@ -21,7 +23,10 @@ public enum Condition {
   ),
 
   MAX_NUMBER_OF_LOST_ITEMS("72b67965-5b73-4840-bc0b-be8f3f6e047e",
-    (summary, limit) -> summary.getNumberOfLostItems() >= limit.getValue()
+    (summary, limit) -> summary.getOpenLoans().stream()
+      .map(OpenLoan::getItemLost)
+      .filter(BooleanUtils::isTrue)
+      .count() >= limit.getValue()
   ),
 
   MAX_NUMBER_OF_OVERDUE_ITEMS("584fbd4f-6a34-4730-a6ca-73a6a6a9d845",
@@ -33,20 +38,22 @@ public enum Condition {
   MAX_NUMBER_OF_OVERDUE_RECALLS("e5b45031-a202-4abb-917b-e1df9346fe2c",
     (summary, limit) -> summary.getOpenLoans().stream()
       .filter(Condition::isLoanOverdue)
-      .filter(OpenLoan::getRecall)
+      .filter(Condition::loanWasRecalled)
       .count() >= limit.getValue()
   ),
 
   RECALL_OVERDUE_BY_MAX_NUMBER_OF_DAYS("08530ac4-07f2-48e6-9dda-a97bc2bf7053",
     (summary, limit) -> summary.getOpenLoans().stream()
       .filter(Condition::isLoanOverdue)
-      .filter(OpenLoan::getRecall)
+      .filter(Condition::loanWasRecalled)
       .map(Condition::getLoanOverdueDays)
       .anyMatch(days -> days >= limit.getValue())
   ),
 
   MAX_OUTSTANDING_FEE_FINE_BALANCE("cf7a0d5f-a327-4ca1-aa9e-dc55ec006b8a",
-    (summary, limit) -> summary.getOutstandingFeeFineBalance()
+    (summary, limit) -> summary.getOpenFeesFines().stream()
+      .map(OpenFeeFine::getBalance)
+      .reduce(BigDecimal.ZERO, BigDecimal::add)
       .compareTo(BigDecimal.valueOf(limit.getValue())) >= 0
   );
 
@@ -91,5 +98,9 @@ public enum Condition {
     return isLoanOverdue(loan)
       ? Days.daysBetween(new LocalDate(loan.getDueDate()), LocalDate.now(DateTimeZone.UTC)).getDays()
       : 0;
+  }
+
+  private static boolean loanWasRecalled(OpenLoan openLoan) {
+    return BooleanUtils.isTrue(openLoan.getRecall());
   }
 }
