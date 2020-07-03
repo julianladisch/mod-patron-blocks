@@ -36,7 +36,7 @@ public class ItemDeclaredLostEventHandler extends EventHandler<ItemDeclaredLostE
       .filter(loan -> StringUtils.equals(loan.getLoanId(), event.getLoanId()))
       .findAny()
       .orElseGet(() -> {
-        OpenLoan newOpenLoan = createOpenLoan(event.getLoanId(), null);
+        OpenLoan newOpenLoan = new OpenLoan().withLoanId(event.getLoanId());
         openLoans.add(newOpenLoan);
         return newOpenLoan;
       }).setItemLost(true);

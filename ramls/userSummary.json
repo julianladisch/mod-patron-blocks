@@ -32,11 +32,13 @@
           },
           "recall": {
             "description": "Indicates if the item was recalled",
-            "type": "boolean"
+            "type": "boolean",
+            "default": false
           },
           "itemLost" : {
             "description": "Indicates if the item associated with the loan is in status 'Aged to lost' or 'Declared lost'",
-            "type": "boolean"
+            "type": "boolean",
+            "default": false
           }
         },
         "additionalProperties": false,

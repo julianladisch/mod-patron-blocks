@@ -40,7 +40,10 @@ public class ItemCheckedOutEventHandler extends EventHandler<ItemCheckedOutEvent
     if (openLoans.stream()
       .noneMatch(loan -> StringUtils.equals(loan.getLoanId(), event.getLoanId()))) {
 
-      openLoans.add(createOpenLoan(event.getLoanId(), event.getDueDate()));
+      openLoans.add(new OpenLoan()
+        .withLoanId(event.getLoanId())
+        .withDueDate(event.getDueDate()));
+
       return userSummaryRepository.upsert(userSummary, userSummary.getId());
     }
     else {

@@ -6,7 +6,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.function.BiPredicate;
 
-import org.apache.commons.lang3.BooleanUtils;
 import org.folio.rest.jaxrs.model.OpenFeeFine;
 import org.folio.rest.jaxrs.model.OpenLoan;
 import org.folio.rest.jaxrs.model.PatronBlockLimit;
@@ -24,8 +23,7 @@ public enum Condition {
 
   MAX_NUMBER_OF_LOST_ITEMS("72b67965-5b73-4840-bc0b-be8f3f6e047e",
     (summary, limit) -> summary.getOpenLoans().stream()
-      .map(OpenLoan::getItemLost)
-      .filter(BooleanUtils::isTrue)
+      .filter(OpenLoan::getItemLost)
       .count() >= limit.getValue()
   ),
 
@@ -38,14 +36,14 @@ public enum Condition {
   MAX_NUMBER_OF_OVERDUE_RECALLS("e5b45031-a202-4abb-917b-e1df9346fe2c",
     (summary, limit) -> summary.getOpenLoans().stream()
       .filter(Condition::isLoanOverdue)
-      .filter(Condition::loanWasRecalled)
+      .filter(OpenLoan::getRecall)
       .count() >= limit.getValue()
   ),
 
   RECALL_OVERDUE_BY_MAX_NUMBER_OF_DAYS("08530ac4-07f2-48e6-9dda-a97bc2bf7053",
     (summary, limit) -> summary.getOpenLoans().stream()
       .filter(Condition::isLoanOverdue)
-      .filter(Condition::loanWasRecalled)
+      .filter(OpenLoan::getRecall)
       .map(Condition::getLoanOverdueDays)
       .anyMatch(days -> days >= limit.getValue())
   ),
@@ -100,7 +98,4 @@ public enum Condition {
       : 0;
   }
 
-  private static boolean loanWasRecalled(OpenLoan openLoan) {
-    return BooleanUtils.isTrue(openLoan.getRecall());
-  }
 }
