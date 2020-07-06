@@ -12,6 +12,7 @@ import java.util.Map;
 
 import org.apache.commons.lang3.StringUtils;
 import org.folio.exception.EntityNotFoundException;
+import org.folio.exception.FailedToMakeRequestException;
 import org.folio.rest.jaxrs.model.Config;
 import org.folio.rest.jaxrs.model.KvConfigurations;
 import org.joda.time.DateTimeZone;
@@ -50,7 +51,7 @@ public class ConfigurationsClient extends OkapiClient {
     catch (UnsupportedEncodingException e) {
       String errorMessage = "Failed to encode query: " + query;
       log.error(errorMessage);
-      return failedFuture(new EntityNotFoundException(errorMessage));
+      return failedFuture(new FailedToMakeRequestException(errorMessage));
     }
 
     String url = format("/configurations/entries?query=%s", query);

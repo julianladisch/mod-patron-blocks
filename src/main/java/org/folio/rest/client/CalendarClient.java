@@ -19,8 +19,6 @@ import org.folio.rest.jaxrs.model.OpeningPeriod;
 import org.folio.rest.jaxrs.model.OpeningPeriods;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
-import org.joda.time.format.DateTimeFormat;
-import org.joda.time.format.DateTimeFormatter;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 
@@ -36,17 +34,8 @@ import io.vertx.ext.web.client.WebClient;
 public class CalendarClient extends OkapiClient {
   private static final Logger log = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
 
-  private static final String PERIODS_QUERY_PARAMS = "servicePointId=%s&startDate=%s&endDate=%s&includeClosedDays=%s";
-  private static final String OPENING_PERIODS = "openingPeriods";
-  private static final String DATE_KEY = "date";
-  private static final String ALL_DAY_KEY = "allDay";
-  private static final String OPEN_KEY = "open";
-  private static final String OPENING_HOUR_KEY = "openingHour";
-  private static final String OPENING_DAY_KEY = "openingDay";
-  private static final String DATE_TIME_FORMAT = "yyyy-MM-dd'T'HH:mm:ss.SSSZ";
-  private static final String DATE_PART_FORMAT = "yyyy-MM-dd";
-  private static final DateTimeFormatter DATE_TIME_FORMATTER =
-    DateTimeFormat.forPattern(DATE_TIME_FORMAT).withZoneUTC();
+  private static final String PERIODS_QUERY_PARAMS =
+    "servicePointId=%s&startDate=%s&endDate=%s&includeClosedDays=%s";
 
   private final ConfigurationsClient configurationsClient;
 
@@ -56,13 +45,14 @@ public class CalendarClient extends OkapiClient {
     configurationsClient = new ConfigurationsClient(vertx, okapiHeaders);
   }
 
-  public Future<Collection<OpeningDayWithTimeZone>> fetchOpeningDaysBetweenDates(String servicePointId,
-    DateTime startDate, DateTime endDate, boolean includeClosedDays) {
+  public Future<Collection<OpeningDayWithTimeZone>> fetchOpeningDaysBetweenDates(
+    String servicePointId, DateTime startDate, DateTime endDate, boolean includeClosedDays) {
 
     Promise<HttpResponse<Buffer>> promise = Promise.promise();
 
     String params = String.format(PERIODS_QUERY_PARAMS,
-      servicePointId, startDate.toLocalDate(), endDate.toLocalDate().plusDays(1), includeClosedDays);
+      servicePointId, startDate.toLocalDate(), endDate.toLocalDate().plusDays(1),
+      includeClosedDays);
     String path = String.format("/calendar/periods?%s", params);
 
     getAbs(path).send(promise);

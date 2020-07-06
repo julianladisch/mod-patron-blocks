@@ -1,6 +1,8 @@
 package org.folio.service;
 
+import static io.vertx.core.Future.failedFuture;
 import static io.vertx.core.Future.succeededFuture;
+import static java.lang.String.format;
 import static org.apache.commons.lang3.ObjectUtils.allNotNull;
 import static org.joda.time.DateTimeConstants.MINUTES_PER_HOUR;
 import static org.joda.time.DateTimeZone.UTC;
@@ -14,6 +16,7 @@ import java.util.UUID;
 
 import org.apache.commons.lang3.ObjectUtils;
 import org.folio.domain.OpeningDayWithTimeZone;
+import org.folio.exception.OverduePeriodCalculatorException;
 import org.folio.rest.client.CalendarClient;
 import org.folio.rest.client.CirculationStorageClient;
 import org.folio.rest.client.FeesFinesClient;
@@ -37,6 +40,7 @@ public class OverduePeriodCalculatorService {
   private static final Logger log = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
 
   private static final int ZERO_MINUTES = 0;
+  private static final Double NUMBER_OF_MINUTES_IN_ONE_DAY = 1440.0;
 
   private final CalendarClient calendarClient;
   private final CirculationStorageClient circulationStorageClient;
@@ -51,8 +55,11 @@ public class OverduePeriodCalculatorService {
   }
 
   public Future<Integer> getMinutes(Loan loan, DateTime systemTime) {
-    if (loan.getOverdueFinePolicyId() == null) {
-      log.error("Loan ID {} - overdue fine policy is missing", loan.getId());
+    if (loan.getOverdueFinePolicyId() == null || loan.getLoanPolicyId() == null) {
+      String message = format("Loan ID %s - overdue fine policy or loan policy is missing",
+        loan.getId());
+      log.error(message);
+      return failedFuture(new OverduePeriodCalculatorException(message));
     }
 
     return succeededFuture(new CalculationContext())
@@ -87,9 +94,10 @@ public class OverduePeriodCalculatorService {
     boolean shouldCountClosedPeriods = calculationContext.getOverdueFinePolicy().getCountClosed();
     Loan loan = calculationContext.getLoan();
 
-    return shouldCountClosedPeriods || getItemLocationPrimaryServicePoint(loan) == null
-      ? minutesOverdueIncludingClosedPeriods(loan, systemTime)
-      : minutesOverdueExcludingClosedPeriods(loan, systemTime);
+    return getItemLocationPrimaryServicePoint(loan)
+      .compose(servicePointId -> shouldCountClosedPeriods || servicePointId == null
+          ? minutesOverdueIncludingClosedPeriods(loan, systemTime)
+          : minutesOverdueExcludingClosedPeriods(loan, servicePointId, systemTime));
   }
 
   private Future<Integer> minutesOverdueIncludingClosedPeriods(Loan loan, DateTime systemTime) {
@@ -97,16 +105,17 @@ public class OverduePeriodCalculatorService {
     return succeededFuture(overdueMinutes);
   }
 
-  private Future<Integer> minutesOverdueExcludingClosedPeriods(Loan loan, DateTime returnDate) {
+  private Future<Integer> minutesOverdueExcludingClosedPeriods(Loan loan,
+    UUID primaryServicePointId, DateTime returnDate) {
+
     DateTime dueDate = new DateTime(loan.getDueDate());
-    return getItemLocationPrimaryServicePoint(loan)
-      .compose(primaryServicePointId -> calendarClient
+    return calendarClient
         .fetchOpeningDaysBetweenDates(primaryServicePointId.toString(), dueDate, returnDate, false)
         .map(openingDays -> getOpeningDaysDurationMinutes(openingDays, dueDate.toLocalDateTime(),
-          returnDate.toLocalDateTime())));
+          returnDate.toLocalDateTime()));
   }
 
-  Integer getOpeningDaysDurationMinutes(
+  private Integer getOpeningDaysDurationMinutes(
     Collection<OpeningDayWithTimeZone> openingDays, LocalDateTime dueDate, LocalDateTime returnDate) {
 
     return openingDays.stream()
@@ -159,7 +168,7 @@ public class OverduePeriodCalculatorService {
     return period.getHours() * MINUTES_PER_HOUR + period.getMinutes();
   }
 
-  Integer adjustOverdueWithGracePeriod(CalculationContext context, int overdueMinutes) {
+  private Integer adjustOverdueWithGracePeriod(CalculationContext context, int overdueMinutes) {
     int result;
 
     if (shouldIgnoreGracePeriod(context)) {
@@ -173,13 +182,14 @@ public class OverduePeriodCalculatorService {
   }
 
   private boolean shouldIgnoreGracePeriod(CalculationContext context) {
-    if (!context.getLoan().getDueDateChangedByRecall()) {
+    boolean dueDateChangedByRecall = context.getLoan().getDueDateChangedByRecall();
+    if (!dueDateChangedByRecall) {
       return false;
     }
 
     Boolean ignoreGracePeriodForRecalls = context.getOverdueFinePolicy().getGracePeriodRecall();
 
-    return ignoreGracePeriodForRecalls == null ? true : ignoreGracePeriodForRecalls;
+    return ignoreGracePeriodForRecalls == null || ignoreGracePeriodForRecalls;
   }
 
   private int getGracePeriodMinutes(CalculationContext context) {
@@ -189,7 +199,7 @@ public class OverduePeriodCalculatorService {
       .map(LoansPolicy::getGracePeriod)
       .map(gp -> Period.from(gp.getDuration(), gp.getIntervalId().value()))
       .map(Period::toMinutes)
-      .orElse(0);
+      .orElse(ZERO_MINUTES);
   }
 
   private Future<UUID> getItemLocationPrimaryServicePoint(Loan loan) {
@@ -199,6 +209,10 @@ public class OverduePeriodCalculatorService {
       .map(location -> Optional.ofNullable(location.getPrimaryServicePoint())
         .map(UUID::fromString)
         .orElse(null));
+  }
+
+  public static int getLoanOverdueDays(Integer overdueMinutes) {
+    return (int) Math.ceil(overdueMinutes.doubleValue() / NUMBER_OF_MINUTES_IN_ONE_DAY);
   }
 
   private static class CalculationContext {

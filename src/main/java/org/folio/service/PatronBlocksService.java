@@ -30,6 +30,7 @@ import org.folio.rest.tools.utils.TenantTool;
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
+import io.vertx.core.impl.CompositeFutureImpl;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
 
@@ -83,7 +84,7 @@ public class PatronBlocksService {
     OverduePeriodCalculatorService overduePeriodCalculatorService =
       new OverduePeriodCalculatorService(vertx, okapiHeaders);
 
-    List<Future> overdueMinutes = new ArrayList<>();
+    List<Future<LoanOverdueMinutes>> overdueMinutes = new ArrayList<>();
     summary.getOpenLoans().forEach(openLoan ->
       overdueMinutes.add(
         circulationStorageClient.findLoanById(openLoan.getLoanId())
@@ -91,7 +92,7 @@ public class PatronBlocksService {
         .map(intValue -> new LoanOverdueMinutes(openLoan.getLoanId(), intValue))
       ));
 
-    return CompositeFuture.all(overdueMinutes)
+    return CompositeFutureImpl.all(overdueMinutes.toArray(new Future[0]))
       .compose(ar -> {
         Map<String, Integer> overdueMinutesMap = ar.list().stream()
           .filter(e -> e instanceof LoanOverdueMinutes)
