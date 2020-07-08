@@ -1,6 +1,5 @@
 package org.folio.repository;
 
-import java.math.BigDecimal;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -60,9 +59,7 @@ public class UserSummaryRepository extends BaseRepository<UserSummary> {
   private UserSummary buildEmptyUserSummary(String userId) {
     return new UserSummary()
       .withId(UUID.randomUUID().toString())
-      .withUserId(userId)
-      .withOutstandingFeeFineBalance(BigDecimal.ZERO)
-      .withNumberOfLostItems(0);
+      .withUserId(userId);
   }
 
 }

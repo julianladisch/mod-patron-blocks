@@ -19,6 +19,11 @@
       "type": "string",
       "$ref": "../raml-util/schemas/uuid.schema"
     },
+    "loanId": {
+      "description": "Unique ID of the loan the fee/fine was created for",
+      "type": "string",
+      "$ref": "../raml-util/schemas/uuid.schema"
+    },
     "balance": {
       "description": "Current balance of a fee/fine",
       "type": "number",

@@ -39,6 +39,7 @@ public class ItemCheckedInHandlerTest extends EventHandlerTestBase {
     OpenLoan existingLoan2 = new OpenLoan()
       .withLoanId(randomId())
       .withDueDate(new Date())
+      .withItemLost(false)
       .withRecall(false);
 
     final String userId = randomId();
@@ -46,8 +47,6 @@ public class ItemCheckedInHandlerTest extends EventHandlerTestBase {
     UserSummary initialUserSummary = new UserSummary()
       .withId(randomId())
       .withUserId(userId)
-      .withNumberOfLostItems(0)
-      .withOutstandingFeeFineBalance(BigDecimal.ZERO)
       .withOpenLoans(Arrays.asList(existingLoan1, existingLoan2));
 
     String savedSummaryId = waitFor(userSummaryRepository.save(initialUserSummary));
@@ -71,9 +70,7 @@ public class ItemCheckedInHandlerTest extends EventHandlerTestBase {
 
     UserSummary initialUserSummary = new UserSummary()
       .withId(randomId())
-      .withUserId(userId)
-      .withNumberOfLostItems(0)
-      .withOutstandingFeeFineBalance(BigDecimal.ZERO);
+      .withUserId(userId);
 
     initialUserSummary.getOpenLoans().add(existingLoan);
 

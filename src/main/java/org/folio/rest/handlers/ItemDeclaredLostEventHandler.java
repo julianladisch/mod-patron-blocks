@@ -1,8 +1,11 @@
 package org.folio.rest.handlers;
 
+import java.util.List;
 import java.util.Map;
 
+import org.apache.commons.lang3.StringUtils;
 import org.folio.rest.jaxrs.model.ItemDeclaredLostEvent;
+import org.folio.rest.jaxrs.model.OpenLoan;
 import org.folio.rest.jaxrs.model.UserSummary;
 import org.folio.rest.persist.PostgresClient;
 
@@ -26,17 +29,17 @@ public class ItemDeclaredLostEventHandler extends EventHandler<ItemDeclaredLostE
       .onComplete(result -> logResult(result, event));
   }
 
-  private Future<String> updateUserSummary(UserSummary userSummary,
-    ItemDeclaredLostEvent event) {
+  private Future<String> updateUserSummary(UserSummary userSummary, ItemDeclaredLostEvent event) {
+    List<OpenLoan> openLoans = userSummary.getOpenLoans();
 
-    // increment the number of lost items
-    if (userSummary.getNumberOfLostItems() == null) {
-      userSummary.setNumberOfLostItems(0);
-    }
-    userSummary.setNumberOfLostItems(userSummary.getNumberOfLostItems() + 1);
-
-    // remove open loan from a summary
-    userSummary.getOpenLoans().removeIf(loan -> loan.getLoanId().equals(event.getLoanId()));
+    openLoans.stream()
+      .filter(loan -> StringUtils.equals(loan.getLoanId(), event.getLoanId()))
+      .findAny()
+      .orElseGet(() -> {
+        OpenLoan newOpenLoan = new OpenLoan().withLoanId(event.getLoanId());
+        openLoans.add(newOpenLoan);
+        return newOpenLoan;
+      }).setItemLost(true);
 
     return userSummaryRepository.upsert(userSummary, userSummary.getId());
   }

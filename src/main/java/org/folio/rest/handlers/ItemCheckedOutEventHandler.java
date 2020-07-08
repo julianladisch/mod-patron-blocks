@@ -42,8 +42,7 @@ public class ItemCheckedOutEventHandler extends EventHandler<ItemCheckedOutEvent
 
       openLoans.add(new OpenLoan()
         .withLoanId(event.getLoanId())
-        .withDueDate(event.getDueDate())
-        .withRecall(false));
+        .withDueDate(event.getDueDate()));
 
       return userSummaryRepository.upsert(userSummary, userSummary.getId());
     }
