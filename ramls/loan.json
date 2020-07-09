@@ -27,6 +27,7 @@
       "$ref": "raml-util/schemas/uuid.schema"
     },
     "status": {
+      "javaType": "org.folio.rest.jaxrs.model.LoanStatus",
       "description": "Overall status of the loan",
       "type": "object",
       "properties": {

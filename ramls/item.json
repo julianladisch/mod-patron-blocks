@@ -225,6 +225,7 @@
       }
     },
     "status": {
+      "javaType": "org.folio.rest.jaxrs.model.ItemStatus",
       "description": "The status of the item",
       "type": "object",
       "properties": {

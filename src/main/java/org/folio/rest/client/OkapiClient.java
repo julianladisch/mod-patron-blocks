@@ -75,10 +75,11 @@ public class OkapiClient {
       } else {
         try {
           T fetchedObject = objectMapper.readValue(response.bodyAsString(), responseType);
-          log.info("Fetched by ID: /{}/{}", path, id);
+          log.info("Fetched by ID: {}/{}. Response body: \n{}", path, id, response.bodyAsString());
           return succeededFuture(fetchedObject);
         } catch (JsonProcessingException e) {
-          log.error("Failed to parse response: " + response.bodyAsString());
+          log.error("Failed to parse response from {}/{}. Response body: \n{}", e, path, id,
+            response.bodyAsString());
           return failedFuture(e);
         }
       }
