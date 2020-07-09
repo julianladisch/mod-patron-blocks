@@ -1,3 +1,6 @@
+## 1.0.2
+* Allow additional properties in user schema (MODPATBLK-30)
+
 ## 1.0.1
 * Create the block when the limit is reached, not when it's exceeded (MODPATBLK-20)
 
