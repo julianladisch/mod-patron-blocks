@@ -1,3 +1,6 @@
+## 1.0.3
+* Delete open loan from user summary when last related lost item fee is closed (MODPATBLK-21)
+
 ## 1.0.2
 * Allow additional properties in user schema (MODPATBLK-30)
 
