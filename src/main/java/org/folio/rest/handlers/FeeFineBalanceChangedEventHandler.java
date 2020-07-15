@@ -3,6 +3,7 @@ package org.folio.rest.handlers;
 import static java.lang.String.format;
 
 import java.math.BigDecimal;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
@@ -10,13 +11,19 @@ import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 
 import org.apache.commons.lang3.StringUtils;
+import org.folio.domain.FeeFineType;
 import org.folio.exception.EntityNotFoundException;
 import org.folio.rest.jaxrs.model.FeeFineBalanceChangedEvent;
 import org.folio.rest.jaxrs.model.OpenFeeFine;
+import org.folio.rest.jaxrs.model.OpenLoan;
 import org.folio.rest.jaxrs.model.UserSummary;
 import org.folio.rest.persist.PostgresClient;
 
 public class FeeFineBalanceChangedEventHandler extends EventHandler<FeeFineBalanceChangedEvent> {
+  private static final List<String> LOST_ITEM_FEE_TYPE_IDS = Arrays.asList(
+    FeeFineType.LOST_ITEM_FEE.getId(),
+    FeeFineType.LOST_ITEM_PROCESSING_FEE.getId()
+  );
 
   public FeeFineBalanceChangedEventHandler(Map<String, String> okapiHeaders, Vertx vertx) {
     super(okapiHeaders, vertx);
@@ -52,25 +59,17 @@ public class FeeFineBalanceChangedEventHandler extends EventHandler<FeeFineBalan
 
     if (feeFineIsClosed(event)) {
       openFeesFines.remove(openFeeFine);
+      removeLoanIfLastLostItemFeeWasClosed(userSummary, event);
     } else {
       openFeeFine.setBalance(event.getBalance());
+      openFeeFine.setLoanId(event.getLoanId());
     }
-
-    refreshOutstandingFeeFineBalance(userSummary);
 
     return userSummaryRepository.upsert(userSummary, userSummary.getId());
   }
 
   private boolean feeFineIsClosed(FeeFineBalanceChangedEvent event) {
     return BigDecimal.ZERO.compareTo(event.getBalance()) == 0;
-  }
-
-  private void refreshOutstandingFeeFineBalance(UserSummary userSummary) {
-    userSummary.setOutstandingFeeFineBalance(
-      userSummary.getOpenFeesFines().stream()
-      .map(OpenFeeFine::getBalance)
-      .reduce(BigDecimal.ZERO, BigDecimal::add)
-    );
   }
 
   private Future<UserSummary> getUserSummary(FeeFineBalanceChangedEvent event) {
@@ -82,7 +81,34 @@ public class FeeFineBalanceChangedEventHandler extends EventHandler<FeeFineBalan
   private Future<UserSummary> findSummaryByFeeFineIdOrFail(String feeFineId) {
     return userSummaryRepository.findByFeeFineId(feeFineId)
       .map(summary -> summary.orElseThrow(() -> new EntityNotFoundException(
-        format("User summary with feeFine %s was not found, event is ignored", feeFineId))));
+        format("User summary with fee/fine %s was not found, event is ignored", feeFineId))));
+  }
+
+  private void removeLoanIfLastLostItemFeeWasClosed(UserSummary userSummary,
+    FeeFineBalanceChangedEvent event) {
+
+    if (!isLostItemFeeId(event.getFeeFineTypeId())) {
+      return;
+    }
+
+    userSummary.getOpenLoans().stream()
+      .filter(OpenLoan::getItemLost)
+      .filter(loan -> StringUtils.equals(loan.getLoanId(), event.getLoanId()))
+      .findAny()
+      .ifPresent(loan -> {
+        boolean noLostItemFeesForLoanExist = userSummary.getOpenFeesFines().stream()
+          .filter(fee -> StringUtils.equals(fee.getLoanId(), event.getLoanId()))
+          .map(OpenFeeFine::getFeeFineTypeId)
+          .noneMatch(this::isLostItemFeeId);
+
+        if (noLostItemFeesForLoanExist) {
+          userSummary.getOpenLoans().remove(loan);
+        }
+      });
+  }
+
+  private boolean isLostItemFeeId(String feeFineTypeId) {
+    return LOST_ITEM_FEE_TYPE_IDS.contains(feeFineTypeId);
   }
 
 }
