@@ -1,3 +1,6 @@
+## 1.0.4 2020-07-15
+* Upgrade to RMB v30.0.3 (MODPATBLK-36)
+
 ## 1.0.3
 * Delete open loan from user summary when last related lost item fee is closed (MODPATBLK-21)
 
