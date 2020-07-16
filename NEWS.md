@@ -1,3 +1,6 @@
+## 1.0.5 2020-07-16
+* Add migration script to remove unnecessary fields from user_summary DB table (MODPATBLK-36)
+
 ## 1.0.4 2020-07-15
 * Upgrade to RMB v30.0.3 (MODPATBLK-36)
 
