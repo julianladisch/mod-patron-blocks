@@ -10,7 +10,7 @@ import org.folio.rest.jaxrs.model.OpenLoan;
 import org.folio.rest.jaxrs.model.UserSummary;
 
 public class EntityBuilder {
-  protected static String randomId() {
+  private static String randomId() {
     return UUID.randomUUID().toString();
   }
 
