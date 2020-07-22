@@ -225,7 +225,7 @@
     },
     {
       "permissionName": "user-summary.item.get",
-      "displayName": "User summaries - get UserSummary object",
+      "displayName": "User summary - get UserSummary object",
       "description": "Get UserSummary object by user ID"
     }
   ],
