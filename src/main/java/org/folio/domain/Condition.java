@@ -10,9 +10,6 @@ import org.folio.rest.jaxrs.model.OpenFeeFine;
 import org.folio.rest.jaxrs.model.OpenLoan;
 import org.folio.rest.jaxrs.model.PatronBlockLimit;
 import org.folio.rest.jaxrs.model.UserSummary;
-import org.joda.time.DateTimeZone;
-import org.joda.time.Days;
-import org.joda.time.LocalDate;
 
 public enum Condition {
   // IDs come from resources\templates\db_scripts\populate-patron-block-conditions.sql
