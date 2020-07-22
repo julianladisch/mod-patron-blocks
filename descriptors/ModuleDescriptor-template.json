@@ -32,6 +32,21 @@
       ]
     },
     {
+      "id":"user-summary",
+      "version":"0.1",
+      "handlers":[
+        {
+          "methods":[
+            "GET"
+          ],
+          "pathPattern":"/user-summary/{userId}",
+          "permissionsRequired": [
+            "user-summary.item.get"
+          ]
+        }
+      ]
+    },
+    {
       "id":"patron-blocks-event-handlers",
       "version":"1.0",
       "handlers":[
