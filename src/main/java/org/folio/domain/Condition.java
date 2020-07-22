@@ -94,7 +94,8 @@ public enum Condition {
 
   private static int getLoanOverdueDays(OpenLoan loan) {
     return isLoanOverdue(loan)
-      ? Days.daysBetween(new LocalDate(loan.getDueDate()), LocalDate.now(DateTimeZone.UTC)).getDays()
+      ? (int) Math.round(((double) (new Date().getTime() - loan.getDueDate().getTime()))
+      / 1000.0 / 60.0 / 60.0 / 24.0)
       : 0;
   }
 
