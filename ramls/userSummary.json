@@ -97,8 +97,6 @@
   "required": [
     "id",
     "userId",
-    "outstandingFeeFineBalance",
-    "numberOfLostItems",
     "openLoans",
     "openFeesFines"
   ]

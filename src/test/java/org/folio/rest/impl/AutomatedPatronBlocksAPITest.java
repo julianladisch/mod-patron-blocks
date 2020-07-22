@@ -14,6 +14,8 @@ import static org.folio.domain.Condition.MAX_OUTSTANDING_FEE_FINE_BALANCE;
 import static org.folio.domain.Condition.RECALL_OVERDUE_BY_MAX_NUMBER_OF_DAYS;
 import static org.folio.repository.PatronBlockLimitsRepository.PATRON_BLOCK_LIMITS_TABLE_NAME;
 import static org.folio.repository.UserSummaryRepository.USER_SUMMARY_TABLE_NAME;
+import static org.folio.rest.utils.EntityBuilder.buildFeeFine;
+import static org.folio.rest.utils.EntityBuilder.buildLoan;
 import static org.hamcrest.core.IsEqual.equalTo;
 import static org.joda.time.DateTime.now;
 
@@ -22,7 +24,6 @@ import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.Date;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Optional;
@@ -114,7 +115,7 @@ public class AutomatedPatronBlocksAPITest extends TestBase {
     final Condition condition = MAX_NUMBER_OF_ITEMS_CHARGED_OUT;
     final int limitValue = LIMIT_VALUES.get(condition);
 
-    OpenLoan openLoan = createLoan(false, false, now().plusHours(1).toDate());
+    OpenLoan openLoan = buildLoan(false, false, now().plusHours(1).toDate());
     List<OpenLoan> openLoans = fillListOfSize(openLoan, limitValue + openLoansSizeDelta);
     createSummary(USER_ID, new ArrayList<>(), openLoans);
 
@@ -160,7 +161,7 @@ public class AutomatedPatronBlocksAPITest extends TestBase {
     final Condition condition = MAX_NUMBER_OF_LOST_ITEMS;
     int limitValue = LIMIT_VALUES.get(condition);
 
-    OpenLoan openLoan = createLoan(false, true, now().plusHours(1).toDate());
+    OpenLoan openLoan = buildLoan(false, true, now().plusHours(1).toDate());
     List<OpenLoan> openLoans = fillListOfSize(openLoan, limitValue + lostItemsDelta);
     createSummary(USER_ID, new ArrayList<>(), openLoans);
 
@@ -206,7 +207,7 @@ public class AutomatedPatronBlocksAPITest extends TestBase {
     final Condition condition = MAX_NUMBER_OF_OVERDUE_ITEMS;
     int limitValue = LIMIT_VALUES.get(condition);
 
-    OpenLoan overdueLoan = createLoan(false, false, now().minusHours(1).toDate());
+    OpenLoan overdueLoan = buildLoan(false, false, now().minusHours(1).toDate());
     List<OpenLoan> overdueLoans = fillListOfSize(overdueLoan, limitValue + openLoansSizeDelta);
     createSummary(USER_ID, new ArrayList<>(), overdueLoans);
 
@@ -252,7 +253,7 @@ public class AutomatedPatronBlocksAPITest extends TestBase {
     Condition condition = MAX_NUMBER_OF_OVERDUE_RECALLS;
     int limitValue = LIMIT_VALUES.get(condition);
 
-    OpenLoan overdueLoan = createLoan(true, false, now().minusHours(1).toDate());
+    OpenLoan overdueLoan = buildLoan(true, false, now().minusHours(1).toDate());
     List<OpenLoan> loans = fillListOfSize(overdueLoan, limitValue + openLoansSizeDelta);
     createSummary(USER_ID, new ArrayList<>(), loans);
 
@@ -299,7 +300,7 @@ public class AutomatedPatronBlocksAPITest extends TestBase {
     int limitValue = LIMIT_VALUES.get(condition);
 
     DateTime dueDateBelowLimit = now().minusDays(limitValue + dueDateDelta);
-    OpenLoan overdueLoan = createLoan(true, false, dueDateBelowLimit.toDate());
+    OpenLoan overdueLoan = buildLoan(true, false, dueDateBelowLimit.toDate());
     createSummary(USER_ID, new ArrayList<>(), singletonList(overdueLoan));
 
     String expectedResponse = createLimitsAndBuildExpectedResponse(condition, singleLimit,
@@ -349,7 +350,7 @@ public class AutomatedPatronBlocksAPITest extends TestBase {
     BigDecimal balancePerFeeFine = BigDecimal.valueOf(limitValue + feeFineBalanceDelta)
       .divide(BigDecimal.valueOf(numberOfFeesFines), 2, RoundingMode.UNNECESSARY);
 
-    OpenFeeFine openFeeFine = createFeeFine(randomId(), randomId(), randomId(), balancePerFeeFine);
+    OpenFeeFine openFeeFine = buildFeeFine(randomId(), randomId(), randomId(), balancePerFeeFine);
     List<OpenFeeFine> openFeeFines = fillListOfSize(openFeeFine, numberOfFeesFines);
     createSummary(USER_ID, openFeeFines, new ArrayList<>());
 
@@ -397,7 +398,7 @@ public class AutomatedPatronBlocksAPITest extends TestBase {
     int maxOverdueRecallLimit = LIMIT_VALUES.get(RECALL_OVERDUE_BY_MAX_NUMBER_OF_DAYS);
     DateTime dueDate = now().minusDays(maxOverdueRecallLimit + 1);
 
-    OpenLoan overdueRecalledLoan = createLoan(loanId, true, true, dueDate.toDate());
+    OpenLoan overdueRecalledLoan = buildLoan(loanId, true, true, dueDate.toDate());
 
     int numberOfOpenLoans = Collections.max(Arrays.asList(
       LIMIT_VALUES.get(MAX_NUMBER_OF_LOST_ITEMS),
@@ -406,7 +407,7 @@ public class AutomatedPatronBlocksAPITest extends TestBase {
       LIMIT_VALUES.get(MAX_NUMBER_OF_OVERDUE_RECALLS))) + 1;
 
     BigDecimal balance = BigDecimal.valueOf(LIMIT_VALUES.get(MAX_OUTSTANDING_FEE_FINE_BALANCE) + 1);
-    List<OpenFeeFine> openFeeFines = singletonList(createFeeFine(loanId, randomId(), randomId(), balance));
+    List<OpenFeeFine> openFeeFines = singletonList(buildFeeFine(loanId, randomId(), randomId(), balance));
     List<OpenLoan> openLoans = fillListOfSize(overdueRecalledLoan, numberOfOpenLoans);
     createSummary(USER_ID, openFeeFines, openLoans);
 
@@ -422,7 +423,7 @@ public class AutomatedPatronBlocksAPITest extends TestBase {
 
     createLimitsForAllConditions();
 
-    OpenLoan openLoan = createLoan(false, false, DateTime.now().plusHours(1).toDate());
+    OpenLoan openLoan = buildLoan(false, false, DateTime.now().plusHours(1).toDate());
     List<OpenLoan> openLoans = fillListOfSize(openLoan, limitValue + 1);
     createSummary(USER_ID, new ArrayList<>(), openLoans);
 
@@ -526,14 +527,6 @@ public class AutomatedPatronBlocksAPITest extends TestBase {
       .withPatronBlockConditionId(condition.getId());
   }
 
-  private <T> List<T> fillListOfSize(T object, int listSize) {
-    List<T> list = new ArrayList<>();
-    for (int i = 0; i < listSize; i++) {
-      list.add(object);
-    }
-    return list;
-  }
-
   private void createLimitsForAllConditions() {
     for (Condition condition : Condition.values()) {
       createLimit(condition, PATRON_GROUP_ID, LIMIT_VALUES.get(condition));
@@ -568,27 +561,5 @@ public class AutomatedPatronBlocksAPITest extends TestBase {
     }
 
     return expectedResponse;
-  }
-
-  private OpenLoan createLoan(boolean recall, boolean itemLost, Date dueDate) {
-    return createLoan(randomId(), recall, itemLost, dueDate);
-  }
-
-  private OpenLoan createLoan(String loanId, boolean recall, boolean itemLost, Date dueDate) {
-    return new OpenLoan()
-      .withLoanId(loanId)
-      .withDueDate(dueDate)
-      .withRecall(recall)
-      .withItemLost(itemLost);
-  }
-
-  private OpenFeeFine createFeeFine(String loanId, String feeFineId, String feeFineTypeId,
-    BigDecimal balance) {
-
-    return new OpenFeeFine()
-      .withLoanId(loanId)
-      .withFeeFineId(feeFineId)
-      .withFeeFineTypeId(feeFineTypeId)
-      .withBalance(balance);
   }
 }

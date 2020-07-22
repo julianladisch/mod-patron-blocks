@@ -1,0 +1,48 @@
+package org.folio.rest.utils;
+
+import java.math.BigDecimal;
+import java.util.Date;
+import java.util.List;
+import java.util.UUID;
+
+import org.folio.rest.jaxrs.model.OpenFeeFine;
+import org.folio.rest.jaxrs.model.OpenLoan;
+import org.folio.rest.jaxrs.model.UserSummary;
+
+public class EntityBuilder {
+  private static String randomId() {
+    return UUID.randomUUID().toString();
+  }
+
+  public static OpenLoan buildLoan(boolean recall, boolean itemLost, Date dueDate) {
+    return buildLoan(randomId(), recall, itemLost, dueDate);
+  }
+
+  public static OpenLoan buildLoan(String loanId, boolean recall, boolean itemLost, Date dueDate) {
+    return new OpenLoan()
+      .withLoanId(loanId)
+      .withDueDate(dueDate)
+      .withRecall(recall)
+      .withItemLost(itemLost);
+  }
+
+  public static OpenFeeFine buildFeeFine(String loanId, String feeFineId, String feeFineTypeId,
+    BigDecimal balance) {
+
+    return new OpenFeeFine()
+      .withLoanId(loanId)
+      .withFeeFineId(feeFineId)
+      .withFeeFineTypeId(feeFineTypeId)
+      .withBalance(balance);
+  }
+
+  public static UserSummary buildUserSummary(String userId, List<OpenFeeFine> feesFines,
+    List<OpenLoan> openLoans) {
+
+    return new UserSummary()
+      .withId(randomId())
+      .withUserId(userId)
+      .withOpenFeesFines(feesFines)
+      .withOpenLoans(openLoans);
+  }
+}

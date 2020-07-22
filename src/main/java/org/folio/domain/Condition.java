@@ -10,9 +10,6 @@ import org.folio.rest.jaxrs.model.OpenFeeFine;
 import org.folio.rest.jaxrs.model.OpenLoan;
 import org.folio.rest.jaxrs.model.PatronBlockLimit;
 import org.folio.rest.jaxrs.model.UserSummary;
-import org.joda.time.DateTimeZone;
-import org.joda.time.Days;
-import org.joda.time.LocalDate;
 
 public enum Condition {
   // IDs come from resources\templates\db_scripts\populate-patron-block-conditions.sql
@@ -94,7 +91,8 @@ public enum Condition {
 
   private static int getLoanOverdueDays(OpenLoan loan) {
     return isLoanOverdue(loan)
-      ? Days.daysBetween(new LocalDate(loan.getDueDate()), LocalDate.now(DateTimeZone.UTC)).getDays()
+      ? (int) Math.round(((double) (new Date().getTime() - loan.getDueDate().getTime()))
+      / 1000.0 / 60.0 / 60.0 / 24.0)
       : 0;
   }
 
