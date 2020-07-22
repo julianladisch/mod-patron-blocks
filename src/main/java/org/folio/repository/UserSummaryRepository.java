@@ -1,5 +1,7 @@
 package org.folio.repository;
 
+import static io.vertx.core.Future.succeededFuture;
+
 import java.util.Optional;
 import java.util.UUID;
 
@@ -41,7 +43,13 @@ public class UserSummaryRepository extends BaseRepository<UserSummary> {
         .setJSONB(true));
 
     return this.get(criterion)
-      .map(results -> results.stream().findFirst());
+      .compose(results -> {
+        if (results.isEmpty()) {
+          return succeededFuture(Optional.empty());
+        }
+
+        return succeededFuture(Optional.ofNullable(results.get(0)));
+      });
   }
 
   public Future<UserSummary> findByUserIdOrBuildNew(String userId) {

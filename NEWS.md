@@ -1,3 +1,6 @@
+## 1.0.6 2020-07-22
+* Add diagnostic GET endpoint for UserSummary objects (MODPATBLK-35)
+
 ## 1.0.5 2020-07-16
 * Add migration script to remove unnecessary fields from user_summary DB table (MODPATBLK-36)
 
