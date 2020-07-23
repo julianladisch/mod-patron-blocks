@@ -2,6 +2,8 @@ package org.folio.service;
 
 import static io.vertx.core.Future.succeededFuture;
 import static java.lang.String.format;
+import static java.util.stream.Collectors.toList;
+import static org.apache.commons.lang3.BooleanUtils.isTrue;
 import static org.folio.domain.Condition.isConditionLimitExceeded;
 import static org.folio.okapi.common.XOkapiHeaders.TENANT;
 
@@ -9,7 +11,6 @@ import java.lang.invoke.MethodHandles;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 import org.folio.exception.EntityNotFoundException;
 import org.folio.repository.PatronBlockConditionsRepository;
@@ -70,21 +71,28 @@ public class PatronBlocksService {
       return succeededFuture(blocks);
     }
 
-    List<Future<AutomatedPatronBlock>> futures = limits.stream()
+    final List<Future<PatronBlockCondition>> findConditions = limits.stream()
       .filter(limit -> isConditionLimitExceeded(summary, limit))
-      .map(this::createBlockForLimit)
-      .collect(Collectors.toList());
+      .map(this::findConditionForLimit)
+      .collect(toList());
 
-    return CompositeFuture.all(new ArrayList<>(futures))
+    return CompositeFuture.all(new ArrayList<>(findConditions))
       .onFailure(log::error)
-      .onSuccess(cf -> blocks.getAutomatedPatronBlocks().addAll(cf.list()))
+      .onSuccess(ignored -> createBlocksForActiveConditions(findConditions, blocks))
       .map(blocks);
   }
 
-  private Future<AutomatedPatronBlock> createBlockForLimit(PatronBlockLimit limit) {
-    return succeededFuture(limit)
-      .compose(this::findConditionForLimit)
-      .map(this::createBlockForCondition);
+  private void createBlocksForActiveConditions(
+    List<Future<PatronBlockCondition>> findConditionFutures, AutomatedPatronBlocks blocks) {
+
+    blocks.withAutomatedPatronBlocks(
+      findConditionFutures.stream()
+        .filter(Future::succeeded)
+        .map(Future::result)
+        .filter(this::isConditionEnabled)
+        .map(this::createBlockForCondition)
+        .collect(toList())
+    );
   }
 
   private Future<PatronBlockCondition> findConditionForLimit(PatronBlockLimit limit) {
@@ -103,6 +111,12 @@ public class PatronBlocksService {
       .withBlockRenewals(condition.getBlockRenewals())
       .withBlockRequests(condition.getBlockRequests())
       .withMessage(condition.getMessage());
+  }
+
+  private boolean isConditionEnabled(PatronBlockCondition condition) {
+    return isTrue(condition.getBlockBorrowing())
+      || isTrue(condition.getBlockRenewals())
+      || isTrue(condition.getBlockRequests());
   }
 
 }

@@ -42,6 +42,7 @@ import org.folio.rest.jaxrs.model.PatronBlockLimit;
 import org.folio.rest.jaxrs.model.UserSummary;
 import org.joda.time.DateTime;
 import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
@@ -61,12 +62,9 @@ public class AutomatedPatronBlocksAPITest extends TestBase {
   private static final boolean SINGLE_LIMIT = true;
   private static final boolean ALL_LIMITS = false;
 
-  private final PatronBlockLimitsRepository limitsRepository =
-    new PatronBlockLimitsRepository(postgresClient);
-  private final UserSummaryRepository summaryRepository =
-    new UserSummaryRepository(postgresClient);
-  private final PatronBlockConditionsRepository conditionsRepository =
-    new PatronBlockConditionsRepository(postgresClient);
+  private static PatronBlockLimitsRepository limitsRepository;
+  private static UserSummaryRepository summaryRepository;
+  private static PatronBlockConditionsRepository conditionsRepository;
 
   private static final EnumMap<Condition, Integer> LIMIT_VALUES;
   static {
@@ -85,6 +83,28 @@ public class AutomatedPatronBlocksAPITest extends TestBase {
     mockUsersResponse();
     deleteAllFromTable(PATRON_BLOCK_LIMITS_TABLE_NAME);
     deleteAllFromTable(USER_SUMMARY_TABLE_NAME);
+  }
+
+  @BeforeClass
+  public static void beforeAll() {
+    limitsRepository = new PatronBlockLimitsRepository(postgresClient);
+    summaryRepository = new UserSummaryRepository(postgresClient);
+    conditionsRepository = new PatronBlockConditionsRepository(postgresClient);
+
+    activateAllConditions();
+  }
+
+  private static void activateAllConditions() {
+    List<PatronBlockCondition> allConditions =
+      waitFor(conditionsRepository.getAllWithDefaultLimit());
+
+    for (PatronBlockCondition condition : allConditions) {
+      waitFor(conditionsRepository.update(condition
+        .withBlockBorrowing(true)
+        .withBlockRenewals(true)
+        .withBlockRequests(true)
+      ));
+    }
   }
 
   @Test
@@ -437,7 +457,7 @@ public class AutomatedPatronBlocksAPITest extends TestBase {
     PatronBlockCondition updatedCondition = new PatronBlockCondition()
       .withId(condition.getId())
       .withBlockBorrowing(!originalCondition.getBlockBorrowing())
-      .withBlockRenewals(!originalCondition.getBlockRenewals())
+      .withBlockRenewals(originalCondition.getBlockRenewals())
       .withBlockRequests(!originalCondition.getBlockRequests())
       .withMessage("Can't do anything");
 
@@ -447,6 +467,40 @@ public class AutomatedPatronBlocksAPITest extends TestBase {
       new AutomatedPatronBlocks().withAutomatedPatronBlocks(singletonList(
         createBlock(condition, updatedCondition.getMessage(), updatedCondition.getBlockBorrowing(),
           updatedCondition.getBlockRenewals(), updatedCondition.getBlockRequests()))));
+
+    sendRequestAndCheckResult(expectedResponse);
+
+    context.assertTrue(waitFor(conditionsRepository.update(originalCondition)));
+  }
+
+  @Test
+  public void noBlockIsCreatedForInactiveCondition(TestContext context) {
+    final Condition condition = MAX_NUMBER_OF_ITEMS_CHARGED_OUT;
+    int limitValue = LIMIT_VALUES.get(condition);
+
+    createLimitsForAllConditions();
+
+    OpenLoan openLoan = buildLoan(false, false, DateTime.now().plusHours(1).toDate());
+    List<OpenLoan> openLoans = fillListOfSize(openLoan, limitValue + 1);
+    createSummary(USER_ID, new ArrayList<>(), openLoans);
+
+    Optional<PatronBlockCondition> optionalResult =
+      waitFor(conditionsRepository.get(condition.getId()));
+
+    context.assertTrue(optionalResult.isPresent());
+
+    final PatronBlockCondition originalCondition = optionalResult.get();
+
+    PatronBlockCondition updatedCondition = new PatronBlockCondition()
+      .withId(condition.getId())
+      .withBlockBorrowing(false)
+      .withBlockRenewals(false)
+      .withBlockRequests(false)
+      .withMessage("All blocks are set to 'false', so the condition is effectively disabled");
+
+    waitFor(conditionsRepository.update(updatedCondition));
+
+    String expectedResponse = toJson(new AutomatedPatronBlocks());
 
     sendRequestAndCheckResult(expectedResponse);
 
@@ -537,7 +591,7 @@ public class AutomatedPatronBlocksAPITest extends TestBase {
     return toJson(
       new AutomatedPatronBlocks().withAutomatedPatronBlocks(
         Arrays.stream(conditions)
-          .map(condition -> createBlock(condition, EMPTY, false, false, false))
+          .map(condition -> createBlock(condition, EMPTY, true, true, true))
           .collect(toList())
       ));
   }
