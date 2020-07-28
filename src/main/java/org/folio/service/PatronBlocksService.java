@@ -2,15 +2,18 @@ package org.folio.service;
 
 import static io.vertx.core.Future.succeededFuture;
 import static java.lang.String.format;
-import static org.folio.domain.Condition.isConditionLimitExceeded;
 import static org.folio.okapi.common.XOkapiHeaders.TENANT;
 
 import java.lang.invoke.MethodHandles;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
+import org.folio.domain.ActionBlocks;
+import org.folio.domain.Condition;
 import org.folio.exception.EntityNotFoundException;
 import org.folio.repository.PatronBlockConditionsRepository;
 import org.folio.repository.PatronBlockLimitsRepository;
@@ -61,7 +64,7 @@ public class PatronBlocksService {
       .compose(limits -> calculateBlocks(summary, limits));
   }
 
-  private Future<AutomatedPatronBlocks> calculateBlocks(UserSummary summary,
+  private Future<AutomatedPatronBlocks> calculateBlocks(UserSummary userSummary,
     List<PatronBlockLimit> limits) {
 
     final AutomatedPatronBlocks blocks = new AutomatedPatronBlocks();
@@ -71,20 +74,32 @@ public class PatronBlocksService {
     }
 
     List<Future<AutomatedPatronBlock>> futures = limits.stream()
-      .filter(limit -> isConditionLimitExceeded(summary, limit))
-      .map(this::createBlockForLimit)
+      .map(limit -> createBlockForLimit(userSummary, limit))
       .collect(Collectors.toList());
 
     return CompositeFuture.all(new ArrayList<>(futures))
       .onFailure(log::error)
-      .onSuccess(cf -> blocks.getAutomatedPatronBlocks().addAll(cf.list()))
+      .onSuccess(cf -> blocks.getAutomatedPatronBlocks().addAll(
+        Arrays.stream(Condition.values())
+          .map(condition -> cf.list().stream()
+            .map(AutomatedPatronBlock.class::cast)
+            .filter(Objects::nonNull)
+            .filter(e -> e.getPatronBlockConditionId().equals(condition.getId()))
+            .findFirst()
+            .orElse(null))
+          .filter(Objects::nonNull)
+          .collect(Collectors.toList())))
       .map(blocks);
   }
 
-  private Future<AutomatedPatronBlock> createBlockForLimit(PatronBlockLimit limit) {
+  private Future<AutomatedPatronBlock> createBlockForLimit(UserSummary userSummary,
+    PatronBlockLimit limit) {
+
+    ActionBlocks actionBlocks = ActionBlocks.determineBlocks(userSummary, limit);
+
     return succeededFuture(limit)
       .compose(this::findConditionForLimit)
-      .map(this::createBlockForCondition);
+      .map(condition -> createBlockForCondition(condition, actionBlocks));
   }
 
   private Future<PatronBlockCondition> findConditionForLimit(PatronBlockLimit limit) {
@@ -96,13 +111,25 @@ public class PatronBlocksService {
           "Condition %s referenced by limit %s does not exist", conditionId, limit.getId()))));
   }
 
-  private AutomatedPatronBlock createBlockForCondition(PatronBlockCondition condition) {
-    return new AutomatedPatronBlock()
-      .withPatronBlockConditionId(condition.getId())
-      .withBlockBorrowing(condition.getBlockBorrowing())
-      .withBlockRenewals(condition.getBlockRenewals())
-      .withBlockRequests(condition.getBlockRequests())
-      .withMessage(condition.getMessage());
-  }
+  private AutomatedPatronBlock createBlockForCondition(PatronBlockCondition condition,
+    ActionBlocks actionBlocks) {
 
+    boolean blockBorrowing = Boolean.TRUE.equals(condition.getBlockBorrowing())
+      && actionBlocks.getBlockBorrowing();
+    boolean blockRenewals = Boolean.TRUE.equals(condition.getBlockRenewals())
+      && actionBlocks.getBlockRenewals();
+    boolean blockRequests = Boolean.TRUE.equals(condition.getBlockRequests())
+      && actionBlocks.getBlockRequests();
+
+    if (blockBorrowing || blockRenewals || blockRequests) {
+      return new AutomatedPatronBlock()
+        .withPatronBlockConditionId(condition.getId())
+        .withBlockBorrowing(blockBorrowing)
+        .withBlockRenewals(blockRenewals)
+        .withBlockRequests(blockRequests)
+        .withMessage(condition.getMessage());
+    }
+
+    return null;
+  }
 }
