@@ -27,18 +27,20 @@ public class ActionBlocks {
   private final boolean blockRenewals;
   private final boolean blockRequests;
 
-  public static ActionBlocks determineBlocks(UserSummary userSummary, PatronBlockLimit limit) {
+  public static ActionBlocks byLimit(UserSummary userSummary, PatronBlockLimit limit) {
 
     if (!ObjectUtils.allNotNull(userSummary, userSummary.getOpenLoans(), limit,
       limit.getConditionId(), Condition.getById(limit.getConditionId()), limit.getValue())) {
 
       log.error("Failed to determine blocks: one of the parameters is null");
-      return none();
+      return empty();
     }
 
     Condition condition = Condition.getById(limit.getConditionId());
 
-    boolean blockBorrowing = false, blockRenewals = false, blockRequests = false;
+    boolean blockBorrowing = false;
+    boolean blockRenewals = false;
+    boolean blockRequests = false;
 
     double limitValue = limit.getValue();
 
@@ -99,7 +101,17 @@ public class ActionBlocks {
     return blockRequests;
   }
 
-  public static ActionBlocks none() {
+  public boolean isNotEmpty() {
+    return blockBorrowing || blockRenewals || blockRequests;
+  }
+
+  public static ActionBlocks and(ActionBlocks left, ActionBlocks right) {
+    return new ActionBlocks(left.blockBorrowing && right.blockBorrowing,
+      left.blockRenewals && right.blockRenewals,
+      left.blockRequests && right.blockRequests);
+  }
+
+  public static ActionBlocks empty() {
     return new ActionBlocks(false, false, false);
   }
 

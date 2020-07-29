@@ -1,20 +1,18 @@
 package org.folio.service;
 
+import static io.vertx.core.Future.failedFuture;
 import static io.vertx.core.Future.succeededFuture;
 import static java.lang.String.format;
 import static org.folio.okapi.common.XOkapiHeaders.TENANT;
 
 import java.lang.invoke.MethodHandles;
-import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
+import org.apache.commons.lang3.ObjectUtils;
 import org.folio.domain.ActionBlocks;
-import org.folio.domain.Condition;
-import org.folio.exception.EntityNotFoundException;
 import org.folio.repository.PatronBlockConditionsRepository;
 import org.folio.repository.PatronBlockLimitsRepository;
 import org.folio.repository.UserSummaryRepository;
@@ -27,14 +25,17 @@ import org.folio.rest.jaxrs.model.UserSummary;
 import org.folio.rest.persist.PostgresClient;
 import org.folio.rest.tools.utils.TenantTool;
 
-import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
+import lombok.AllArgsConstructor;
+import lombok.NoArgsConstructor;
+import lombok.With;
 
 public class PatronBlocksService {
   private static final Logger log = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
+  private static final String DEFAULT_ERROR_MESSAGE = "Failed to calculate automated patron blocks";
 
   private final UserSummaryRepository userSummaryRepository;
   private final PatronBlockConditionsRepository conditionsRepository;
@@ -53,83 +54,140 @@ public class PatronBlocksService {
   public Future<AutomatedPatronBlocks> getBlocksForUser(String userId) {
     return userSummaryRepository.getByUserId(userId)
       .compose(optionalSummary -> optionalSummary
+        .map(userSummary -> new BlocksCalculationContext().withUserSummary(userSummary))
         .map(this::getBlocksForSummary)
         .orElseGet(() -> succeededFuture(new AutomatedPatronBlocks())));
   }
 
-  private Future<AutomatedPatronBlocks> getBlocksForSummary(UserSummary summary) {
-    return succeededFuture(summary.getUserId())
-      .compose(usersClient::findPatronGroupIdForUser)
-      .compose(limitsRepository::findLimitsForPatronGroup)
-      .compose(limits -> calculateBlocks(summary, limits));
+  private Future<AutomatedPatronBlocks> getBlocksForSummary(BlocksCalculationContext ctx) {
+    return succeededFuture(ctx)
+      .compose(this::addUserGroupIdToContext)
+      .compose(this::addPatronBlockLimitsToContext)
+      .compose(this::addAllPatronBlockConditionsToContext)
+      .map(this::calculateBlocks);
   }
 
-  private Future<AutomatedPatronBlocks> calculateBlocks(UserSummary userSummary,
-    List<PatronBlockLimit> limits) {
-
+  private AutomatedPatronBlocks calculateBlocks(BlocksCalculationContext ctx) {
     final AutomatedPatronBlocks blocks = new AutomatedPatronBlocks();
 
-    if (limits.isEmpty()) {
-      return succeededFuture(blocks);
+    if (ctx.patronBlockLimits.isEmpty()) {
+      return blocks;
     }
 
-    List<Future<AutomatedPatronBlock>> futures = limits.stream()
-      .map(limit -> createBlockForLimit(userSummary, limit))
-      .collect(Collectors.toList());
+    blocks.getAutomatedPatronBlocks().addAll(ctx.patronBlockLimits.stream()
+      .map(ctx::withCurrentPatronBlockLimit)
+      .map(this::addCurrentConditionToContext)
+      .map(this::addActionBlocksByLimitAndConditionToContext)
+      .filter(context -> context.currentActionBlocks.isNotEmpty())
+      .map(this::createBlockForLimit)
+      .filter(Objects::nonNull)
+      .collect(Collectors.toList()));
 
-    return CompositeFuture.all(new ArrayList<>(futures))
-      .onFailure(log::error)
-      .onSuccess(cf -> blocks.getAutomatedPatronBlocks().addAll(
-        Arrays.stream(Condition.values())
-          .map(condition -> cf.list().stream()
-            .map(AutomatedPatronBlock.class::cast)
-            .filter(Objects::nonNull)
-            .filter(e -> e.getPatronBlockConditionId().equals(condition.getId()))
-            .findFirst()
-            .orElse(null))
-          .filter(Objects::nonNull)
-          .collect(Collectors.toList())))
-      .map(blocks);
+    return blocks;
   }
 
-  private Future<AutomatedPatronBlock> createBlockForLimit(UserSummary userSummary,
-    PatronBlockLimit limit) {
-
-    ActionBlocks actionBlocks = ActionBlocks.determineBlocks(userSummary, limit);
-
-    return succeededFuture(limit)
-      .compose(this::findConditionForLimit)
-      .map(condition -> createBlockForCondition(condition, actionBlocks));
-  }
-
-  private Future<PatronBlockCondition> findConditionForLimit(PatronBlockLimit limit) {
-    final String conditionId = limit.getConditionId();
-
-    return conditionsRepository.get(conditionId)
-      .map(optional -> optional.orElseThrow(() ->
-        new EntityNotFoundException(format(
-          "Condition %s referenced by limit %s does not exist", conditionId, limit.getId()))));
-  }
-
-  private AutomatedPatronBlock createBlockForCondition(PatronBlockCondition condition,
-    ActionBlocks actionBlocks) {
-
-    boolean blockBorrowing = Boolean.TRUE.equals(condition.getBlockBorrowing())
-      && actionBlocks.getBlockBorrowing();
-    boolean blockRenewals = Boolean.TRUE.equals(condition.getBlockRenewals())
-      && actionBlocks.getBlockRenewals();
-    boolean blockRequests = Boolean.TRUE.equals(condition.getBlockRequests())
-      && actionBlocks.getBlockRequests();
-
-    if (blockBorrowing || blockRenewals || blockRequests) {
-      return new AutomatedPatronBlock()
-        .withPatronBlockConditionId(condition.getId())
-        .withBlockBorrowing(blockBorrowing)
-        .withBlockRenewals(blockRenewals)
-        .withBlockRequests(blockRequests)
-        .withMessage(condition.getMessage());
+  private Future<BlocksCalculationContext> addUserGroupIdToContext(BlocksCalculationContext ctx) {
+    if (!ObjectUtils.allNotNull(ctx.userSummary, ctx.userSummary.getUserId())) {
+      String message = "addUserGroupIdToContext() failed - some ctx params are null";
+      log.error(message);
+      return failedFuture(DEFAULT_ERROR_MESSAGE);
     }
 
-    return null;
+    return usersClient.findPatronGroupIdForUser(ctx.userSummary.getUserId())
+      .map(ctx::withUserGroupId);
+  }
+
+  private Future<BlocksCalculationContext> addPatronBlockLimitsToContext(
+    BlocksCalculationContext ctx) {
+
+    if (!ObjectUtils.allNotNull(ctx.userGroupId)) {
+      String message = "addPatronBlockLimitsToContext() failed - some ctx params are null";
+      log.error(message);
+      return failedFuture(DEFAULT_ERROR_MESSAGE);
+    }
+
+    return limitsRepository.findLimitsForPatronGroup(ctx.userGroupId)
+      .map(ctx::withPatronBlockLimits);
+  }
+
+  private Future<BlocksCalculationContext> addAllPatronBlockConditionsToContext(
+    BlocksCalculationContext ctx) {
+
+    return conditionsRepository.getAllWithDefaultLimit().map(ctx::withPatronBlockConditions);
+  }
+
+  private BlocksCalculationContext addCurrentConditionToContext(
+    BlocksCalculationContext ctx) {
+
+    if (!ObjectUtils.allNotNull(ctx.currentPatronBlockLimit,
+      ctx.currentPatronBlockLimit.getConditionId())) {
+
+      log.error("addCurrentConditionToContext() failed - some ctx params are null");
+      return ctx;
+    }
+
+    String conditionId = ctx.currentPatronBlockLimit.getConditionId();
+
+    PatronBlockCondition patronBlockCondition = ctx.patronBlockConditions.stream()
+      .filter(condition -> condition.getId().equals(conditionId))
+      .findFirst()
+      .orElse(null);
+
+    if (patronBlockCondition == null) {
+      log.error(format("addCurrentConditionToContext() failed - cannot find condition by ID %s",
+        conditionId));
+      return ctx;
+    }
+
+    return ctx.withCurrentPatronBlockCondition(patronBlockCondition);
+  }
+
+  private BlocksCalculationContext addActionBlocksByLimitAndConditionToContext(
+    BlocksCalculationContext ctx) {
+
+    if (!ObjectUtils.allNotNull(ctx.userSummary, ctx.currentPatronBlockLimit)) {
+      log.error("addActionBlocksByLimitAndConditionToContext() failed - some ctx params are null");
+      return ctx;
+    }
+
+    PatronBlockCondition patronBlockCondition = ctx.currentPatronBlockCondition;
+
+    ActionBlocks actionBlocksByLimit = ActionBlocks.byLimit(ctx.userSummary,
+      ctx.currentPatronBlockLimit);
+
+    ActionBlocks actionBlocksByCondition = new ActionBlocks(
+      Boolean.TRUE.equals(patronBlockCondition.getBlockBorrowing()),
+      Boolean.TRUE.equals(patronBlockCondition.getBlockRenewals()),
+      Boolean.TRUE.equals(patronBlockCondition.getBlockRequests()));
+
+    return ctx.withCurrentActionBlocks(
+      ActionBlocks.and(actionBlocksByLimit, actionBlocksByCondition));
+  }
+
+  private AutomatedPatronBlock createBlockForLimit(BlocksCalculationContext ctx) {
+    if (!ObjectUtils.allNotNull(ctx.currentPatronBlockCondition, ctx.currentActionBlocks)) {
+      log.error("createBlockForLimit() failed - some ctx params are null");
+      return null;
+    }
+
+    return new AutomatedPatronBlock()
+      .withPatronBlockConditionId(ctx.currentPatronBlockCondition.getId())
+      .withBlockBorrowing(ctx.currentActionBlocks.getBlockBorrowing())
+      .withBlockRenewals(ctx.currentActionBlocks.getBlockRenewals())
+      .withBlockRequests(ctx.currentActionBlocks.getBlockRequests())
+      .withMessage(ctx.currentPatronBlockCondition.getMessage());
+  }
+
+  @With
+  @AllArgsConstructor
+  @NoArgsConstructor(force = true)
+  private static class BlocksCalculationContext {
+    final UserSummary userSummary;
+    final String userGroupId;
+    final List<PatronBlockLimit> patronBlockLimits;
+    final List<PatronBlockCondition> patronBlockConditions;
+    final PatronBlockLimit currentPatronBlockLimit;
+    final PatronBlockCondition currentPatronBlockCondition;
+    final ActionBlocks currentActionBlocks;
   }
 }

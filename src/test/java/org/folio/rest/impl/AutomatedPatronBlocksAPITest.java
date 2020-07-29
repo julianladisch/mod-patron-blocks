@@ -78,9 +78,9 @@ public class AutomatedPatronBlocksAPITest extends TestBase {
     LIMIT_VALUES.put(MAX_OUTSTANDING_FEE_FINE_BALANCE, 70);
   }
 
-  private boolean expectBlockBorrowing = false;
-  private boolean expectBlockRenewals = false;
-  private boolean expectBlockRequests = false;
+  private boolean expectBlockBorrowing;
+  private boolean expectBlockRenewals;
+  private boolean expectBlockRequests;
 
   @Before
   public void beforeEach() {
@@ -88,6 +88,13 @@ public class AutomatedPatronBlocksAPITest extends TestBase {
     mockUsersResponse();
     deleteAllFromTable(PATRON_BLOCK_LIMITS_TABLE_NAME);
     deleteAllFromTable(USER_SUMMARY_TABLE_NAME);
+
+    expectBlockBorrowing = false;
+    expectBlockRenewals = false;
+    expectBlockRequests = false;
+
+    Arrays.stream(Condition.values())
+      .forEach(condition -> updateCondition(condition, true, true, true));
   }
 
   @Test
@@ -116,8 +123,6 @@ public class AutomatedPatronBlocksAPITest extends TestBase {
     boolean singleLimit) {
 
     final Condition condition = MAX_NUMBER_OF_ITEMS_CHARGED_OUT;
-    updateCondition(condition, expectBlockBorrowing, expectBlockRenewals, expectBlockRequests);
-
     final int limitValue = LIMIT_VALUES.get(condition);
 
     OpenLoan openLoan = buildLoan(false, false, now().plusHours(1).toDate());
@@ -164,15 +169,14 @@ public class AutomatedPatronBlocksAPITest extends TestBase {
   }
 
   @Test
-  public void blockWhenMaxNumberOfItemsChargedOutLimitIsExceededAndAllLimitsExist() {expectAllBlocks();
+  public void blockWhenMaxNumberOfItemsChargedOutLimitIsExceededAndAllLimitsExist() {
+    expectAllBlocks();
     validateMaxNumberOfItemsChargedOutBlockResponse(1, ALL_LIMITS);
   }
 
   private void validateMaxNumberOfLostItemsBlockResponse(int lostItemsDelta, boolean singleLimit) {
     final Condition condition = MAX_NUMBER_OF_LOST_ITEMS;
     int limitValue = LIMIT_VALUES.get(condition);
-
-    updateCondition(condition, expectBlockBorrowing, expectBlockRenewals, expectBlockRequests);
 
     OpenLoan openLoan = buildLoan(false, true, now().plusHours(1).toDate());
     List<OpenLoan> openLoans = fillListOfSize(openLoan, limitValue + lostItemsDelta);
@@ -221,8 +225,6 @@ public class AutomatedPatronBlocksAPITest extends TestBase {
 
   private void validateMaxOverdueItemsBlockResponse(int openLoansSizeDelta, boolean singleLimit) {
     final Condition condition = MAX_NUMBER_OF_OVERDUE_ITEMS;
-    updateCondition(condition, expectBlockBorrowing, expectBlockRenewals, expectBlockRequests);
-
     int limitValue = LIMIT_VALUES.get(condition);
 
     OpenLoan overdueLoan = buildLoan(false, false, now().minusHours(1).toDate());
@@ -272,8 +274,6 @@ public class AutomatedPatronBlocksAPITest extends TestBase {
 
   private void validateMaxOverdueRecallsBlockResponse(int openLoansSizeDelta, boolean singleLimit) {
     Condition condition = MAX_NUMBER_OF_OVERDUE_RECALLS;
-    updateCondition(condition, expectBlockBorrowing, expectBlockRenewals, expectBlockRequests);
-
     int limitValue = LIMIT_VALUES.get(condition);
 
     OpenLoan overdueLoan = buildLoan(true, false, now().minusHours(1).toDate());
@@ -325,8 +325,6 @@ public class AutomatedPatronBlocksAPITest extends TestBase {
     boolean singleLimit) {
 
     final Condition condition = RECALL_OVERDUE_BY_MAX_NUMBER_OF_DAYS;
-    updateCondition(condition, expectBlockBorrowing, expectBlockRenewals, expectBlockRequests);
-
     int limitValue = LIMIT_VALUES.get(condition);
 
     DateTime dueDateBelowLimit = now().minusDays(limitValue + dueDateDelta);
@@ -378,8 +376,6 @@ public class AutomatedPatronBlocksAPITest extends TestBase {
     boolean singleLimit) {
 
     final Condition condition = MAX_OUTSTANDING_FEE_FINE_BALANCE;
-    updateCondition(condition, expectBlockBorrowing, expectBlockRenewals, expectBlockRequests);
-
     int limitValue = LIMIT_VALUES.get(condition);
     int numberOfFeesFines = 2;
 
@@ -434,9 +430,6 @@ public class AutomatedPatronBlocksAPITest extends TestBase {
   @Test
   public void allLimitsAreExceeded() {
     expectAllBlocks();
-    Arrays.stream(Condition.values())
-      .forEach(condition -> updateCondition(condition, expectBlockBorrowing, expectBlockRenewals,
-        expectBlockRequests));
 
     String loanId = randomId();
     createLimitsForAllConditions();
