@@ -476,7 +476,7 @@ public class AutomatedPatronBlocksAPITest extends TestBase {
     PatronBlockCondition updatedCondition = new PatronBlockCondition()
       .withId(condition.getId())
       .withBlockBorrowing(!originalCondition.getBlockBorrowing())
-      .withBlockRenewals(!originalCondition.getBlockRenewals())
+      .withBlockRenewals(originalCondition.getBlockRenewals())
       .withBlockRequests(!originalCondition.getBlockRequests())
       .withMessage(EMPTY);
 
