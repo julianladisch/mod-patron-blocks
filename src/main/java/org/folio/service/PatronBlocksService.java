@@ -11,7 +11,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
-import org.apache.commons.lang3.ObjectUtils;
 import org.folio.domain.ActionBlocks;
 import org.folio.repository.PatronBlockConditionsRepository;
 import org.folio.repository.PatronBlockLimitsRepository;
@@ -87,9 +86,8 @@ public class PatronBlocksService {
   }
 
   private Future<BlocksCalculationContext> addUserGroupIdToContext(BlocksCalculationContext ctx) {
-    if (!ObjectUtils.allNotNull(ctx.userSummary, ctx.userSummary.getUserId())) {
-      String message = "addUserGroupIdToContext() failed - some ctx params are null";
-      log.error(message);
+    if (ctx.userSummary == null || ctx.userSummary.getUserId() == null) {
+      logAddingToContextError("user group ID");
       return failedFuture(DEFAULT_ERROR_MESSAGE);
     }
 
@@ -100,9 +98,8 @@ public class PatronBlocksService {
   private Future<BlocksCalculationContext> addPatronBlockLimitsToContext(
     BlocksCalculationContext ctx) {
 
-    if (!ObjectUtils.allNotNull(ctx.userGroupId)) {
-      String message = "addPatronBlockLimitsToContext() failed - some ctx params are null";
-      log.error(message);
+    if (ctx.userGroupId == null) {
+      logAddingToContextError("patron block limits");
       return failedFuture(DEFAULT_ERROR_MESSAGE);
     }
 
@@ -119,10 +116,10 @@ public class PatronBlocksService {
   private BlocksCalculationContext addCurrentConditionToContext(
     BlocksCalculationContext ctx) {
 
-    if (!ObjectUtils.allNotNull(ctx.currentPatronBlockLimit,
-      ctx.currentPatronBlockLimit.getConditionId())) {
+    if (ctx.currentPatronBlockLimit == null ||
+      ctx.currentPatronBlockLimit.getConditionId() == null) {
 
-      log.error("addCurrentConditionToContext() failed - some ctx params are null");
+      logAddingToContextError("current condition");
       return ctx;
     }
 
@@ -134,8 +131,8 @@ public class PatronBlocksService {
       .orElse(null);
 
     if (patronBlockCondition == null) {
-      log.error(format("addCurrentConditionToContext() failed - cannot find condition by ID %s",
-        conditionId));
+      logAddingToContextError("current condition",
+        format("cannot find condition by ID %s", conditionId));
       return ctx;
     }
 
@@ -145,8 +142,10 @@ public class PatronBlocksService {
   private BlocksCalculationContext addActionBlocksByLimitAndConditionToContext(
     BlocksCalculationContext ctx) {
 
-    if (!ObjectUtils.allNotNull(ctx.userSummary, ctx.currentPatronBlockLimit)) {
-      log.error("addActionBlocksByLimitAndConditionToContext() failed - some ctx params are null");
+    if (ctx.userSummary == null || ctx.currentPatronBlockLimit == null ||
+      ctx.currentPatronBlockCondition == null) {
+
+      logAddingToContextError("action blocks by limit and condition");
       return ctx;
     }
 
@@ -165,8 +164,8 @@ public class PatronBlocksService {
   }
 
   private AutomatedPatronBlock createBlockForLimit(BlocksCalculationContext ctx) {
-    if (!ObjectUtils.allNotNull(ctx.currentPatronBlockCondition, ctx.currentActionBlocks)) {
-      log.error("createBlockForLimit() failed - some ctx params are null");
+    if (ctx.currentPatronBlockCondition == null || ctx.currentActionBlocks == null) {
+      log.error("Failed to create automated patron block - context is invalid");
       return null;
     }
 
@@ -176,6 +175,21 @@ public class PatronBlocksService {
       .withBlockRenewals(ctx.currentActionBlocks.getBlockRenewals())
       .withBlockRequests(ctx.currentActionBlocks.getBlockRequests())
       .withMessage(ctx.currentPatronBlockCondition.getMessage());
+  }
+
+  private void logAddingToContextError(String parameterName, String additionalMessage) {
+    String message = format("Blocks calculation context is invalid, failed to add %s",
+      parameterName);
+
+    if (additionalMessage != null) {
+      message += format(". %s", additionalMessage);
+    }
+
+    log.error(message);
+  }
+
+  private void logAddingToContextError(String parameterName) {
+    logAddingToContextError(parameterName, null);
   }
 
   @With
