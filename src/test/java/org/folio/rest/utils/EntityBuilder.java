@@ -1,5 +1,7 @@
 package org.folio.rest.utils;
 
+import static org.folio.util.UuidHelper.randomId;
+
 import java.math.BigDecimal;
 import java.util.Date;
 import java.util.List;
@@ -8,11 +10,9 @@ import java.util.UUID;
 import org.folio.rest.jaxrs.model.OpenFeeFine;
 import org.folio.rest.jaxrs.model.OpenLoan;
 import org.folio.rest.jaxrs.model.UserSummary;
+import org.folio.util.UuidHelper;
 
 public class EntityBuilder {
-  private static String randomId() {
-    return UUID.randomUUID().toString();
-  }
 
   public static OpenLoan buildLoan(boolean recall, boolean itemLost, Date dueDate) {
     return buildLoan(randomId(), recall, itemLost, dueDate);

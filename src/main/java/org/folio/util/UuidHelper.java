@@ -1,5 +1,7 @@
 package org.folio.util;
 
+import java.util.UUID;
+
 import javax.validation.ValidationException;
 
 public class UuidHelper {
@@ -16,5 +18,9 @@ public class UuidHelper {
 
   public static void validateUUID(String uuid) {
     validateUUID(uuid, true);
+  }
+
+  public static String randomId() {
+    return UUID.randomUUID().toString();
   }
 }

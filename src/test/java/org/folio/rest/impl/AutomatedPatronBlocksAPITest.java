@@ -26,6 +26,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.EnumMap;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 
 import org.folio.domain.Condition;
@@ -56,8 +57,6 @@ import io.vertx.ext.unit.junit.VertxUnitRunner;
 public class AutomatedPatronBlocksAPITest extends TestBase {
   private static final String USER_ID = randomId();
   private static final String PATRON_GROUP_ID = randomId();
-  private static final boolean BLOCK_SHOULD_EXIST = true;
-  private static final boolean NO_BLOCKS_SHOULD_EXIST = false;
   private static final boolean SINGLE_LIMIT = true;
   private static final boolean ALL_LIMITS = false;
 
@@ -79,12 +78,23 @@ public class AutomatedPatronBlocksAPITest extends TestBase {
     LIMIT_VALUES.put(MAX_OUTSTANDING_FEE_FINE_BALANCE, 70);
   }
 
+  private boolean expectBlockBorrowing;
+  private boolean expectBlockRenewals;
+  private boolean expectBlockRequests;
+
   @Before
   public void beforeEach() {
     super.resetMocks();
     mockUsersResponse();
     deleteAllFromTable(PATRON_BLOCK_LIMITS_TABLE_NAME);
     deleteAllFromTable(USER_SUMMARY_TABLE_NAME);
+
+    expectBlockBorrowing = false;
+    expectBlockRenewals = false;
+    expectBlockRequests = false;
+
+    Arrays.stream(Condition.values())
+      .forEach(condition -> updateCondition(condition, true, true, true));
   }
 
   @Test
@@ -110,7 +120,7 @@ public class AutomatedPatronBlocksAPITest extends TestBase {
   }
 
   private void validateMaxNumberOfItemsChargedOutBlockResponse(int openLoansSizeDelta,
-    boolean singleLimit, boolean blockShouldExist) {
+    boolean singleLimit) {
 
     final Condition condition = MAX_NUMBER_OF_ITEMS_CHARGED_OUT;
     final int limitValue = LIMIT_VALUES.get(condition);
@@ -119,45 +129,52 @@ public class AutomatedPatronBlocksAPITest extends TestBase {
     List<OpenLoan> openLoans = fillListOfSize(openLoan, limitValue + openLoansSizeDelta);
     createSummary(USER_ID, new ArrayList<>(), openLoans);
 
-    String expectedResponse = createLimitsAndBuildExpectedResponse(condition, singleLimit,
-      blockShouldExist);
+    String expectedResponse = createLimitsAndBuildExpectedResponse(condition, singleLimit);
 
     sendRequestAndCheckResult(expectedResponse);
   }
 
   @Test
   public void noBlockWhenMaxNumberOfItemsChargedOutLimitIsNotReached() {
-    validateMaxNumberOfItemsChargedOutBlockResponse(-1, SINGLE_LIMIT, NO_BLOCKS_SHOULD_EXIST);
+    expectNoBlocks();
+    validateMaxNumberOfItemsChargedOutBlockResponse(-1, SINGLE_LIMIT);
   }
 
   @Test
   public void noBlockWhenMaxNumberOfItemsChargedOutLimitIsNotReachedAndAllLimitsExist() {
-    validateMaxNumberOfItemsChargedOutBlockResponse(-1, ALL_LIMITS, NO_BLOCKS_SHOULD_EXIST);
+    expectNoBlocks();
+    validateMaxNumberOfItemsChargedOutBlockResponse(-1, ALL_LIMITS);
   }
 
   @Test
   public void blockWhenMaxNumberOfItemsChargedOutLimitIsReached() {
-    validateMaxNumberOfItemsChargedOutBlockResponse(0, SINGLE_LIMIT, BLOCK_SHOULD_EXIST);
+    expectBlockBorrowing = true;
+    expectBlockRenewals = false;
+    expectBlockRequests = false;
+    validateMaxNumberOfItemsChargedOutBlockResponse(0, SINGLE_LIMIT);
   }
 
   @Test
   public void blockWhenMaxNumberOfItemsChargedOutLimitIsReachedAndAllLimitsExist() {
-    validateMaxNumberOfItemsChargedOutBlockResponse(0, ALL_LIMITS, BLOCK_SHOULD_EXIST);
+    expectBlockBorrowing = true;
+    expectBlockRenewals = false;
+    expectBlockRequests = false;
+    validateMaxNumberOfItemsChargedOutBlockResponse(0, ALL_LIMITS);
   }
 
   @Test
   public void blockWhenMaxNumberOfItemsChargedOutLimitIsExceeded() {
-    validateMaxNumberOfItemsChargedOutBlockResponse(1, SINGLE_LIMIT, BLOCK_SHOULD_EXIST);
+    expectAllBlocks();
+    validateMaxNumberOfItemsChargedOutBlockResponse(1, SINGLE_LIMIT);
   }
 
   @Test
   public void blockWhenMaxNumberOfItemsChargedOutLimitIsExceededAndAllLimitsExist() {
-    validateMaxNumberOfItemsChargedOutBlockResponse(1, ALL_LIMITS, BLOCK_SHOULD_EXIST);
+    expectAllBlocks();
+    validateMaxNumberOfItemsChargedOutBlockResponse(1, ALL_LIMITS);
   }
 
-  private void validateMaxNumberOfLostItemsBlockResponse(int lostItemsDelta, boolean singleLimit,
-    boolean blockShouldExist) {
-
+  private void validateMaxNumberOfLostItemsBlockResponse(int lostItemsDelta, boolean singleLimit) {
     final Condition condition = MAX_NUMBER_OF_LOST_ITEMS;
     int limitValue = LIMIT_VALUES.get(condition);
 
@@ -165,45 +182,48 @@ public class AutomatedPatronBlocksAPITest extends TestBase {
     List<OpenLoan> openLoans = fillListOfSize(openLoan, limitValue + lostItemsDelta);
     createSummary(USER_ID, new ArrayList<>(), openLoans);
 
-    String expectedResponse = createLimitsAndBuildExpectedResponse(condition, singleLimit,
-      blockShouldExist);
+    String expectedResponse = createLimitsAndBuildExpectedResponse(condition, singleLimit);
 
     sendRequestAndCheckResult(expectedResponse);
   }
 
   @Test
   public void noBlockWhenMaxNumberOfLostItemsLimitIsNotReached() {
-    validateMaxNumberOfLostItemsBlockResponse(-1, SINGLE_LIMIT, NO_BLOCKS_SHOULD_EXIST);
+    expectNoBlocks();
+    validateMaxNumberOfLostItemsBlockResponse(-1, SINGLE_LIMIT);
   }
 
   @Test
   public void noBlockWhenMaxNumberOfLostItemsLimitIsNotReachedAndAllLimitsExist() {
-    validateMaxNumberOfLostItemsBlockResponse(-1, ALL_LIMITS, NO_BLOCKS_SHOULD_EXIST);
+    expectNoBlocks();
+    validateMaxNumberOfLostItemsBlockResponse(-1, ALL_LIMITS);
   }
 
   @Test
-  public void blockWhenMaxNumberOfLostItemsLimitIsReached() {
-    validateMaxNumberOfLostItemsBlockResponse(0, SINGLE_LIMIT, BLOCK_SHOULD_EXIST);
+  public void noBlockWhenMaxNumberOfLostItemsLimitIsReached() {
+    expectNoBlocks();
+    validateMaxNumberOfLostItemsBlockResponse(0, SINGLE_LIMIT);
   }
 
   @Test
-  public void blockWhenMaxNumberOfLostItemsLimitIsReachedAndAllLimitsExist() {
-    validateMaxNumberOfLostItemsBlockResponse(0, ALL_LIMITS, BLOCK_SHOULD_EXIST);
+  public void noBlockWhenMaxNumberOfLostItemsLimitIsReachedAndAllLimitsExist() {
+    expectNoBlocks();
+    validateMaxNumberOfLostItemsBlockResponse(0, ALL_LIMITS);
   }
 
   @Test
   public void blockWhenMaxNumberOfLostItemsLimitIsExceeded() {
-    validateMaxNumberOfLostItemsBlockResponse(1, SINGLE_LIMIT, BLOCK_SHOULD_EXIST);
+    expectAllBlocks();
+    validateMaxNumberOfLostItemsBlockResponse(1, SINGLE_LIMIT);
   }
 
   @Test
   public void blockWhenMaxNumberOfLostItemsLimitIsExceededAndAllLimitsExist() {
-    validateMaxNumberOfLostItemsBlockResponse(1, ALL_LIMITS, BLOCK_SHOULD_EXIST);
+    expectAllBlocks();
+    validateMaxNumberOfLostItemsBlockResponse(1, ALL_LIMITS);
   }
 
-  private void validateMaxOverdueItemsBlockResponse(int openLoansSizeDelta, boolean singleLimit,
-    boolean blockShouldExist) {
-
+  private void validateMaxOverdueItemsBlockResponse(int openLoansSizeDelta, boolean singleLimit) {
     final Condition condition = MAX_NUMBER_OF_OVERDUE_ITEMS;
     int limitValue = LIMIT_VALUES.get(condition);
 
@@ -211,45 +231,48 @@ public class AutomatedPatronBlocksAPITest extends TestBase {
     List<OpenLoan> overdueLoans = fillListOfSize(overdueLoan, limitValue + openLoansSizeDelta);
     createSummary(USER_ID, new ArrayList<>(), overdueLoans);
 
-    String expectedResponse = createLimitsAndBuildExpectedResponse(condition, singleLimit,
-      blockShouldExist);
+    String expectedResponse = createLimitsAndBuildExpectedResponse(condition, singleLimit);
 
     sendRequestAndCheckResult(expectedResponse);
   }
 
   @Test
   public void noBlockWhenMaxNumberOfOverdueItemsLimitIsNotReached() {
-    validateMaxOverdueItemsBlockResponse(-1, SINGLE_LIMIT, NO_BLOCKS_SHOULD_EXIST);
+    expectNoBlocks();
+    validateMaxOverdueItemsBlockResponse(-1, SINGLE_LIMIT);
   }
 
   @Test
   public void noBlockWhenMaxNumberOfOverdueItemsLimitIsNotReachedAndAllLimitsExist() {
-    validateMaxOverdueItemsBlockResponse(-1, ALL_LIMITS, NO_BLOCKS_SHOULD_EXIST);
+    expectNoBlocks();
+    validateMaxOverdueItemsBlockResponse(-1, ALL_LIMITS);
   }
 
   @Test
-  public void blockWhenMaxNumberOfOverdueItemsLimitIsReached() {
-    validateMaxOverdueItemsBlockResponse(0, SINGLE_LIMIT, BLOCK_SHOULD_EXIST);
+  public void noBlockWhenMaxNumberOfOverdueItemsLimitIsReached() {
+    expectNoBlocks();
+    validateMaxOverdueItemsBlockResponse(0, SINGLE_LIMIT);
   }
 
   @Test
-  public void blockWhenMaxNumberOfOverdueItemsLimitReachedAndAllLimitsExist() {
-    validateMaxOverdueItemsBlockResponse(0, ALL_LIMITS, BLOCK_SHOULD_EXIST);
+  public void noBlockWhenMaxNumberOfOverdueItemsLimitReachedAndAllLimitsExist() {
+    expectNoBlocks();
+    validateMaxOverdueItemsBlockResponse(0, ALL_LIMITS);
   }
 
   @Test
   public void blockWhenMaxNumberOfOverdueItemsLimitIsExceeded() {
-    validateMaxOverdueItemsBlockResponse(1, SINGLE_LIMIT, BLOCK_SHOULD_EXIST);
+    expectAllBlocks();
+    validateMaxOverdueItemsBlockResponse(1, SINGLE_LIMIT);
   }
 
   @Test
   public void blockWhenMaxNumberOfOverdueItemsLimitIsExceededAndAllLimitsExist() {
-    validateMaxOverdueItemsBlockResponse(1, ALL_LIMITS, BLOCK_SHOULD_EXIST);
+    expectAllBlocks();
+    validateMaxOverdueItemsBlockResponse(1, ALL_LIMITS);
   }
 
-  private void validateMaxOverdueRecallsBlockResponse(int openLoansSizeDelta, boolean singleLimit,
-    boolean blockShouldExist) {
-
+  private void validateMaxOverdueRecallsBlockResponse(int openLoansSizeDelta, boolean singleLimit) {
     Condition condition = MAX_NUMBER_OF_OVERDUE_RECALLS;
     int limitValue = LIMIT_VALUES.get(condition);
 
@@ -257,44 +280,49 @@ public class AutomatedPatronBlocksAPITest extends TestBase {
     List<OpenLoan> loans = fillListOfSize(overdueLoan, limitValue + openLoansSizeDelta);
     createSummary(USER_ID, new ArrayList<>(), loans);
 
-    String expectedResponse = createLimitsAndBuildExpectedResponse(condition, singleLimit,
-      blockShouldExist);
+    String expectedResponse = createLimitsAndBuildExpectedResponse(condition, singleLimit);
 
     sendRequestAndCheckResult(expectedResponse);
   }
 
   @Test
   public void noBlockWhenMaxNumberOfOverdueRecallsLimitIsNotReached() {
-    validateMaxOverdueRecallsBlockResponse(-1, SINGLE_LIMIT, NO_BLOCKS_SHOULD_EXIST);
+    expectNoBlocks();
+    validateMaxOverdueRecallsBlockResponse(-1, SINGLE_LIMIT);
   }
 
   @Test
   public void noBlockWhenMaxNumberOfOverdueRecallsLimitIsNotReachedAndAllLimitsExist() {
-    validateMaxOverdueRecallsBlockResponse(-1, ALL_LIMITS, NO_BLOCKS_SHOULD_EXIST);
+    expectNoBlocks();
+    validateMaxOverdueRecallsBlockResponse(-1, ALL_LIMITS);
   }
 
   @Test
-  public void blockWhenMaxNumberOfOverdueRecallsLimitIsReached() {
-    validateMaxOverdueRecallsBlockResponse(0, SINGLE_LIMIT, BLOCK_SHOULD_EXIST);
+  public void noBlockWhenMaxNumberOfOverdueRecallsLimitIsReached() {
+    expectNoBlocks();
+    validateMaxOverdueRecallsBlockResponse(0, SINGLE_LIMIT);
   }
 
   @Test
-  public void blockWhenMaxNumberOfOverdueRecallsLimitIsReachedAndAllLimitsExist() {
-    validateMaxOverdueRecallsBlockResponse(0, ALL_LIMITS, BLOCK_SHOULD_EXIST);
+  public void noBlockWhenMaxNumberOfOverdueRecallsLimitIsReachedAndAllLimitsExist() {
+    expectNoBlocks();
+    validateMaxOverdueRecallsBlockResponse(0, ALL_LIMITS);
   }
 
   @Test
   public void blockWhenMaxNumberOfOverdueRecallsLimitIsExceeded() {
-    validateMaxOverdueRecallsBlockResponse(1, SINGLE_LIMIT, BLOCK_SHOULD_EXIST);
+    expectAllBlocks();
+    validateMaxOverdueRecallsBlockResponse(1, SINGLE_LIMIT);
   }
 
   @Test
   public void blockWhenMaxNumberOfOverdueRecallsLimitIsExceededAllLimitsExist() {
-    validateMaxOverdueRecallsBlockResponse(1, ALL_LIMITS, BLOCK_SHOULD_EXIST);
+    expectAllBlocks();
+    validateMaxOverdueRecallsBlockResponse(1, ALL_LIMITS);
   }
 
   private void validateRecallOverdueByMaximumNumberOfDaysBlockResponse(int dueDateDelta,
-    boolean singleLimit, boolean blockShouldExist) {
+    boolean singleLimit) {
 
     final Condition condition = RECALL_OVERDUE_BY_MAX_NUMBER_OF_DAYS;
     int limitValue = LIMIT_VALUES.get(condition);
@@ -303,45 +331,49 @@ public class AutomatedPatronBlocksAPITest extends TestBase {
     OpenLoan overdueLoan = buildLoan(true, false, dueDateBelowLimit.toDate());
     createSummary(USER_ID, new ArrayList<>(), singletonList(overdueLoan));
 
-    String expectedResponse = createLimitsAndBuildExpectedResponse(condition, singleLimit,
-      blockShouldExist);
+    String expectedResponse = createLimitsAndBuildExpectedResponse(condition, singleLimit);
 
     sendRequestAndCheckResult(expectedResponse);
   }
 
   @Test
   public void noBlockWhenRecallOverdueByMaximumNumberOfDaysLimitIsNotReached() {
-    validateRecallOverdueByMaximumNumberOfDaysBlockResponse(-1, SINGLE_LIMIT,
-      NO_BLOCKS_SHOULD_EXIST);
+    expectNoBlocks();
+    validateRecallOverdueByMaximumNumberOfDaysBlockResponse(-1, SINGLE_LIMIT);
   }
 
   @Test
   public void noBlockWhenRecallOverdueByMaximumNumberOfDaysLimitIsNotReachedAndAllLimitsExist() {
-    validateRecallOverdueByMaximumNumberOfDaysBlockResponse(-1, ALL_LIMITS, NO_BLOCKS_SHOULD_EXIST);
+    expectNoBlocks();
+    validateRecallOverdueByMaximumNumberOfDaysBlockResponse(-1, ALL_LIMITS);
   }
 
   @Test
-  public void blockWhenRecallOverdueByMaximumNumberOfDaysLimitIsReached() {
-    validateRecallOverdueByMaximumNumberOfDaysBlockResponse(0, SINGLE_LIMIT, BLOCK_SHOULD_EXIST);
+  public void noBlockWhenRecallOverdueByMaximumNumberOfDaysLimitIsReached() {
+    expectNoBlocks();
+    validateRecallOverdueByMaximumNumberOfDaysBlockResponse(0, SINGLE_LIMIT);
   }
 
   @Test
-  public void blockWhenRecallOverdueByMaximumNumberOfDaysLimitIsReachedAndAllLimitsExist() {
-    validateRecallOverdueByMaximumNumberOfDaysBlockResponse(0, ALL_LIMITS, BLOCK_SHOULD_EXIST);
+  public void noBlockWhenRecallOverdueByMaximumNumberOfDaysLimitIsReachedAndAllLimitsExist() {
+    expectNoBlocks();
+    validateRecallOverdueByMaximumNumberOfDaysBlockResponse(0, ALL_LIMITS);
   }
 
   @Test
   public void blockWhenRecallOverdueByMaximumNumberOfDaysLimitIsExceeded() {
-    validateRecallOverdueByMaximumNumberOfDaysBlockResponse(1, SINGLE_LIMIT, BLOCK_SHOULD_EXIST);
+    expectAllBlocks();
+    validateRecallOverdueByMaximumNumberOfDaysBlockResponse(1, SINGLE_LIMIT);
   }
 
   @Test
   public void blockWhenRecallOverdueByMaximumNumberOfDaysLimitIsExceededAllLimitsExist() {
-    validateRecallOverdueByMaximumNumberOfDaysBlockResponse(1, ALL_LIMITS, BLOCK_SHOULD_EXIST);
+    expectAllBlocks();
+    validateRecallOverdueByMaximumNumberOfDaysBlockResponse(1, ALL_LIMITS);
   }
 
   private void validateMaxOutstandingFeeFineBalanceBlockResponse(int feeFineBalanceDelta,
-    boolean singleLimit, boolean blockShouldExist) {
+    boolean singleLimit) {
 
     final Condition condition = MAX_OUTSTANDING_FEE_FINE_BALANCE;
     int limitValue = LIMIT_VALUES.get(condition);
@@ -354,44 +386,51 @@ public class AutomatedPatronBlocksAPITest extends TestBase {
     List<OpenFeeFine> openFeeFines = fillListOfSize(openFeeFine, numberOfFeesFines);
     createSummary(USER_ID, openFeeFines, new ArrayList<>());
 
-    String expectedResponse = createLimitsAndBuildExpectedResponse(condition, singleLimit,
-      blockShouldExist);
+    String expectedResponse = createLimitsAndBuildExpectedResponse(condition, singleLimit);
 
     sendRequestAndCheckResult(expectedResponse);
   }
 
   @Test
   public void noBlockWhenMaxOutstandingFeeFineBalanceLimitIsNotReached() {
-    validateMaxOutstandingFeeFineBalanceBlockResponse(-1, SINGLE_LIMIT, NO_BLOCKS_SHOULD_EXIST);
+    expectNoBlocks();
+    validateMaxOutstandingFeeFineBalanceBlockResponse(-1, SINGLE_LIMIT);
   }
 
   @Test
   public void noBlockWhenMaxOutstandingFeeFineBalanceLimitIsNotReachedAndAllLimitsExist() {
-    validateMaxOutstandingFeeFineBalanceBlockResponse(-1, ALL_LIMITS, NO_BLOCKS_SHOULD_EXIST);
+    expectNoBlocks();
+    validateMaxOutstandingFeeFineBalanceBlockResponse(-1, ALL_LIMITS);
   }
 
   @Test
-  public void blockWhenMaxOutstandingFeeFineBalanceLimitIsReached() {
-    validateMaxOutstandingFeeFineBalanceBlockResponse(0, SINGLE_LIMIT, BLOCK_SHOULD_EXIST);
+  public void noBlockWhenMaxOutstandingFeeFineBalanceLimitIsReached() {
+    expectNoBlocks();
+    validateMaxOutstandingFeeFineBalanceBlockResponse(0, SINGLE_LIMIT);
   }
 
   @Test
-  public void blockWhenMaxOutstandingFeeFineBalanceLimitIsReachedAndAllLimitsExist() {
-    validateMaxOutstandingFeeFineBalanceBlockResponse(0, ALL_LIMITS, BLOCK_SHOULD_EXIST);
+  public void noBlockWhenMaxOutstandingFeeFineBalanceLimitIsReachedAndAllLimitsExist() {
+    expectNoBlocks();
+    validateMaxOutstandingFeeFineBalanceBlockResponse(0, ALL_LIMITS);
   }
 
   @Test
   public void blockWhenMaxOutstandingFeeFineBalanceLimitIsExceeded() {
-    validateMaxOutstandingFeeFineBalanceBlockResponse(1, SINGLE_LIMIT, BLOCK_SHOULD_EXIST);
+    expectAllBlocks();
+    validateMaxOutstandingFeeFineBalanceBlockResponse(1, SINGLE_LIMIT);
   }
 
   @Test
   public void blockWhenMaxOutstandingFeeFineBalanceLimitIsExceededAllLimitsExist() {
-    validateMaxOutstandingFeeFineBalanceBlockResponse(1, ALL_LIMITS, BLOCK_SHOULD_EXIST);
+    expectAllBlocks();
+    validateMaxOutstandingFeeFineBalanceBlockResponse(1, ALL_LIMITS);
   }
 
   @Test
   public void allLimitsAreExceeded() {
+    expectAllBlocks();
+
     String loanId = randomId();
     createLimitsForAllConditions();
 
@@ -437,16 +476,20 @@ public class AutomatedPatronBlocksAPITest extends TestBase {
     PatronBlockCondition updatedCondition = new PatronBlockCondition()
       .withId(condition.getId())
       .withBlockBorrowing(!originalCondition.getBlockBorrowing())
-      .withBlockRenewals(!originalCondition.getBlockRenewals())
+      .withBlockRenewals(originalCondition.getBlockRenewals())
       .withBlockRequests(!originalCondition.getBlockRequests())
-      .withMessage("Can't do anything");
+      .withMessage(EMPTY);
 
     waitFor(conditionsRepository.update(updatedCondition));
 
     String expectedResponse = toJson(
       new AutomatedPatronBlocks().withAutomatedPatronBlocks(singletonList(
         createBlock(condition, updatedCondition.getMessage(), updatedCondition.getBlockBorrowing(),
-          updatedCondition.getBlockRenewals(), updatedCondition.getBlockRequests()))));
+          updatedCondition.getBlockRenewals(), updatedCondition.getBlockRequests()))
+        .stream()
+        .filter(Objects::nonNull)
+        .collect(toList())
+      ));
 
     sendRequestAndCheckResult(expectedResponse);
 
@@ -486,6 +529,19 @@ public class AutomatedPatronBlocksAPITest extends TestBase {
       ));
   }
 
+  private void updateCondition(Condition condition, boolean blockBorrowing, boolean blockRenewals,
+    boolean blockRequests) throws IllegalArgumentException {
+
+    PatronBlockCondition patronBlockCondition =
+      waitFor(conditionsRepository.get(condition.getId()))
+        .orElseThrow(() -> new IllegalArgumentException("Invalid condition ID"))
+        .withBlockBorrowing(blockBorrowing)
+        .withBlockRenewals(blockRenewals)
+        .withBlockRequests(blockRequests);
+
+    waitFor(conditionsRepository.update(patronBlockCondition));
+  }
+
   private String createLimit(Condition condition, String patronGroupId, double value) {
     PatronBlockLimit limit = new PatronBlockLimit()
       .withId(randomId())
@@ -516,15 +572,23 @@ public class AutomatedPatronBlocksAPITest extends TestBase {
     return waitFor(summaryRepository.save(userSummary));
   }
 
+  private AutomatedPatronBlock createBlock(Condition condition, String message) {
+    return createBlock(condition, message, expectBlockBorrowing, expectBlockRenewals, expectBlockRequests);
+  }
+
   private AutomatedPatronBlock createBlock(Condition condition, String message,
     boolean blockBorrowing, boolean blockRenewals, boolean blockRequests) {
 
-    return new AutomatedPatronBlock()
-      .withMessage(message)
-      .withBlockBorrowing(blockBorrowing)
-      .withBlockRenewals(blockRenewals)
-      .withBlockRequests(blockRequests)
-      .withPatronBlockConditionId(condition.getId());
+    if (blockBorrowing || blockRenewals || blockRequests) {
+      return new AutomatedPatronBlock()
+        .withMessage(message)
+        .withBlockBorrowing(blockBorrowing)
+        .withBlockRenewals(blockRenewals)
+        .withBlockRequests(blockRequests)
+        .withPatronBlockConditionId(condition.getId());
+    }
+
+    return null;
   }
 
   private void createLimitsForAllConditions() {
@@ -537,13 +601,13 @@ public class AutomatedPatronBlocksAPITest extends TestBase {
     return toJson(
       new AutomatedPatronBlocks().withAutomatedPatronBlocks(
         Arrays.stream(conditions)
-          .map(condition -> createBlock(condition, EMPTY, false, false, false))
+          .map(condition -> createBlock(condition, EMPTY))
+          .filter(Objects::nonNull)
           .collect(toList())
       ));
   }
 
-  private String createLimitsAndBuildExpectedResponse(Condition condition, boolean singleLimit,
-    boolean blockShouldExist) {
+  private String createLimitsAndBuildExpectedResponse(Condition condition, boolean singleLimit) {
 
     int limitValue = LIMIT_VALUES.get(condition);
 
@@ -553,13 +617,18 @@ public class AutomatedPatronBlocksAPITest extends TestBase {
       createLimitsForAllConditions();
     }
 
-    String expectedResponse;
-    if (blockShouldExist) {
-      expectedResponse = buildDefaultResponseFor(condition);
-    } else {
-      expectedResponse = buildDefaultResponseFor();
-    }
+    return buildDefaultResponseFor(condition);
+  }
 
-    return expectedResponse;
+  private void expectNoBlocks() {
+    expectBlockBorrowing = false;
+    expectBlockRenewals = false;
+    expectBlockRequests = false;
+  }
+
+  private void expectAllBlocks() {
+    expectBlockBorrowing = true;
+    expectBlockRenewals = true;
+    expectBlockRequests = true;
   }
 }
