@@ -11,7 +11,6 @@ import java.lang.invoke.MethodHandles;
 import java.math.BigDecimal;
 import java.util.Date;
 
-import org.apache.commons.lang3.ObjectUtils;
 import org.folio.rest.jaxrs.model.OpenFeeFine;
 import org.folio.rest.jaxrs.model.OpenLoan;
 import org.folio.rest.jaxrs.model.PatronBlockLimit;
@@ -28,9 +27,8 @@ public class ActionBlocks {
   private final boolean blockRequests;
 
   public static ActionBlocks byLimit(UserSummary userSummary, PatronBlockLimit limit) {
-
-    if (!ObjectUtils.allNotNull(userSummary, userSummary.getOpenLoans(), limit,
-      limit.getConditionId(), Condition.getById(limit.getConditionId()), limit.getValue())) {
+    if (userSummary == null || limit == null || limit.getValue() == null
+      || limit.getConditionId() == null || Condition.getById(limit.getConditionId()) == null) {
 
       log.error("Failed to determine blocks: one of the parameters is null");
       return empty();
