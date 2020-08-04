@@ -1,9 +1,9 @@
 package org.folio.repository;
 
 import static io.vertx.core.Future.succeededFuture;
+import static org.folio.util.UuidHelper.randomId;
 
 import java.util.Optional;
-import java.util.UUID;
 
 import org.folio.rest.jaxrs.model.UserSummary;
 import org.folio.rest.persist.Criteria.Criteria;
@@ -66,7 +66,7 @@ public class UserSummaryRepository extends BaseRepository<UserSummary> {
 
   private UserSummary buildEmptyUserSummary(String userId) {
     return new UserSummary()
-      .withId(UUID.randomUUID().toString())
+      .withId(randomId())
       .withUserId(userId);
   }
 
