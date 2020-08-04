@@ -28,7 +28,7 @@ public class ActionBlocks {
 
   public static ActionBlocks byLimit(UserSummary userSummary, PatronBlockLimit limit) {
     if (userSummary == null || limit == null || limit.getValue() == null
-      || limit.getConditionId() == null || Condition.getById(limit.getConditionId()) == null) {
+      || limit.getConditionId() == null) {
 
       log.error("Failed to determine blocks: one of the parameters is null");
       return empty();
