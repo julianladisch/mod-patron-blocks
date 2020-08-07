@@ -90,6 +90,15 @@
           "methods":[
             "POST"
           ],
+          "pathPattern":"/automated-patron-blocks/handlers/item-claimed-returned",
+          "permissionsRequired": [
+            "patron-blocks.events.post"
+          ]
+        },
+        {
+          "methods":[
+            "POST"
+          ],
           "pathPattern":"/automated-patron-blocks/handlers/loan-due-date-changed",
           "permissionsRequired": [
             "patron-blocks.events.post"

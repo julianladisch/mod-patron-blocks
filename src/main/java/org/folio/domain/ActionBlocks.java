@@ -10,6 +10,7 @@ import static org.folio.domain.Condition.RECALL_OVERDUE_BY_MAX_NUMBER_OF_DAYS;
 import java.lang.invoke.MethodHandles;
 import java.math.BigDecimal;
 import java.util.Date;
+import java.util.Objects;
 
 import org.folio.rest.jaxrs.model.OpenFeeFine;
 import org.folio.rest.jaxrs.model.OpenLoan;
@@ -43,29 +44,35 @@ public class ActionBlocks {
     double limitValue = limit.getValue();
 
     if (condition == MAX_NUMBER_OF_ITEMS_CHARGED_OUT) {
-      int numberOfOpenLoans = userSummary.getOpenLoans().size();
+      int numberOfOpenLoans = (int) userSummary.getOpenLoans().stream()
+        .filter(ActionBlocks::itemIsNotClaimedReturned)
+        .count();
 
       blockBorrowing = numberOfOpenLoans >= limitValue;
       blockRenewals = blockRequests = numberOfOpenLoans > limitValue;
     }
     else if (condition == MAX_NUMBER_OF_LOST_ITEMS) {
       blockBorrowing = blockRenewals = blockRequests = userSummary.getOpenLoans().stream()
+        .filter(ActionBlocks::itemIsNotClaimedReturned)
         .filter(OpenLoan::getItemLost)
         .count() > limitValue;
     }
     else if (condition == MAX_NUMBER_OF_OVERDUE_ITEMS) {
       blockBorrowing = blockRenewals = blockRequests = userSummary.getOpenLoans().stream()
+        .filter(ActionBlocks::itemIsNotClaimedReturned)
         .filter(ActionBlocks::isLoanOverdue)
         .count() > limitValue;
     }
     else if (condition == MAX_NUMBER_OF_OVERDUE_RECALLS) {
       blockBorrowing = blockRenewals = blockRequests = userSummary.getOpenLoans().stream()
+        .filter(ActionBlocks::itemIsNotClaimedReturned)
         .filter(ActionBlocks::isLoanOverdue)
         .filter(OpenLoan::getRecall)
         .count() > limitValue;
     }
     else if (condition == RECALL_OVERDUE_BY_MAX_NUMBER_OF_DAYS) {
       blockBorrowing = blockRenewals = blockRequests = userSummary.getOpenLoans().stream()
+        .filter(ActionBlocks::itemIsNotClaimedReturned)
         .filter(ActionBlocks::isLoanOverdue)
         .filter(OpenLoan::getRecall)
         .map(ActionBlocks::getLoanOverdueDays)
@@ -73,6 +80,7 @@ public class ActionBlocks {
     }
     else if (condition == MAX_OUTSTANDING_FEE_FINE_BALANCE) {
       blockBorrowing = blockRenewals = blockRequests = userSummary.getOpenFeesFines().stream()
+        .filter(feeFine -> feeFineIsNotRelatedToItemClaimedReturned(feeFine, userSummary))
         .map(OpenFeeFine::getBalance)
         .reduce(BigDecimal.ZERO, BigDecimal::add)
         .compareTo(BigDecimal.valueOf(limitValue)) > 0;
@@ -123,5 +131,19 @@ public class ActionBlocks {
       ? (int) Math.round(((double) (new Date().getTime() - loan.getDueDate().getTime()))
       / 1000.0 / 60.0 / 60.0 / 24.0)
       : 0;
+  }
+
+  private static boolean itemIsNotClaimedReturned(OpenLoan loan) {
+    return !loan.getItemClaimedReturned();
+  }
+
+  private static boolean feeFineIsNotRelatedToItemClaimedReturned(OpenFeeFine feeFine,
+    UserSummary userSummary) {
+
+    return userSummary.getOpenLoans().stream()
+      .filter(OpenLoan::getItemClaimedReturned)
+      .map(OpenLoan::getLoanId)
+      .filter(Objects::nonNull)
+      .noneMatch(loanId -> loanId.equals(feeFine.getLoanId()));
   }
 }

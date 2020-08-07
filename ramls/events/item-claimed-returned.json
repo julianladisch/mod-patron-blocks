@@ -1,0 +1,23 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "type": "object",
+  "javaInterfaces" : ["org.folio.domain.Event"],
+  "description": "Item claimed returned event",
+  "properties": {
+    "userId": {
+      "description": "ID of the user the item was charged out to",
+      "type": "string",
+      "$ref": "../raml-util/schemas/uuid.schema"
+    },
+    "loanId": {
+      "description": "ID of the loan associated with the item",
+      "type": "string",
+      "$ref": "../raml-util/schemas/uuid.schema"
+    }
+  },
+  "additionalProperties": false,
+  "required": [
+    "userId",
+    "loanId"
+  ]
+}
