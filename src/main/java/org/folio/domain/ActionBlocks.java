@@ -140,10 +140,15 @@ public class ActionBlocks {
   private static boolean feeFineIsNotRelatedToItemClaimedReturned(OpenFeeFine feeFine,
     UserSummary userSummary) {
 
+    if (feeFine.getLoanId() == null) {
+      return true;
+    }
+
     return userSummary.getOpenLoans().stream()
       .filter(OpenLoan::getItemClaimedReturned)
       .map(OpenLoan::getLoanId)
       .filter(Objects::nonNull)
-      .noneMatch(loanId -> loanId.equals(feeFine.getLoanId()));
+      .noneMatch(loanId -> loanId.equals(feeFine.getLoanId()
+      ));
   }
 }

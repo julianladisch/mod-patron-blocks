@@ -21,8 +21,7 @@ public class ItemClaimedReturnedEventHandlerTest extends EventHandlerTestBase {
     new ItemClaimedReturnedEventHandler(postgresClient);
 
   @Before
-  public void beforeEach(TestContext context) {
-    super.resetMocks();
+  public void beforeEach() {
     deleteAllFromTable(USER_SUMMARY_TABLE_NAME);
   }
 
@@ -76,7 +75,7 @@ public class ItemClaimedReturnedEventHandlerTest extends EventHandlerTestBase {
   }
 
   @Test
-  public void shouldFlipItemLostFlagWhenUserSummaryExists(TestContext context) {
+  public void shouldFlipItemClaimedReturnedFlagWhenUserSummaryExists(TestContext context) {
     String userId = randomId();
     String loanId = randomId();
 
