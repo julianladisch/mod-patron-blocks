@@ -148,7 +148,6 @@ public class ActionBlocks {
       .filter(OpenLoan::getItemClaimedReturned)
       .map(OpenLoan::getLoanId)
       .filter(Objects::nonNull)
-      .noneMatch(loanId -> loanId.equals(feeFine.getLoanId()
-      ));
+      .noneMatch(loanId -> loanId.equals(feeFine.getLoanId()));
   }
 }
