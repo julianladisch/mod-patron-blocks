@@ -15,12 +15,8 @@ import org.folio.util.UuidHelper;
 public class EntityBuilder {
 
   public static OpenLoan buildLoan(boolean recall, boolean itemLost, Date dueDate) {
-    return buildLoan(randomId(), recall, itemLost, dueDate);
-  }
-
-  public static OpenLoan buildLoan(String loanId, boolean recall, boolean itemLost, Date dueDate) {
     return new OpenLoan()
-      .withLoanId(loanId)
+      .withLoanId(randomId())
       .withDueDate(dueDate)
       .withRecall(recall)
       .withItemLost(itemLost);

@@ -431,41 +431,28 @@ public class AutomatedPatronBlocksAPITest extends TestBase {
   @Test
   public void everythingIsBlockedWhenAllLimitsAreExceeded() {
     expectAllBlocks();
-
-    String loanId = randomId();
-    createLimitsForAllConditions();
-
-    int maxOverdueRecallLimit = LIMIT_VALUES.get(RECALL_OVERDUE_BY_MAX_NUMBER_OF_DAYS);
-    DateTime dueDate = now().minusDays(maxOverdueRecallLimit + 1);
-
-    OpenLoan overdueRecalledLoan = buildLoan(loanId, true, true, dueDate.toDate());
-
-    int numberOfOpenLoans = Collections.max(Arrays.asList(
-      LIMIT_VALUES.get(MAX_NUMBER_OF_LOST_ITEMS),
-      LIMIT_VALUES.get(MAX_NUMBER_OF_ITEMS_CHARGED_OUT),
-      LIMIT_VALUES.get(MAX_NUMBER_OF_OVERDUE_ITEMS),
-      LIMIT_VALUES.get(MAX_NUMBER_OF_OVERDUE_RECALLS))) + 1;
-
-    BigDecimal balance = BigDecimal.valueOf(LIMIT_VALUES.get(MAX_OUTSTANDING_FEE_FINE_BALANCE) + 1);
-    List<OpenFeeFine> openFeeFines = singletonList(buildFeeFine(loanId, randomId(), randomId(), balance));
-    List<OpenLoan> openLoans = fillListOfSize(overdueRecalledLoan, numberOfOpenLoans);
-    createSummary(USER_ID, openFeeFines, openLoans);
-
+    OpenLoan overdueRecalledLoan = buildLoan(true, true, null);
+    exceedAllLimits(overdueRecalledLoan);
     String expectedResponse = buildDefaultResponseFor(Condition.values());
-
     sendRequestAndCheckResult(expectedResponse);
   }
 
   @Test
   public void nothingIsBlockedWhenAllLimitsAreExceededForItemsClaimedReturned() {
-    String loanId = randomId();
+    expectNoBlocks();
+    OpenLoan loanClaimedReturned = buildLoan(true, true, null)
+      .withItemClaimedReturned(true);
+    exceedAllLimits(loanClaimedReturned);
+    sendRequestAndCheckResult(toJson(new AutomatedPatronBlocks()));
+  }
+
+  private void exceedAllLimits(OpenLoan openLoan) {
     createLimitsForAllConditions();
 
     int maxOverdueRecallLimit = LIMIT_VALUES.get(RECALL_OVERDUE_BY_MAX_NUMBER_OF_DAYS);
     DateTime dueDate = now().minusDays(maxOverdueRecallLimit + 1);
 
-    OpenLoan loanClaimedReturned = buildLoan(loanId, true, true, dueDate.toDate())
-      .withItemClaimedReturned(true);
+    openLoan.withDueDate(dueDate.toDate());
 
     int numberOfOpenLoans = Collections.max(Arrays.asList(
       LIMIT_VALUES.get(MAX_NUMBER_OF_LOST_ITEMS),
@@ -474,11 +461,10 @@ public class AutomatedPatronBlocksAPITest extends TestBase {
       LIMIT_VALUES.get(MAX_NUMBER_OF_OVERDUE_RECALLS))) + 1;
 
     BigDecimal balance = BigDecimal.valueOf(LIMIT_VALUES.get(MAX_OUTSTANDING_FEE_FINE_BALANCE) + 1);
-    List<OpenFeeFine> openFeeFines = singletonList(buildFeeFine(loanId, randomId(), randomId(), balance));
-    List<OpenLoan> openLoans = fillListOfSize(loanClaimedReturned, numberOfOpenLoans);
+    List<OpenFeeFine> openFeeFines = singletonList(
+      buildFeeFine(openLoan.getLoanId(), randomId(), randomId(), balance));
+    List<OpenLoan> openLoans = fillListOfSize(openLoan, numberOfOpenLoans);
     createSummary(USER_ID, openFeeFines, openLoans);
-
-    sendRequestAndCheckResult(toJson(new AutomatedPatronBlocks()));
   }
 
   @Test
