@@ -28,6 +28,7 @@ import java.util.EnumMap;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.stream.Stream;
 
 import org.folio.domain.Condition;
 import org.folio.repository.PatronBlockConditionsRepository;
@@ -428,16 +429,30 @@ public class AutomatedPatronBlocksAPITest extends TestBase {
   }
 
   @Test
-  public void allLimitsAreExceeded() {
+  public void everythingIsBlockedWhenAllLimitsAreExceeded() {
     expectAllBlocks();
+    OpenLoan overdueRecalledLoan = buildLoan(true, true, null);
+    exceedAllLimits(overdueRecalledLoan);
+    String expectedResponse = buildDefaultResponseFor(Condition.values());
+    sendRequestAndCheckResult(expectedResponse);
+  }
 
-    String loanId = randomId();
+  @Test
+  public void nothingIsBlockedWhenAllLimitsAreExceededForItemsClaimedReturned() {
+    expectNoBlocks();
+    OpenLoan loanClaimedReturned = buildLoan(true, true, null)
+      .withItemClaimedReturned(true);
+    exceedAllLimits(loanClaimedReturned);
+    sendRequestAndCheckResult(toJson(new AutomatedPatronBlocks()));
+  }
+
+  private void exceedAllLimits(OpenLoan openLoan) {
     createLimitsForAllConditions();
 
     int maxOverdueRecallLimit = LIMIT_VALUES.get(RECALL_OVERDUE_BY_MAX_NUMBER_OF_DAYS);
     DateTime dueDate = now().minusDays(maxOverdueRecallLimit + 1);
 
-    OpenLoan overdueRecalledLoan = buildLoan(loanId, true, true, dueDate.toDate());
+    openLoan.withDueDate(dueDate.toDate());
 
     int numberOfOpenLoans = Collections.max(Arrays.asList(
       LIMIT_VALUES.get(MAX_NUMBER_OF_LOST_ITEMS),
@@ -446,13 +461,10 @@ public class AutomatedPatronBlocksAPITest extends TestBase {
       LIMIT_VALUES.get(MAX_NUMBER_OF_OVERDUE_RECALLS))) + 1;
 
     BigDecimal balance = BigDecimal.valueOf(LIMIT_VALUES.get(MAX_OUTSTANDING_FEE_FINE_BALANCE) + 1);
-    List<OpenFeeFine> openFeeFines = singletonList(buildFeeFine(loanId, randomId(), randomId(), balance));
-    List<OpenLoan> openLoans = fillListOfSize(overdueRecalledLoan, numberOfOpenLoans);
+    List<OpenFeeFine> openFeeFines = singletonList(
+      buildFeeFine(openLoan.getLoanId(), randomId(), randomId(), balance));
+    List<OpenLoan> openLoans = fillListOfSize(openLoan, numberOfOpenLoans);
     createSummary(USER_ID, openFeeFines, openLoans);
-
-    String expectedResponse = buildDefaultResponseFor(Condition.values());
-
-    sendRequestAndCheckResult(expectedResponse);
   }
 
   @Test
@@ -483,10 +495,9 @@ public class AutomatedPatronBlocksAPITest extends TestBase {
     waitFor(conditionsRepository.update(updatedCondition));
 
     String expectedResponse = toJson(
-      new AutomatedPatronBlocks().withAutomatedPatronBlocks(singletonList(
+      new AutomatedPatronBlocks().withAutomatedPatronBlocks(Stream.of(
         createBlock(condition, updatedCondition.getMessage(), updatedCondition.getBlockBorrowing(),
           updatedCondition.getBlockRenewals(), updatedCondition.getBlockRequests()))
-        .stream()
         .filter(Objects::nonNull)
         .collect(toList())
       ));

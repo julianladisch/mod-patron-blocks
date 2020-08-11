@@ -6,6 +6,7 @@ import java.util.Map;
 import org.folio.rest.jaxrs.model.FeeFineBalanceChangedEvent;
 import org.folio.rest.jaxrs.model.ItemCheckedInEvent;
 import org.folio.rest.jaxrs.model.ItemCheckedOutEvent;
+import org.folio.rest.jaxrs.model.ItemClaimedReturnedEvent;
 import org.folio.rest.jaxrs.model.ItemDeclaredLostEvent;
 import org.folio.rest.jaxrs.model.LoanDueDateChangedEvent;
 
@@ -14,6 +15,7 @@ public enum EventType {
   ITEM_CHECKED_OUT(ItemCheckedOutEvent.class),
   ITEM_CHECKED_IN(ItemCheckedInEvent.class),
   ITEM_DECLARED_LOST(ItemDeclaredLostEvent.class),
+  ITEM_CLAIMED_RETURNED(ItemClaimedReturnedEvent.class),
   LOAN_DUE_DATE_CHANGED(LoanDueDateChangedEvent.class),
   UNKNOWN(null);
 
