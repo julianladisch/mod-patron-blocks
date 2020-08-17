@@ -1,3 +1,7 @@
+## 1.0.7 2020-08-17
+* Remove `Maximum outstanding fee/fine balance` automated patron block when condition removed by library (MODPATBLK-27)
+* Fix 3 implemented automated patron blocks - block when limits are exceeded (MODPATBLK-34)
+
 ## 1.0.6 2020-07-22
 * Add diagnostic GET endpoint for UserSummary objects (MODPATBLK-35)
 
