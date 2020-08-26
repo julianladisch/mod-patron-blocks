@@ -16,6 +16,7 @@ import org.folio.rest.TestBase;
 import org.folio.rest.jaxrs.model.FeeFineBalanceChangedEvent;
 import org.folio.rest.jaxrs.model.ItemCheckedInEvent;
 import org.folio.rest.jaxrs.model.ItemCheckedOutEvent;
+import org.folio.rest.jaxrs.model.ItemClaimedReturnedEvent;
 import org.folio.rest.jaxrs.model.ItemDeclaredLostEvent;
 import org.folio.rest.jaxrs.model.LoanDueDateChangedEvent;
 import org.folio.rest.jaxrs.model.UserSummary;
@@ -38,8 +39,11 @@ public class EventHandlersAPITest extends TestBase {
     "/automated-patron-blocks/handlers/item-checked-in";
   private static final String ITEM_DECLARED_LOST_HANDLER_URL =
     "/automated-patron-blocks/handlers/item-declared-lost";
+  private static final String ITEM_CLAIMED_RETURNED_HANDLER_URL =
+    "/automated-patron-blocks/handlers/item-claimed-returned";
   private static final String LOAN_DUE_DATE_CHANGED_HANDLER_URL =
     "/automated-patron-blocks/handlers/loan-due-date-changed";
+
 
   final UserSummaryRepository userSummaryRepository = new UserSummaryRepository(postgresClient);
 
@@ -197,6 +201,24 @@ public class EventHandlersAPITest extends TestBase {
       .withLoanId(loanId);
 
     sendEvent(ITEM_DECLARED_LOST_HANDLER_URL, toJson(event), SC_NO_CONTENT);
+    assertThatUserSummaryWasCreated(userId);
+  }
+
+  @Test
+  public void postAutomatedPatronBlocksHandlersItemClaimedReturned(TestContext context) {
+    String userId = randomId();
+    String loanId = randomId();
+
+    Optional<UserSummary> userSummaryBeforeEvent =
+      waitFor(userSummaryRepository.getByUserId(userId));
+
+    context.assertFalse(userSummaryBeforeEvent.isPresent());
+
+    ItemClaimedReturnedEvent event = new ItemClaimedReturnedEvent()
+      .withUserId(userId)
+      .withLoanId(loanId);
+
+    sendEvent(ITEM_CLAIMED_RETURNED_HANDLER_URL, toJson(event), SC_NO_CONTENT);
     assertThatUserSummaryWasCreated(userId);
   }
 

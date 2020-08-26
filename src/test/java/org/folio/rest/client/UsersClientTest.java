@@ -90,6 +90,24 @@ public class UsersClientTest extends TestBase {
       });
   }
 
+  @Test
+  public void additionalFieldShouldBeAllowed(TestContext context) {
+    Async async = context.async();
+
+    mockUsersResponse(200, new JsonObject()
+      .put("id", USER_ID)
+      .put("patronGroup", PATRON_GROUP_ID)
+      .put("additionalNonExistingField", "value")
+      .encodePrettily());
+
+    usersClient.findPatronGroupIdForUser(USER_ID)
+      .onFailure(context::fail)
+      .onSuccess(groupId -> {
+        context.assertEquals(PATRON_GROUP_ID, groupId);
+        async.complete();
+      });
+  }
+
   private void mockUsersResponse(int responseStatus, String responseBody) {
     wireMock.stubFor(get(urlPathMatching("/users/.+"))
       .willReturn(aResponse()

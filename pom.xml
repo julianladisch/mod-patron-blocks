@@ -14,7 +14,7 @@
   </licenses>
 
   <properties>
-    <raml-module-builder.version>30.0.0</raml-module-builder.version>
+    <raml-module-builder.version>30.0.3</raml-module-builder.version>
     <vertx.version>3.9.0</vertx.version>
     <junit.version>4.12</junit.version>
     <rest-assured.version>3.2.0</rest-assured.version>
@@ -92,6 +92,12 @@
       <artifactId>JUnitParams</artifactId>
       <version>1.1.1</version>
       <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.projectlombok</groupId>
+      <artifactId>lombok</artifactId>
+      <version>1.18.12</version>
+      <scope>provided</scope>
     </dependency>
     <dependency>
       <groupId>joda-time</groupId>

@@ -77,6 +77,21 @@
       ]
     },
     {
+      "id":"user-summary",
+      "version":"0.1",
+      "handlers":[
+        {
+          "methods":[
+            "GET"
+          ],
+          "pathPattern":"/user-summary/{userId}",
+          "permissionsRequired": [
+            "user-summary.item.get"
+          ]
+        }
+      ]
+    },
+    {
       "id":"patron-blocks-event-handlers",
       "version":"1.0",
       "handlers":[
@@ -112,6 +127,15 @@
             "POST"
           ],
           "pathPattern":"/automated-patron-blocks/handlers/item-declared-lost",
+          "permissionsRequired": [
+            "patron-blocks.events.post"
+          ]
+        },
+        {
+          "methods":[
+            "POST"
+          ],
+          "pathPattern":"/automated-patron-blocks/handlers/item-claimed-returned",
           "permissionsRequired": [
             "patron-blocks.events.post"
           ]
@@ -252,6 +276,11 @@
       "permissionName": "automated-patron-blocks.collection.get",
       "displayName": "Patron blocks - get blocks for patron",
       "description": "Get automated patron blocks by user ID"
+    },
+    {
+      "permissionName": "user-summary.item.get",
+      "displayName": "User summary - get UserSummary object",
+      "description": "Get UserSummary object by user ID"
     }
   ],
   "launchDescriptor": {

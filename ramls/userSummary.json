@@ -13,15 +13,6 @@
       "type": "string",
       "$ref": "raml-util/schemas/uuid.schema"
     },
-    "outstandingFeeFineBalance": {
-      "description": "Total of all user's open fee/fine balances",
-      "type": "number",
-      "javaType": "java.math.BigDecimal"
-    },
-    "numberOfLostItems": {
-      "description": "Number of items in status 'Aged to lost' or 'Declared lost' charged out to the user",
-      "type": "integer"
-    },
     "openLoans": {
       "description": "User's open loans",
       "type": "array",
@@ -41,7 +32,18 @@
           },
           "recall": {
             "description": "Indicates if the item was recalled",
-            "type": "boolean"
+            "type": "boolean",
+            "default": false
+          },
+          "itemLost" : {
+            "description": "Indicates if the item associated with the loan is in status 'Aged to lost' or 'Declared lost'",
+            "type": "boolean",
+            "default": false
+          },
+          "itemClaimedReturned" : {
+            "description": "Indicates if the item associated with the loan is in status 'Claimed returned'",
+            "type": "boolean",
+            "default": false
           }
         },
         "additionalProperties": false,
@@ -70,6 +72,11 @@
             "type": "string",
             "$ref": "raml-util/schemas/uuid.schema"
           },
+          "loanId": {
+            "description": "Unique ID of the loan the fee/fine was created for",
+            "type": "string",
+            "$ref": "raml-util/schemas/uuid.schema"
+          },
           "balance": {
             "description": "Balance",
             "type": "number",
@@ -95,8 +102,6 @@
   "required": [
     "id",
     "userId",
-    "outstandingFeeFineBalance",
-    "numberOfLostItems",
     "openLoans",
     "openFeesFines"
   ]

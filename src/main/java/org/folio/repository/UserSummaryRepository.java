@@ -1,8 +1,9 @@
 package org.folio.repository;
 
-import java.math.BigDecimal;
+import static io.vertx.core.Future.succeededFuture;
+import static org.folio.util.UuidHelper.randomId;
+
 import java.util.Optional;
-import java.util.UUID;
 
 import org.folio.rest.jaxrs.model.UserSummary;
 import org.folio.rest.persist.Criteria.Criteria;
@@ -42,7 +43,13 @@ public class UserSummaryRepository extends BaseRepository<UserSummary> {
         .setJSONB(true));
 
     return this.get(criterion)
-      .map(results -> results.stream().findFirst());
+      .compose(results -> {
+        if (results.isEmpty()) {
+          return succeededFuture(Optional.empty());
+        }
+
+        return succeededFuture(Optional.ofNullable(results.get(0)));
+      });
   }
 
   public Future<UserSummary> findByUserIdOrBuildNew(String userId) {
@@ -59,10 +66,8 @@ public class UserSummaryRepository extends BaseRepository<UserSummary> {
 
   private UserSummary buildEmptyUserSummary(String userId) {
     return new UserSummary()
-      .withId(UUID.randomUUID().toString())
-      .withUserId(userId)
-      .withOutstandingFeeFineBalance(BigDecimal.ZERO)
-      .withNumberOfLostItems(0);
+      .withId(randomId())
+      .withUserId(userId);
   }
 
 }

@@ -5,7 +5,7 @@ import static org.folio.repository.UserSummaryRepository.USER_SUMMARY_TABLE_NAME
 
 import java.util.Date;
 
-import org.folio.rest.jaxrs.model.ItemDeclaredLostEvent;
+import org.folio.rest.jaxrs.model.ItemClaimedReturnedEvent;
 import org.folio.rest.jaxrs.model.OpenLoan;
 import org.folio.rest.jaxrs.model.UserSummary;
 import org.junit.Before;
@@ -16,13 +16,12 @@ import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
 
 @RunWith(VertxUnitRunner.class)
-public class ItemDeclaredLostEventHandlerTest extends EventHandlerTestBase {
-  private static final ItemDeclaredLostEventHandler eventHandler =
-    new ItemDeclaredLostEventHandler(postgresClient);
+public class ItemClaimedReturnedEventHandlerTest extends EventHandlerTestBase {
+  private static final ItemClaimedReturnedEventHandler eventHandler =
+    new ItemClaimedReturnedEventHandler(postgresClient);
 
   @Before
-  public void beforeEach(TestContext context) {
-    super.resetMocks();
+  public void beforeEach() {
     deleteAllFromTable(USER_SUMMARY_TABLE_NAME);
   }
 
@@ -31,7 +30,7 @@ public class ItemDeclaredLostEventHandlerTest extends EventHandlerTestBase {
     String userId = randomId();
     String loanId = randomId();
 
-    ItemDeclaredLostEvent event = new ItemDeclaredLostEvent()
+    ItemClaimedReturnedEvent event = new ItemClaimedReturnedEvent()
       .withUserId(userId)
       .withLoanId(loanId);
 
@@ -42,14 +41,41 @@ public class ItemDeclaredLostEventHandlerTest extends EventHandlerTestBase {
       .withOpenLoans(singletonList(new OpenLoan()
         .withLoanId(loanId)
         .withRecall(false)
-        .withItemClaimedReturned(false)
-        .withItemLost(true)));
+        .withItemClaimedReturned(true)
+        .withItemLost(false)));
 
     checkUserSummary(summaryId, userSummaryToCompare, context);
   }
 
   @Test
-  public void shouldFlipItemLostFlagWhenUserSummaryExists(TestContext context) {
+  public void newOpenLoanShouldBeCreatedForExistingSummaryWhenDoesNotExist(TestContext context) {
+    String userId = randomId();
+    String loanId = randomId();
+
+    UserSummary userSummary = new UserSummary()
+      .withUserId(userId);
+
+    waitFor(userSummaryRepository.save(userSummary));
+
+    ItemClaimedReturnedEvent event = new ItemClaimedReturnedEvent()
+      .withUserId(userId)
+      .withLoanId(loanId);
+
+    String summaryId = waitFor(eventHandler.handle(event));
+
+    UserSummary userSummaryToCompare = new UserSummary()
+      .withUserId(userId)
+      .withOpenLoans(singletonList(new OpenLoan()
+        .withLoanId(loanId)
+        .withRecall(false)
+        .withItemClaimedReturned(true)
+        .withItemLost(false)));
+
+    checkUserSummary(summaryId, userSummaryToCompare, context);
+  }
+
+  @Test
+  public void shouldFlipItemClaimedReturnedFlagWhenUserSummaryExists(TestContext context) {
     String userId = randomId();
     String loanId = randomId();
 
@@ -65,13 +91,13 @@ public class ItemDeclaredLostEventHandlerTest extends EventHandlerTestBase {
 
     waitFor(userSummaryRepository.save(userSummary));
 
-    ItemDeclaredLostEvent event = new ItemDeclaredLostEvent()
+    ItemClaimedReturnedEvent event = new ItemClaimedReturnedEvent()
       .withUserId(userId)
       .withLoanId(loanId);
 
     String summaryId = waitFor(eventHandler.handle(event));
 
-    userSummary.getOpenLoans().get(0).setItemLost(true);
+    userSummary.getOpenLoans().get(0).setItemClaimedReturned(true);
 
     checkUserSummary(summaryId, userSummary, context);
   }

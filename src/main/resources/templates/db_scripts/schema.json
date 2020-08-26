@@ -1,4 +1,11 @@
 {
+  "scripts": [
+    {
+      "run": "before",
+      "snippetPath": "remove-user_summary-v1.0.4-unnecessary-fields.sql",
+      "fromModuleVersion": "1.0.5"
+    }
+  ],
   "tables": [
     {
       "tableName": "user_summary",

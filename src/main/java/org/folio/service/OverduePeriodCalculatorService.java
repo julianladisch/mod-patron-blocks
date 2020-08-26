@@ -2,7 +2,6 @@ package org.folio.service;
 
 import static io.vertx.core.Future.failedFuture;
 import static io.vertx.core.Future.succeededFuture;
-import static java.lang.String.format;
 import static org.apache.commons.lang3.ObjectUtils.allNotNull;
 import static org.joda.time.DateTimeConstants.MINUTES_PER_HOUR;
 import static org.joda.time.DateTimeZone.UTC;
@@ -14,7 +13,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
-import org.apache.commons.lang3.ObjectUtils;
 import org.folio.domain.OpeningDayWithTimeZone;
 import org.folio.exception.OverduePeriodCalculatorException;
 import org.folio.rest.client.CalendarClient;
@@ -55,9 +53,11 @@ public class OverduePeriodCalculatorService {
   }
 
   public Future<Integer> getMinutes(Loan loan, DateTime systemTime) {
-    if (loan.getOverdueFinePolicyId() == null || loan.getLoanPolicyId() == null) {
-      String message = format("Loan ID %s - overdue fine policy or loan policy is missing",
-        loan.getId());
+    if (loan == null || loan.getOverdueFinePolicyId() == null || loan.getLoanPolicyId() == null
+      || loan.getDueDate() == null || systemTime == null) {
+
+      String message = "Failed to calculate overdue minutes. One of the parameters is null: " +
+        "loan, overdue fine policy, loan policy, due date, system time";
       log.error(message);
       return failedFuture(new OverduePeriodCalculatorException(message));
     }
@@ -86,8 +86,7 @@ public class OverduePeriodCalculatorService {
   }
 
   private boolean loanIsOverdue(Loan loan, DateTime systemTime) {
-    return ObjectUtils.allNotNull(loan, systemTime)
-      && loan.getDueDate().before(systemTime.toDate());
+    return loan.getDueDate().before(systemTime.toDate());
   }
 
   Future<Integer> getOverdueMinutes(CalculationContext calculationContext, DateTime systemTime) {
@@ -115,8 +114,8 @@ public class OverduePeriodCalculatorService {
           returnDate.toLocalDateTime()));
   }
 
-  private Integer getOpeningDaysDurationMinutes(
-    Collection<OpeningDayWithTimeZone> openingDays, LocalDateTime dueDate, LocalDateTime returnDate) {
+  private Integer getOpeningDaysDurationMinutes(Collection<OpeningDayWithTimeZone> openingDays,
+    LocalDateTime dueDate, LocalDateTime returnDate) {
 
     return openingDays.stream()
         .mapToInt(day -> getOpeningDayDurationMinutes(day, dueDate, returnDate))
@@ -135,8 +134,8 @@ public class OverduePeriodCalculatorService {
       .sum();
   }
 
-  private int getOpeningHourDurationMinutes(OpeningHour openingHour,
-    DateTime datePart, LocalDateTime dueDate, LocalDateTime returnDate) {
+  private int getOpeningHourDurationMinutes(OpeningHour openingHour, DateTime datePart,
+    LocalDateTime dueDate, LocalDateTime returnDate) {
 
     if (allNotNull(datePart, dueDate, openingHour.getStartTime(), openingHour.getEndTime())) {
 
@@ -211,9 +210,9 @@ public class OverduePeriodCalculatorService {
         .orElse(null));
   }
 
-  public static int getLoanOverdueDays(Integer overdueMinutes) {
-    return (int) Math.ceil(overdueMinutes.doubleValue() / NUMBER_OF_MINUTES_IN_ONE_DAY);
-  }
+//  public static int getLoanOverdueDays(Integer overdueMinutes) {
+//    return (int) Math.ceil(overdueMinutes.doubleValue() / NUMBER_OF_MINUTES_IN_ONE_DAY);
+//  }
 
   private static class CalculationContext {
     final Loan loan;
