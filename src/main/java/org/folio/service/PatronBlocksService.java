@@ -131,10 +131,6 @@ public class PatronBlocksService {
 
     List<Future<LoanOverdueMinutes>> overdueMinutesFutures = new ArrayList<>();
 
-    Set<String> uniqueIds = ctx.userSummary.getOpenLoans().stream()
-      .map(OpenLoan::getLoanId)
-      .collect(Collectors.toSet());
-
     ctx.userSummary.getOpenLoans().forEach(openLoan ->
       overdueMinutesFutures.add(
         circulationStorageClient.findLoanById(openLoan.getLoanId())

@@ -38,7 +38,6 @@ public class OverduePeriodCalculatorService {
   private static final Logger log = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
 
   private static final int ZERO_MINUTES = 0;
-  private static final Double NUMBER_OF_MINUTES_IN_ONE_DAY = 1440.0;
 
   private final CalendarClient calendarClient;
   private final CirculationStorageClient circulationStorageClient;
@@ -209,10 +208,6 @@ public class OverduePeriodCalculatorService {
         .map(UUID::fromString)
         .orElse(null));
   }
-
-//  public static int getLoanOverdueDays(Integer overdueMinutes) {
-//    return (int) Math.ceil(overdueMinutes.doubleValue() / NUMBER_OF_MINUTES_IN_ONE_DAY);
-//  }
 
   private static class CalculationContext {
     final Loan loan;
