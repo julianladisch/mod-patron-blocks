@@ -31,7 +31,13 @@ public class ActionBlocks {
   private final boolean blockRequests;
 
   public static ActionBlocks byLimit(UserSummary userSummary, PatronBlockLimit limit) {
+    if (userSummary == null || limit == null || userSummary.getOpenLoans() == null) {
+      log.error("Failed to determine blocks: one of the parameters is null");
+      return empty();
+    }
+
     return byLimit(userSummary, limit, userSummary.getOpenLoans().stream()
+      .filter(openLoan -> openLoan.getLoanId() != null)
       .collect(Collectors.toMap(OpenLoan::getLoanId, r -> 0)));
   }
 
