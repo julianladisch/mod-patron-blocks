@@ -180,8 +180,8 @@ public class OverduePeriodCalculatorService {
   }
 
   private boolean shouldIgnoreGracePeriod(CalculationContext context) {
-    boolean dueDateChangedByRecall = context.getLoan().getDueDateChangedByRecall();
-    if (!dueDateChangedByRecall) {
+    Boolean dueDateChangedByRecall = context.getLoan().getDueDateChangedByRecall();
+    if (dueDateChangedByRecall == null || !dueDateChangedByRecall) {
       return false;
     }
 

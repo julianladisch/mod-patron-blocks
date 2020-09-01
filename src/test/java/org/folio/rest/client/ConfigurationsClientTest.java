@@ -68,9 +68,11 @@ public class ConfigurationsClientTest extends TestBase {
 
   @Test
   public void shouldFailWhenResponseStatusIsNot200(TestContext context) {
-    mockUsersResponse(400, "");
+    mockUsersResponse(400, "error");
 
     configurationsClient.findTimeZone()
+      .onFailure(throwable -> context.assertEquals(
+        "Failed to find time zone configuration. Response: 400 errord", throwable.getMessage()))
       .onSuccess(dateTimeZone -> context.fail());
   }
 
