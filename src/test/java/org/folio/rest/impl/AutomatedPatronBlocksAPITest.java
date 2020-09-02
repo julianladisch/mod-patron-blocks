@@ -64,10 +64,7 @@ public class AutomatedPatronBlocksAPITest extends TestBase {
   private static final String PATRON_GROUP_ID = randomId();
   private static final boolean SINGLE_LIMIT = true;
   private static final boolean ALL_LIMITS = false;
-  private static final String OVERDUE_FINE_POLICY_ID = randomId();
-  private static final String DO_NOT_COUNT_CLOSED_OVERDUE_FINE_POLICY_ID = randomId();
   private static final String LOAN_POLICY_ID = randomId();
-  private static final String PRIMARY_SERVICE_POINT_ID = randomId();
 
   private final PatronBlockLimitsRepository limitsRepository =
     new PatronBlockLimitsRepository(postgresClient);
@@ -105,36 +102,11 @@ public class AutomatedPatronBlocksAPITest extends TestBase {
     Arrays.stream(Condition.values())
       .forEach(condition -> updateCondition(condition, true, true, true));
 
-    wireMock.stubFor(get(urlEqualTo("/overdue-fines-policies/" + OVERDUE_FINE_POLICY_ID))
-      .atPriority(5)
-      .willReturn(aResponse()
-        .withStatus(200)
-        .withBody(makeOverdueFinePolicyResponseBody())));
-
-    wireMock.stubFor(get(urlEqualTo(
-      "/overdue-fines-policies/" + DO_NOT_COUNT_CLOSED_OVERDUE_FINE_POLICY_ID))
-      .atPriority(5)
-      .willReturn(aResponse()
-        .withStatus(200)
-        .withBody(makeOverdueFinePolicyResponseBody(false))));
-
     wireMock.stubFor(get(urlEqualTo("/loan-policy-storage/loan-policies/" + LOAN_POLICY_ID))
       .atPriority(5)
       .willReturn(aResponse()
         .withStatus(200)
         .withBody(makeLoanPolicyResponseBody())));
-
-    wireMock.stubFor(get(urlMatching("/calendar/periods.*"))
-      .atPriority(5)
-      .willReturn(aResponse()
-        .withStatus(200)
-        .withBody(makeEmptyCalendarResponseBody())));
-
-    wireMock.stubFor(get(urlMatching("/configurations/entries.*"))
-      .atPriority(5)
-      .willReturn(aResponse()
-        .withStatus(200)
-        .withBody(makeConfigurationResponseBody())));
   }
 
   @Test
@@ -229,7 +201,7 @@ public class AutomatedPatronBlocksAPITest extends TestBase {
 
     OpenLoan openLoan = buildLoan(false, true, now().plusHours(1).toDate());
     List<OpenLoan> openLoans = fillListOfSize(openLoan, limitValue + lostItemsDelta);
-    stubLoan(openLoan, OVERDUE_FINE_POLICY_ID);
+    stubLoan(openLoan);
     createSummary(USER_ID, new ArrayList<>(), openLoans);
 
     String expectedResponse = createLimitsAndBuildExpectedResponse(condition, singleLimit);
@@ -588,7 +560,7 @@ public class AutomatedPatronBlocksAPITest extends TestBase {
   }
 
   @Test
-  public void noBlockWhenClosedPeriodsNotCountedAndNoOpeningPeriodsExist() {
+  public void noBlockWhenLoanIsNotOverdue() {
     expectNoBlocks();
 
     final Condition condition = MAX_NUMBER_OF_OVERDUE_ITEMS;
@@ -598,9 +570,9 @@ public class AutomatedPatronBlocksAPITest extends TestBase {
       OpenLoan openLoan = new OpenLoan()
         .withLoanId(randomId())
         .withRecall(false)
-        .withDueDate(now().minusHours(1).toDate());
+        .withDueDate(now().plusHours(1).toDate());
 
-      stubLoan(openLoan, DO_NOT_COUNT_CLOSED_OVERDUE_FINE_POLICY_ID);
+      stubLoan(openLoan);
 
       return openLoan;
     }, limitValue);
@@ -617,14 +589,14 @@ public class AutomatedPatronBlocksAPITest extends TestBase {
   }
 
   @Test
-  public void blockWhenClosedPeriodsNotCountedAndOpeningPeriodsExist() {
-    expectAllBlocks();
+  public void noBlockWhenLoanIsNotOverdueBecauseOfGracePeriod() {
+    expectNoBlocks();
 
-    wireMock.stubFor(get(urlMatching("/calendar/periods.*"))
-      .atPriority(4)
+    wireMock.stubFor(get(urlEqualTo("/loan-policy-storage/loan-policies/" + LOAN_POLICY_ID))
+      .atPriority(5)
       .willReturn(aResponse()
         .withStatus(200)
-        .withBody(makeOpeningPeriodsCalendarResponseBody())));
+        .withBody(makeLoanPolicyWithGracePeriodResponseBody())));
 
     final Condition condition = MAX_NUMBER_OF_OVERDUE_ITEMS;
     int limitValue = LIMIT_VALUES.get(condition);
@@ -635,7 +607,36 @@ public class AutomatedPatronBlocksAPITest extends TestBase {
         .withRecall(false)
         .withDueDate(now().minusHours(1).toDate());
 
-      stubLoan(openLoan, DO_NOT_COUNT_CLOSED_OVERDUE_FINE_POLICY_ID);
+      stubLoan(openLoan);
+
+      return openLoan;
+    }, limitValue + 1);
+
+    createSummary(USER_ID, new ArrayList<>(), overdueLoans);
+
+    String expectedResponse = createLimitsAndBuildExpectedResponse(condition, true);
+
+    sendRequest(USER_ID)
+      .then()
+      .statusCode(200)
+      .contentType(ContentType.JSON)
+      .body(equalTo(expectedResponse));
+  }
+
+  @Test
+  public void blockWhenLoanIsOverdue() {
+    expectAllBlocks();
+
+    final Condition condition = MAX_NUMBER_OF_OVERDUE_ITEMS;
+    int limitValue = LIMIT_VALUES.get(condition);
+
+    List<OpenLoan> overdueLoans = fillListOfSize(() -> {
+      OpenLoan openLoan = new OpenLoan()
+        .withLoanId(randomId())
+        .withRecall(false)
+        .withDueDate(now().minusHours(1).toDate());
+
+      stubLoan(openLoan);
 
       return openLoan;
     }, limitValue + 1);
@@ -787,17 +788,6 @@ public class AutomatedPatronBlocksAPITest extends TestBase {
     expectBlockRequests = true;
   }
 
-  private static String makeOverdueFinePolicyResponseBody() {
-    return makeOverdueFinePolicyResponseBody(true);
-  }
-
-  private static String makeOverdueFinePolicyResponseBody(boolean countClosed) {
-    return new JsonObject()
-      .put("id", OVERDUE_FINE_POLICY_ID)
-      .put("countClosed", countClosed)
-      .encodePrettily();
-  }
-
   private static String makeLoanPolicyResponseBody() {
     return new JsonObject()
       .put("id", LOAN_POLICY_ID)
@@ -808,67 +798,20 @@ public class AutomatedPatronBlocksAPITest extends TestBase {
       .encodePrettily();
   }
 
-  private static String makeItemResponseBody(String itemId, String effectiveLocationId) {
+  private static String makeLoanPolicyWithGracePeriodResponseBody() {
     return new JsonObject()
-      .put("id", itemId)
-      .put("effectiveLocationId", effectiveLocationId)
+      .put("id", LOAN_POLICY_ID)
+      .put("loansPolicy", new JsonObject()
+        .put("gracePeriod", new JsonObject()
+          .put("duration", 5)
+          .put("intervalId", "Hours")))
       .encodePrettily();
   }
 
-  private static String makeLocationResponseBody(String locationId) {
-    return new JsonObject()
-      .put("id", locationId)
-      .put("primaryServicePoint", PRIMARY_SERVICE_POINT_ID)
-      .encodePrettily();
-  }
-
-  private static String makeEmptyCalendarResponseBody() {
-    return new JsonObject()
-      .put("openingPeriods", new JsonArray())
-      .encodePrettily();
-  }
-
-  private static String makeOpeningPeriodsCalendarResponseBody() {
-    return new JsonObject()
-      .put("openingPeriods", new JsonArray(Arrays.asList(
-        new JsonObject()
-          .put("openingDay", new JsonObject()
-            .put("openingHour", new JsonArray(singletonList(new JsonObject()
-              .put("startTime", "00:00")
-              .put("endTime", "23:59"))))
-            .put("allDay", false)
-            .put("open", true)
-            .put("exceptional", false))
-          .put("date", new DateTime().minusDays(1).withTime(0, 0, 0, 0)
-            .toString(ISODateTimeFormat.dateTime())),
-        new JsonObject()
-          .put("openingDay", new JsonObject()
-            .put("openingHour", new JsonArray(singletonList(new JsonObject()
-              .put("startTime", "00:00")
-              .put("endTime", "23:59"))))
-            .put("allDay", false)
-            .put("open", true)
-            .put("exceptional", false))
-          .put("date", new DateTime().withTime(0, 0, 0, 0).toString(ISODateTimeFormat.dateTime()))
-      )))
-      .encodePrettily();
-  }
-
-  private static String makeConfigurationResponseBody() {
-    return new JsonObject()
-      .put("configs", new JsonArray(singletonList(
-        new JsonObject()
-          .put("value", "")
-      )))
-      .encodePrettily();
-  }
-
-  private static String makeLoanResponseBody(OpenLoan openLoan, String overdueFinePolicyId,
-    String itemId) {
-
+  private static String makeLoanResponseBody(OpenLoan openLoan, String itemId) {
     return new JsonObject()
       .put("id", randomId())
-      .put("overdueFinePolicyId", overdueFinePolicyId)
+      .put("overdueFinePolicyId", randomId())
       .put("loanPolicyId", LOAN_POLICY_ID)
       .put("dueDate", new DateTime(openLoan.getDueDate()).toString(ISODateTimeFormat.dateTime()))
       .put("dueDateChangedByRecall", openLoan.getRecall())
@@ -877,29 +820,10 @@ public class AutomatedPatronBlocksAPITest extends TestBase {
   }
 
   private static void stubLoan(OpenLoan openLoan) {
-    stubLoan(openLoan, OVERDUE_FINE_POLICY_ID);
-  }
-
-  private static void stubLoan(OpenLoan openLoan, String overdueFinePolicyId) {
-    String itemId = randomId();
-    String effectiveLocationId = randomId();
-
-    wireMock.stubFor(get(urlEqualTo("/item-storage/items/" + itemId))
-      .atPriority(5)
-      .willReturn(aResponse()
-        .withStatus(200)
-        .withBody(makeItemResponseBody(itemId, effectiveLocationId))));
-
-    wireMock.stubFor(get(urlEqualTo("/locations/" + effectiveLocationId))
-      .atPriority(5)
-      .willReturn(aResponse()
-        .withStatus(200)
-        .withBody(makeLocationResponseBody(effectiveLocationId))));
-
     wireMock.stubFor(get(urlEqualTo("/loan-storage/loans/" + openLoan.getLoanId()))
       .atPriority(5)
       .willReturn(aResponse()
         .withStatus(200)
-        .withBody(makeLoanResponseBody(openLoan, overdueFinePolicyId, itemId))));
+        .withBody(makeLoanResponseBody(openLoan, randomId()))));
   }
 }

@@ -15,10 +15,6 @@
       "version": "0.1"
     },
     {
-      "id": "calendar",
-      "version": "4.0"
-    },
-    {
       "id": "loan-storage",
       "version": "7.0"
     },
@@ -29,10 +25,6 @@
     {
       "id": "configuration",
       "version": "2.0"
-    },
-    {
-      "id":"feesfines",
-      "version":"15.2"
     },
     {
       "id": "item-storage",
@@ -64,11 +56,9 @@
             "pubsub.event-types.post",
             "pubsub.publishers.post",
             "pubsub.subscribers.post",
-            "calendar.opening-hours.collection.get",
             "circulation-storage.loans.item.get",
             "circulation-storage.loan-policies.item.get",
             "configuration.entries.collection.get",
-            "overdue-fines-policies.item.get",
             "inventory-storage.items.item.get",
             "inventory-storage.locations.item.get",
             "users.item.get"
