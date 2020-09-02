@@ -575,7 +575,7 @@ public class AutomatedPatronBlocksAPITest extends TestBase {
       stubLoan(openLoan);
 
       return openLoan;
-    }, limitValue);
+    }, limitValue + 1);
 
     createSummary(USER_ID, new ArrayList<>(), overdueLoans);
 
