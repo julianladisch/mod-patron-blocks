@@ -37,8 +37,8 @@ public class OverduePeriodCalculatorService {
   }
 
   public Future<Integer> getMinutes(Loan loan, DateTime systemTime) {
-    if (loan == null || loan.getOverdueFinePolicyId() == null || loan.getLoanPolicyId() == null
-      || loan.getDueDate() == null || systemTime == null) {
+    if (loan == null || loan.getLoanPolicyId() == null || loan.getDueDate() == null
+      || systemTime == null) {
 
       String message = "Failed to calculate overdue minutes. One of the parameters is null: " +
         "loan, overdue fine policy, loan policy, due date, system time";
