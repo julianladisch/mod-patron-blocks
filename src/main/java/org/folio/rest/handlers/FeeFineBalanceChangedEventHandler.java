@@ -7,35 +7,46 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
-import io.vertx.core.Future;
-import io.vertx.core.Vertx;
-
 import org.apache.commons.lang3.StringUtils;
+import org.folio.domain.EventType;
 import org.folio.domain.FeeFineType;
 import org.folio.exception.EntityNotFoundException;
+import org.folio.repository.BaseRepository;
 import org.folio.rest.jaxrs.model.FeeFineBalanceChangedEvent;
 import org.folio.rest.jaxrs.model.OpenFeeFine;
 import org.folio.rest.jaxrs.model.OpenLoan;
 import org.folio.rest.jaxrs.model.UserSummary;
 import org.folio.rest.persist.PostgresClient;
+import org.folio.util.UuidHelper;
+
+import io.vertx.core.Future;
+import io.vertx.core.Vertx;
 
 public class FeeFineBalanceChangedEventHandler extends EventHandler<FeeFineBalanceChangedEvent> {
+  private static final String EVENT_TABLE_NAME = EventType.FEE_FINE_BALANCE_CHANGED.getTableName();
   private static final List<String> LOST_ITEM_FEE_TYPE_IDS = Arrays.asList(
     FeeFineType.LOST_ITEM_FEE.getId(),
     FeeFineType.LOST_ITEM_PROCESSING_FEE.getId()
   );
 
+  private final BaseRepository<FeeFineBalanceChangedEvent> eventRepository;
+
   public FeeFineBalanceChangedEventHandler(Map<String, String> okapiHeaders, Vertx vertx) {
     super(okapiHeaders, vertx);
+    eventRepository = new BaseRepository<>(getPostgresClient(okapiHeaders, vertx), EVENT_TABLE_NAME,
+      FeeFineBalanceChangedEvent.class);
   }
 
   public FeeFineBalanceChangedEventHandler(PostgresClient postgresClient) {
     super(postgresClient);
+    eventRepository = new BaseRepository<>(postgresClient, EVENT_TABLE_NAME,
+      FeeFineBalanceChangedEvent.class);
   }
 
   @Override
   public Future<String> handle(FeeFineBalanceChangedEvent event) {
-    return getUserSummary(event)
+    return eventRepository.save(event, UuidHelper.randomId())
+      .compose(eventId -> getUserSummary(event))
       .compose(summary -> updateUserSummary(summary, event))
       .onComplete(result -> logResult(result, event));
   }

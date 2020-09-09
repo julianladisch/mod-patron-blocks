@@ -4,6 +4,11 @@
   "javaInterfaces" : ["org.folio.domain.Event"],
   "description": "Fee/fine balance changed event",
   "properties": {
+    "id": {
+      "description" : "A globally unique (UUID) identifier for the event",
+      "type": "string",
+      "$ref": "../raml-util/schemas/uuid.schema"
+    },
     "feeFineId": {
       "description": "Unique ID a fee/fine",
       "type": "string",
@@ -28,6 +33,12 @@
       "description": "Current balance of a fee/fine",
       "type": "number",
       "javaType" : "java.math.BigDecimal"
+    },
+    "metadata": {
+      "description": "Metadata about creation and changes, provided by the server (client should not provide)",
+      "type": "object",
+      "$ref": "../raml-util/schemas/metadata.schema",
+      "readonly": true
     }
   },
   "additionalProperties": false,

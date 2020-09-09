@@ -23,9 +23,8 @@ public abstract class EventHandler<E extends Event> {
   protected final UserSummaryRepository userSummaryRepository;
 
   public EventHandler(Map<String, String> okapiHeaders, Vertx vertx) {
-    String tenantId = calculateTenantId(okapiHeaders.get(XOkapiHeaders.TENANT.toLowerCase()));
-    userSummaryRepository = new UserSummaryRepository(
-      PostgresClient.getInstance(vertx, tenantId));
+    PostgresClient postgresClient = getPostgresClient(okapiHeaders, vertx);
+    userSummaryRepository = new UserSummaryRepository(postgresClient);
   }
 
   public EventHandler(PostgresClient postgresClient) {
@@ -49,6 +48,11 @@ public abstract class EventHandler<E extends Event> {
       log.info("Event {} processed successfully. Affected user summary: {}",
         eventType, result.result());
     }
+  }
+
+  protected PostgresClient getPostgresClient(Map<String, String> okapiHeaders, Vertx vertx) {
+    String tenantId = calculateTenantId(okapiHeaders.get(XOkapiHeaders.TENANT.toLowerCase()));
+    return PostgresClient.getInstance(vertx, tenantId);
   }
 
 }

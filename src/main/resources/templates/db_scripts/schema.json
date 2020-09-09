@@ -8,6 +8,30 @@
   ],
   "tables": [
     {
+      "tableName": "fee_fine_balance_changed_event",
+      "withMetadata": true
+    },
+    {
+      "tableName": "item_checked_out_event",
+      "withMetadata": true
+    },
+    {
+      "tableName": "item_checked_in_event",
+      "withMetadata": true
+    },
+    {
+      "tableName": "item_declared_lost_event",
+      "withMetadata": true
+    },
+    {
+      "tableName": "item_claimed_returned_event",
+      "withMetadata": true
+    },
+    {
+      "tableName": "loan_due_date_changed_event",
+      "withMetadata": true
+    },
+    {
       "tableName": "user_summary",
       "withMetadata": true,
       "uniqueIndex": [

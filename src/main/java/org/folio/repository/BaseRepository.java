@@ -1,10 +1,13 @@
 package org.folio.repository;
 
+import static io.vertx.core.Future.succeededFuture;
+
 import java.util.List;
 import java.util.Optional;
 
 import org.folio.cql2pgjson.CQL2PgJSON;
 import org.folio.cql2pgjson.exception.FieldException;
+import org.folio.rest.persist.Criteria.Criteria;
 import org.folio.rest.persist.Criteria.Criterion;
 import org.folio.rest.persist.Criteria.Limit;
 import org.folio.rest.persist.Criteria.Offset;
@@ -19,6 +22,8 @@ import io.vertx.sqlclient.RowSet;
 
 public class BaseRepository<T> {
   private static final int DEFAULT_LIMIT = 100;
+  private static final String USER_ID_FIELD = "'userId'";
+  private static final String OPERATION_EQUALS = "=";
 
   private final PostgresClient pgClient;
   private final String tableName;
@@ -85,6 +90,23 @@ public class BaseRepository<T> {
     Promise<RowSet<Row>> promise = Promise.promise();
     pgClient.delete(tableName, id, promise);
     return promise.future().map(updateResult -> updateResult.rowCount() == 1);
+  }
+
+  public Future<Optional<T>> getByUserId(String userId) {
+    Criterion criterion = new Criterion(new Criteria()
+      .addField(USER_ID_FIELD)
+      .setOperation(OPERATION_EQUALS)
+      .setVal(userId)
+      .setJSONB(true));
+
+    return this.get(criterion)
+      .compose(results -> {
+        if (results.isEmpty()) {
+          return succeededFuture(Optional.empty());
+        }
+
+        return succeededFuture(Optional.ofNullable(results.get(0)));
+      });
   }
 
   /**
