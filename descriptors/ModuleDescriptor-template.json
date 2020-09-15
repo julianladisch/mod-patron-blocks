@@ -23,18 +23,6 @@
       "version": "2.1"
     },
     {
-      "id": "configuration",
-      "version": "2.0"
-    },
-    {
-      "id": "item-storage",
-      "version": "8.4"
-    },
-    {
-      "id": "locations",
-      "version": "3.0"
-    },
-    {
       "id": "users",
       "version": "15.1"
     }
@@ -58,9 +46,6 @@
             "pubsub.subscribers.post",
             "circulation-storage.loans.item.get",
             "circulation-storage.loan-policies.item.get",
-            "configuration.entries.collection.get",
-            "inventory-storage.items.item.get",
-            "inventory-storage.locations.item.get",
             "users.item.get"
           ]
         }

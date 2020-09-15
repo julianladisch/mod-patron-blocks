@@ -652,6 +652,41 @@ public class AutomatedPatronBlocksAPITest extends TestBase {
       .body(equalTo(expectedResponse));
   }
 
+  @Test
+  public void blockWhenLoanIsOverdueAndGracePeriodExists() {
+    expectAllBlocks();
+
+    wireMock.stubFor(get(urlEqualTo("/loan-policy-storage/loan-policies/" + LOAN_POLICY_ID))
+      .atPriority(5)
+      .willReturn(aResponse()
+        .withStatus(200)
+        .withBody(makeLoanPolicyWithGracePeriodResponseBody())));
+
+    final Condition condition = MAX_NUMBER_OF_OVERDUE_ITEMS;
+    int limitValue = LIMIT_VALUES.get(condition);
+
+    List<OpenLoan> overdueLoans = fillListOfSize(() -> {
+      OpenLoan openLoan = new OpenLoan()
+        .withLoanId(randomId())
+        .withRecall(false)
+        .withDueDate(now().minusHours(6).toDate());
+
+      stubLoan(openLoan);
+
+      return openLoan;
+    }, limitValue + 1);
+
+    createSummary(USER_ID, new ArrayList<>(), overdueLoans);
+
+    String expectedResponse = createLimitsAndBuildExpectedResponse(condition, true);
+
+    sendRequest(USER_ID)
+      .then()
+      .statusCode(200)
+      .contentType(ContentType.JSON)
+      .body(equalTo(expectedResponse));
+  }
+
   private Response sendRequest(String userId) {
     return okapiClient.get("automated-patron-blocks/" + userId);
   }

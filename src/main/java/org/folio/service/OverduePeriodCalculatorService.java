@@ -53,7 +53,7 @@ public class OverduePeriodCalculatorService {
       .compose(ctx -> {
         if (loanIsOverdue(ctx.getLoan(), systemTime)) {
           return succeededFuture(ctx)
-            .compose(r -> minutesOverdueIncludingClosedPeriods(ctx.getLoan(), systemTime)
+            .compose(r -> calculateOverdueMinutes(ctx.getLoan(), systemTime)
               .map(om -> adjustOverdueWithGracePeriod(ctx, om)));
         }
         else {
@@ -66,7 +66,7 @@ public class OverduePeriodCalculatorService {
     return loan.getDueDate().before(systemTime.toDate());
   }
 
-  private Future<Integer> minutesOverdueIncludingClosedPeriods(Loan loan, DateTime systemTime) {
+  private Future<Integer> calculateOverdueMinutes(Loan loan, DateTime systemTime) {
     int overdueMinutes = minutesBetween(new DateTime(loan.getDueDate()), systemTime).getMinutes();
     return succeededFuture(overdueMinutes);
   }
