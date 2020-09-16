@@ -17,6 +17,7 @@ import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Supplier;
 
 import org.awaitility.Awaitility;
 import org.folio.rest.client.TenantClient;
@@ -182,6 +183,14 @@ public class TestBase {
     List<T> list = new ArrayList<>();
     for (int i = 0; i < listSize; i++) {
       list.add(object);
+    }
+    return list;
+  }
+
+  protected <T> List<T> fillListOfSize(Supplier<T> supplier, int listSize) {
+    List<T> list = new ArrayList<>();
+    for (int i = 0; i < listSize; i++) {
+      list.add(supplier.get());
     }
     return list;
   }

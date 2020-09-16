@@ -9,6 +9,8 @@ documentation:
 
 types:
   user: !include user.json
+  loanPolicy: !include loan-policy.json
+  loan: !include loan.json
   errors: !include raml-util/schemas/errors.schema
   automatedPatronBlocks: !include automated-patron-blocks.json
   synchronization-request: !include synchronization-request.json
@@ -16,14 +18,7 @@ types:
   synchronization-retrieve: !include synchronization-retrieve.json
 
 traits:
-#  pageable: !include raml-util/traits/pageable.raml
-#  searchable: !include raml-util/traits/searchable.raml
-#  language: !include raml-util/traits/language.raml
   validate: !include raml-util/traits/validation.raml
-
-#resourceTypes:
-#  collection: !include raml-util/rtypes/collection.raml
-#  collection-item: !include raml-util/rtypes/item-collection.raml
 
 /automated-patron-blocks/{userId}:
   get:

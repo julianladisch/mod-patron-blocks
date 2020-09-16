@@ -13,6 +13,18 @@
     {
       "id": "pubsub-subscribers",
       "version": "0.1"
+    },
+    {
+      "id": "loan-storage",
+      "version": "7.0"
+    },
+    {
+      "id": "loan-policy-storage",
+      "version": "2.1"
+    },
+    {
+      "id": "users",
+      "version": "15.1"
     }
   ],
   "provides": [
@@ -27,6 +39,14 @@
           "pathPattern":"/automated-patron-blocks/{userId}",
           "permissionsRequired": [
             "automated-patron-blocks.collection.get"
+          ],
+          "modulePermissions": [
+            "pubsub.event-types.post",
+            "pubsub.publishers.post",
+            "pubsub.subscribers.post",
+            "circulation-storage.loans.item.get",
+            "circulation-storage.loan-policies.item.get",
+            "users.item.get"
           ]
         }
       ]

@@ -5,12 +5,10 @@ import static org.folio.util.UuidHelper.randomId;
 import java.math.BigDecimal;
 import java.util.Date;
 import java.util.List;
-import java.util.UUID;
 
 import org.folio.rest.jaxrs.model.OpenFeeFine;
 import org.folio.rest.jaxrs.model.OpenLoan;
 import org.folio.rest.jaxrs.model.UserSummary;
-import org.folio.util.UuidHelper;
 
 public class EntityBuilder {
 
