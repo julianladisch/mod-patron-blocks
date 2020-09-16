@@ -9,8 +9,9 @@ import static org.folio.domain.Condition.RECALL_OVERDUE_BY_MAX_NUMBER_OF_DAYS;
 
 import java.lang.invoke.MethodHandles;
 import java.math.BigDecimal;
-import java.util.Date;
+import java.util.Map;
 import java.util.Objects;
+import java.util.stream.Collectors;
 
 import org.folio.rest.jaxrs.model.OpenFeeFine;
 import org.folio.rest.jaxrs.model.OpenLoan;
@@ -23,12 +24,27 @@ import io.vertx.core.logging.LoggerFactory;
 public class ActionBlocks {
   private static final Logger log = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
 
+  private static final Double NUMBER_OF_MINUTES_IN_ONE_DAY = 1440.0;
+
   private final boolean blockBorrowing;
   private final boolean blockRenewals;
   private final boolean blockRequests;
 
   public static ActionBlocks byLimit(UserSummary userSummary, PatronBlockLimit limit) {
-    if (userSummary == null || limit == null || limit.getValue() == null
+    if (userSummary == null || limit == null || userSummary.getOpenLoans() == null) {
+      log.error("Failed to determine blocks: one of the parameters is null");
+      return empty();
+    }
+
+    return byLimit(userSummary, limit, userSummary.getOpenLoans().stream()
+      .filter(openLoan -> openLoan.getLoanId() != null)
+      .collect(Collectors.toMap(OpenLoan::getLoanId, r -> 0)));
+  }
+
+  public static ActionBlocks byLimit(UserSummary userSummary, PatronBlockLimit limit,
+    Map<String, Integer> overdueMinutes) {
+
+    if (userSummary == null || limit == null || overdueMinutes == null || limit.getValue() == null
       || limit.getConditionId() == null) {
 
       log.error("Failed to determine blocks: one of the parameters is null");
@@ -60,22 +76,22 @@ public class ActionBlocks {
     else if (condition == MAX_NUMBER_OF_OVERDUE_ITEMS) {
       blockBorrowing = blockRenewals = blockRequests = userSummary.getOpenLoans().stream()
         .filter(ActionBlocks::itemIsNotClaimedReturned)
-        .filter(ActionBlocks::isLoanOverdue)
+        .filter(openLoan -> ActionBlocks.isLoanOverdue(openLoan, overdueMinutes))
         .count() > limitValue;
     }
     else if (condition == MAX_NUMBER_OF_OVERDUE_RECALLS) {
       blockBorrowing = blockRenewals = blockRequests = userSummary.getOpenLoans().stream()
         .filter(ActionBlocks::itemIsNotClaimedReturned)
-        .filter(ActionBlocks::isLoanOverdue)
+        .filter(openLoan -> ActionBlocks.isLoanOverdue(openLoan, overdueMinutes))
         .filter(OpenLoan::getRecall)
         .count() > limitValue;
     }
     else if (condition == RECALL_OVERDUE_BY_MAX_NUMBER_OF_DAYS) {
       blockBorrowing = blockRenewals = blockRequests = userSummary.getOpenLoans().stream()
         .filter(ActionBlocks::itemIsNotClaimedReturned)
-        .filter(ActionBlocks::isLoanOverdue)
+        .filter(openLoan -> ActionBlocks.isLoanOverdue(openLoan, overdueMinutes))
         .filter(OpenLoan::getRecall)
-        .map(ActionBlocks::getLoanOverdueDays)
+        .map(openLoan -> ActionBlocks.getLoanOverdueDays(openLoan, overdueMinutes))
         .anyMatch(days -> days > limitValue);
     }
     else if (condition == MAX_OUTSTANDING_FEE_FINE_BALANCE) {
@@ -121,16 +137,22 @@ public class ActionBlocks {
     return new ActionBlocks(false, false, false);
   }
 
-  private static boolean isLoanOverdue(OpenLoan loan) {
-    Date dueDate = loan.getDueDate();
-    return dueDate != null && dueDate.before(new Date());
+  private static int getLoanOverdueMinutes(OpenLoan loan, Map<String, Integer> overdueMinutes) {
+    if (loan == null || loan.getLoanId() == null || overdueMinutes.get(loan.getLoanId()) == null) {
+      log.error("Failed to get loan overdue minutes: one of the parameters is null");
+      return 0;
+    }
+
+    return overdueMinutes.get(loan.getLoanId());
   }
 
-  private static int getLoanOverdueDays(OpenLoan loan) {
-    return isLoanOverdue(loan)
-      ? (int) Math.round(((double) (new Date().getTime() - loan.getDueDate().getTime()))
-      / 1000.0 / 60.0 / 60.0 / 24.0)
-      : 0;
+  private static boolean isLoanOverdue(OpenLoan loan, Map<String, Integer> overdueMinutes) {
+    return getLoanOverdueMinutes(loan, overdueMinutes) > 0;
+  }
+
+  private static int getLoanOverdueDays(OpenLoan loan, Map<String, Integer> overdueMinutes) {
+    return (int) Math.ceil(
+      ((double) getLoanOverdueMinutes(loan, overdueMinutes)) / NUMBER_OF_MINUTES_IN_ONE_DAY);
   }
 
   private static boolean itemIsNotClaimedReturned(OpenLoan loan) {
