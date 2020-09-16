@@ -1,0 +1,53 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "type": "object",
+  "description": "Synchronization retrieve schema",
+  "properties": {
+    "id": {
+      "description" : "Sync request ID",
+      "type": "string",
+      "$ref": "raml-util/schemas/uuid.schema"
+    },
+    "scope": {
+      "type": "string",
+      "description": "Scope of re-sync data. Format: [user:{user-uuid}] or [full] for all users"
+    },
+    "status": {
+      "description": "Status of sync request",
+      "type": "string"
+    },
+    "totalNumberOfLoans": {
+      "description": "Total number of loans",
+      "type": "number"
+    },
+    "totalNumberOfFeesFines": {
+      "description": "Total number of fees/fines",
+      "type": "number"
+    },
+    "numberOfProcessedLoans": {
+      "description": "Total number of processed loans",
+      "type": "number"
+    },
+    "numberOfProcessedFeesFines": {
+      "description": "Total number of processed fees/fines",
+      "type": "number"
+    },
+    "errors": {
+      "description": "Contains array of errors",
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  },
+  "additionalProperties": false,
+  "required": [
+    "id",
+    "scope",
+    "status",
+    "totalNumberOfLoans",
+    "totalNumberOfFeesFines",
+    "numberOfProcessedLoans",
+    "numberOfProcessedFeesFines"
+  ]
+}

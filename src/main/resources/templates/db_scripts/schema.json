@@ -32,6 +32,16 @@
           "tOps": "ADD"
         }
       ]
+    },
+    {
+      "tableName": "sync-requests",
+      "withMetadata": true,
+      "uniqueIndex": [
+        {
+          "fieldName": "id",
+          "tOps": "ADD"
+        }
+      ]
     }
   ]
 }

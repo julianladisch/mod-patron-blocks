@@ -103,6 +103,24 @@
           "permissionsRequired": [
             "patron-blocks.events.post"
           ]
+        },
+        {
+          "methods":[
+            "POST"
+          ],
+          "pathPattern":"/automated-patron-blocks/synchronization-request",
+          "permissionsRequired": [
+            "patron-blocks.synchronization-request.post"
+          ]
+        },
+        {
+          "methods":[
+            "GET"
+          ],
+          "pathPattern":"/automated-patron-blocks/synchronization-request/{sync-request-id}",
+          "permissionsRequired": [
+            "patron-blocks.synchronization-request.get"
+          ]
         }
       ]
     },
@@ -236,6 +254,16 @@
       "permissionName": "user-summary.item.get",
       "displayName": "User summary - get UserSummary object",
       "description": "Get UserSummary object by user ID"
+    },
+    {
+      "permissionName": "patron-blocks.synchronization-request.post",
+      "displayName": "Synchronization request - post Synchronization request",
+      "description": "Post Synchronization request"
+    },
+    {
+      "permissionName": "patron-blocks.synchronization-request.get",
+      "displayName": "Synchronization request - get Synchronization request by ID",
+      "description": "Get Synchronization request"
     }
   ],
   "launchDescriptor": {

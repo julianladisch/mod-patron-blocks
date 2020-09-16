@@ -54,7 +54,7 @@ public class PatronBlocksService {
     return userSummaryRepository.getByUserId(userId)
       .compose(optionalSummary -> optionalSummary
         .map(userSummary -> new BlocksCalculationContext().withUserSummary(userSummary))
-        .map(this::getBlocksForSummary)
+        .map(ctx -> getBlocksForSummary(ctx))
         .orElseGet(() -> succeededFuture(new AutomatedPatronBlocks())));
   }
 

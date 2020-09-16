@@ -17,7 +17,8 @@ import io.vertx.core.Handler;
 
 public class AutomatedPatronBlocksAPI implements AutomatedPatronBlocksUserId {
 
-  @Override public void getAutomatedPatronBlocksByUserId(String userId,
+  @Override
+  public void getAutomatedPatronBlocksByUserId(String userId,
     Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler,
     Context vertxContext) {
 

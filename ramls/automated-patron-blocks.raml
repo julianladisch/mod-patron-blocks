@@ -11,9 +11,19 @@ types:
   user: !include user.json
   errors: !include raml-util/schemas/errors.schema
   automatedPatronBlocks: !include automated-patron-blocks.json
+  synchronization-request: !include synchronization-request.json
+  synchronization-response: !include synchronization-response.json
+  synchronization-retrieve: !include synchronization-retrieve.json
 
 traits:
+#  pageable: !include raml-util/traits/pageable.raml
+#  searchable: !include raml-util/traits/searchable.raml
+#  language: !include raml-util/traits/language.raml
   validate: !include raml-util/traits/validation.raml
+
+#resourceTypes:
+#  collection: !include raml-util/rtypes/collection.raml
+#  collection-item: !include raml-util/rtypes/item-collection.raml
 
 /automated-patron-blocks/{userId}:
   get:
@@ -33,3 +43,41 @@ traits:
         body:
           text/plain:
             example: "Internal server error, contact administrator"
+
+/automated-patron-blocks/synchronization-request:
+  post:
+    description: "Run synchronization"
+    body:
+      application/json:
+        type: synchronization-request
+    responses:
+      201:
+        description: "Synchronization was done successfully"
+        body:
+          application/json:
+            type: synchronization-response
+            example: !include examples/synchronization-response.sample
+      500:
+        description: "Internal server error"
+        body:
+          text/plain:
+            example: "Internal server error, please contact administrator"
+  /{sync-request-id}:
+    get:
+      description: "Checks synchronization status"
+      responses:
+        200:
+          body:
+            application/json:
+              schema: synchronization-retrieve
+              example: !include examples/synchronization-retrieve.sample
+        400:
+          description: "Invalid ID in request"
+          body:
+            text/plain:
+              example: "Bad request, e.g. invalid sync-request UUID"
+        500:
+          description: "Internal server error, e.g. due to misconfiguration"
+          body:
+            text/plain:
+              example: "Internal server error, contact administrator"
