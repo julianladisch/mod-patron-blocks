@@ -16,10 +16,6 @@ public class UuidHelper {
     }
   }
 
-  public static void validateUUID(String uuid) {
-    validateUUID(uuid, true);
-  }
-
   public static String randomId() {
     return UUID.randomUUID().toString();
   }
