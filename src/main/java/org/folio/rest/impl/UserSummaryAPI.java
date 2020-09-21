@@ -2,6 +2,7 @@ package org.folio.rest.impl;
 
 import static io.vertx.core.Future.succeededFuture;
 import static java.lang.String.format;
+import static org.folio.util.PostgresUtils.getPostgresClient;
 import static org.folio.util.UuidUtil.isUuid;
 
 import java.util.Map;
@@ -27,7 +28,7 @@ public class UserSummaryAPI implements UserSummaryUserId {
       return;
     }
 
-    new UserSummaryService(okapiHeaders, vertxContext.owner()).getByUserId(userId)
+    new UserSummaryService(getPostgresClient(okapiHeaders, vertxContext.owner())).getByUserId(userId)
       .onSuccess(userSummary -> asyncResultHandler.handle(succeededFuture(
         UserSummaryUserId.GetUserSummaryByUserIdResponse.respond200WithApplicationJson(userSummary))))
       .onFailure(failure -> {

@@ -5,12 +5,17 @@ import static org.folio.util.UuidHelper.randomId;
 import java.math.BigDecimal;
 import java.util.Date;
 import java.util.List;
-import java.util.UUID;
 
+import org.folio.rest.jaxrs.model.FeeFineBalanceChangedEvent;
+import org.folio.rest.jaxrs.model.ItemCheckedInEvent;
+import org.folio.rest.jaxrs.model.ItemCheckedOutEvent;
+import org.folio.rest.jaxrs.model.ItemClaimedReturnedEvent;
+import org.folio.rest.jaxrs.model.ItemDeclaredLostEvent;
+import org.folio.rest.jaxrs.model.LoanDueDateChangedEvent;
+import org.folio.rest.jaxrs.model.Metadata;
 import org.folio.rest.jaxrs.model.OpenFeeFine;
 import org.folio.rest.jaxrs.model.OpenLoan;
 import org.folio.rest.jaxrs.model.UserSummary;
-import org.folio.util.UuidHelper;
 
 public class EntityBuilder {
 
@@ -40,5 +45,70 @@ public class EntityBuilder {
       .withUserId(userId)
       .withOpenFeesFines(feesFines)
       .withOpenLoans(openLoans);
+  }
+
+  public static Metadata buildDefaultMetadata() {
+    return new Metadata().withCreatedDate(new Date());
+  }
+
+  public static ItemCheckedOutEvent buildItemCheckedOutEvent(String userId, String loanId,
+    Date dueDate) {
+
+    return new ItemCheckedOutEvent()
+      .withUserId(userId)
+      .withLoanId(loanId)
+      .withDueDate(dueDate)
+      .withMetadata(buildDefaultMetadata());
+  }
+
+  public static ItemCheckedInEvent buildItemCheckedInEvent(String userId, String loanId,
+    Date returnDate) {
+
+    return new ItemCheckedInEvent()
+      .withUserId(userId)
+      .withLoanId(loanId)
+      .withReturnDate(returnDate)
+      .withMetadata(buildDefaultMetadata());
+  }
+
+  public static ItemClaimedReturnedEvent buildItemClaimedReturnedEvent(String userId,
+    String loanId) {
+
+    return new ItemClaimedReturnedEvent()
+      .withUserId(userId)
+      .withLoanId(loanId)
+      .withMetadata(buildDefaultMetadata());
+  }
+
+  public static ItemDeclaredLostEvent buildItemDeclaredLostEvent(String userId,
+    String loanId) {
+
+    return new ItemDeclaredLostEvent()
+      .withUserId(userId)
+      .withLoanId(loanId)
+      .withMetadata(buildDefaultMetadata());
+  }
+
+  public static FeeFineBalanceChangedEvent buildFeeFineBalanceChangedEvent(String userId,
+    String loanId, String feeFineId, String feeFineTypeId, BigDecimal balance) {
+
+    return new FeeFineBalanceChangedEvent()
+      .withUserId(userId)
+      .withLoanId(loanId)
+      .withFeeFineId(feeFineId)
+      .withFeeFineTypeId(feeFineTypeId)
+      .withBalance(balance)
+      .withMetadata(buildDefaultMetadata());
+  }
+
+  public static LoanDueDateChangedEvent buildLoanDueDateChangedEvent(String userId,
+    String loanId, Date dueDate, boolean dueDateChangedByRecall) {
+
+    return new LoanDueDateChangedEvent()
+      .withUserId(userId)
+      .withLoanId(loanId)
+      .withDueDate(dueDate)
+      .withDueDateChangedByRecall(dueDateChangedByRecall)
+      .withMetadata(buildDefaultMetadata());
   }
 }

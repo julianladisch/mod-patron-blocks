@@ -5,7 +5,6 @@ import static io.vertx.core.Future.succeededFuture;
 import static java.lang.String.format;
 import static org.folio.okapi.common.XOkapiHeaders.TENANT;
 
-import java.lang.invoke.MethodHandles;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -23,17 +22,15 @@ import org.folio.rest.jaxrs.model.PatronBlockLimit;
 import org.folio.rest.jaxrs.model.UserSummary;
 import org.folio.rest.persist.PostgresClient;
 import org.folio.rest.tools.utils.TenantTool;
+import org.folio.util.AsyncProcessingContext;
 
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
-import io.vertx.core.logging.Logger;
-import io.vertx.core.logging.LoggerFactory;
 import lombok.AllArgsConstructor;
 import lombok.NoArgsConstructor;
 import lombok.With;
 
 public class PatronBlocksService {
-  private static final Logger log = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
   private static final String DEFAULT_ERROR_MESSAGE = "Failed to calculate automated patron blocks";
 
   private final UserSummaryRepository userSummaryRepository;
@@ -87,7 +84,7 @@ public class PatronBlocksService {
 
   private Future<BlocksCalculationContext> addUserGroupIdToContext(BlocksCalculationContext ctx) {
     if (ctx.userSummary == null || ctx.userSummary.getUserId() == null) {
-      logAddingToContextError("user group ID");
+      ctx.logFailedValidationError("addUserGroupIdToContext");
       return failedFuture(DEFAULT_ERROR_MESSAGE);
     }
 
@@ -99,7 +96,7 @@ public class PatronBlocksService {
     BlocksCalculationContext ctx) {
 
     if (ctx.userGroupId == null) {
-      logAddingToContextError("patron block limits");
+      ctx.logFailedValidationError("addPatronBlockLimitsToContext");
       return failedFuture(DEFAULT_ERROR_MESSAGE);
     }
 
@@ -113,13 +110,11 @@ public class PatronBlocksService {
     return conditionsRepository.getAllWithDefaultLimit().map(ctx::withPatronBlockConditions);
   }
 
-  private BlocksCalculationContext addCurrentConditionToContext(
-    BlocksCalculationContext ctx) {
-
+  private BlocksCalculationContext addCurrentConditionToContext(BlocksCalculationContext ctx) {
     if (ctx.currentPatronBlockLimit == null ||
       ctx.currentPatronBlockLimit.getConditionId() == null) {
 
-      logAddingToContextError("current condition");
+      ctx.logFailedValidationError("addCurrentConditionToContext");
       return ctx;
     }
 
@@ -131,8 +126,8 @@ public class PatronBlocksService {
       .orElse(null);
 
     if (patronBlockCondition == null) {
-      logAddingToContextError("current condition",
-        format("cannot find condition by ID %s", conditionId));
+      ctx.logFailedValidationError("addCurrentConditionToContext",
+        format("Cannot find condition by ID %s", conditionId));
       return ctx;
     }
 
@@ -145,7 +140,7 @@ public class PatronBlocksService {
     if (ctx.userSummary == null || ctx.currentPatronBlockLimit == null ||
       ctx.currentPatronBlockCondition == null) {
 
-      logAddingToContextError("action blocks by limit and condition");
+      ctx.logFailedValidationError("addActionBlocksByLimitAndConditionToContext");
       return ctx;
     }
 
@@ -165,7 +160,7 @@ public class PatronBlocksService {
 
   private AutomatedPatronBlock createBlockForLimit(BlocksCalculationContext ctx) {
     if (ctx.currentPatronBlockCondition == null || ctx.currentActionBlocks == null) {
-      log.error("Failed to create automated patron block - context is invalid");
+      ctx.logFailedValidationError("createBlockForLimit");
       return null;
     }
 
@@ -177,25 +172,10 @@ public class PatronBlocksService {
       .withMessage(ctx.currentPatronBlockCondition.getMessage());
   }
 
-  private void logAddingToContextError(String parameterName, String additionalMessage) {
-    String message = format("Blocks calculation context is invalid, failed to add %s",
-      parameterName);
-
-    if (additionalMessage != null) {
-      message += format(". %s", additionalMessage);
-    }
-
-    log.error(message);
-  }
-
-  private void logAddingToContextError(String parameterName) {
-    logAddingToContextError(parameterName, null);
-  }
-
   @With
   @AllArgsConstructor
   @NoArgsConstructor(force = true)
-  private static class BlocksCalculationContext {
+  private static class BlocksCalculationContext extends AsyncProcessingContext {
     final UserSummary userSummary;
     final String userGroupId;
     final List<PatronBlockLimit> patronBlockLimits;
@@ -203,5 +183,10 @@ public class PatronBlocksService {
     final PatronBlockLimit currentPatronBlockLimit;
     final PatronBlockCondition currentPatronBlockCondition;
     final ActionBlocks currentActionBlocks;
+
+    @Override
+    protected String getName() {
+      return "blocks-calculation-context";
+    }
   }
 }

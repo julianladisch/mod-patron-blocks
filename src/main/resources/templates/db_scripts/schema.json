@@ -9,27 +9,75 @@
   "tables": [
     {
       "tableName": "fee_fine_balance_changed_event",
-      "withMetadata": true
+      "withMetadata": true,
+      "index": [
+        {
+          "fieldName": "userId",
+          "tOps": "ADD",
+          "caseSensitive": false,
+          "removeAccents": true
+        }
+      ]
     },
     {
       "tableName": "item_checked_out_event",
-      "withMetadata": true
+      "withMetadata": true,
+      "index": [
+        {
+          "fieldName": "userId",
+          "tOps": "ADD",
+          "caseSensitive": false,
+          "removeAccents": true
+        }
+      ]
     },
     {
       "tableName": "item_checked_in_event",
-      "withMetadata": true
+      "withMetadata": true,
+      "index": [
+        {
+          "fieldName": "userId",
+          "tOps": "ADD",
+          "caseSensitive": false,
+          "removeAccents": true
+        }
+      ]
     },
     {
       "tableName": "item_declared_lost_event",
-      "withMetadata": true
+      "withMetadata": true,
+      "index": [
+        {
+          "fieldName": "userId",
+          "tOps": "ADD",
+          "caseSensitive": false,
+          "removeAccents": true
+        }
+      ]
     },
     {
       "tableName": "item_claimed_returned_event",
-      "withMetadata": true
+      "withMetadata": true,
+      "index": [
+        {
+          "fieldName": "userId",
+          "tOps": "ADD",
+          "caseSensitive": false,
+          "removeAccents": true
+        }
+      ]
     },
     {
       "tableName": "loan_due_date_changed_event",
-      "withMetadata": true
+      "withMetadata": true,
+      "index": [
+        {
+          "fieldName": "userId",
+          "tOps": "ADD",
+          "caseSensitive": false,
+          "removeAccents": true
+        }
+      ]
     },
     {
       "tableName": "user_summary",

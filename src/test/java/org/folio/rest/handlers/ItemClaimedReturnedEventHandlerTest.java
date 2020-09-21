@@ -2,6 +2,9 @@ package org.folio.rest.handlers;
 
 import static java.util.Collections.singletonList;
 import static org.folio.repository.UserSummaryRepository.USER_SUMMARY_TABLE_NAME;
+import static org.folio.rest.utils.EntityBuilder.buildDefaultMetadata;
+import static org.folio.rest.utils.EntityBuilder.buildItemCheckedOutEvent;
+import static org.folio.rest.utils.EntityBuilder.buildItemClaimedReturnedEvent;
 
 import java.util.Date;
 
@@ -17,8 +20,10 @@ import io.vertx.ext.unit.junit.VertxUnitRunner;
 
 @RunWith(VertxUnitRunner.class)
 public class ItemClaimedReturnedEventHandlerTest extends EventHandlerTestBase {
-  private static final ItemClaimedReturnedEventHandler eventHandler =
+  private static final ItemClaimedReturnedEventHandler itemClaimedReturnedEventHandler =
     new ItemClaimedReturnedEventHandler(postgresClient);
+  private static final ItemCheckedOutEventHandler itemCheckedOutEventHandler =
+    new ItemCheckedOutEventHandler(postgresClient);
 
   @Before
   public void beforeEach() {
@@ -32,9 +37,10 @@ public class ItemClaimedReturnedEventHandlerTest extends EventHandlerTestBase {
 
     ItemClaimedReturnedEvent event = new ItemClaimedReturnedEvent()
       .withUserId(userId)
-      .withLoanId(loanId);
+      .withLoanId(loanId)
+      .withMetadata(buildDefaultMetadata());
 
-    String summaryId = waitFor(eventHandler.handle(event));
+    String summaryId = waitFor(itemClaimedReturnedEventHandler.handle(event));
 
     UserSummary userSummaryToCompare = new UserSummary()
       .withUserId(userId)
@@ -59,9 +65,10 @@ public class ItemClaimedReturnedEventHandlerTest extends EventHandlerTestBase {
 
     ItemClaimedReturnedEvent event = new ItemClaimedReturnedEvent()
       .withUserId(userId)
-      .withLoanId(loanId);
+      .withLoanId(loanId)
+      .withMetadata(buildDefaultMetadata());
 
-    String summaryId = waitFor(eventHandler.handle(event));
+    String summaryId = waitFor(itemClaimedReturnedEventHandler.handle(event));
 
     UserSummary userSummaryToCompare = new UserSummary()
       .withUserId(userId)
@@ -78,12 +85,13 @@ public class ItemClaimedReturnedEventHandlerTest extends EventHandlerTestBase {
   public void shouldFlipItemClaimedReturnedFlagWhenUserSummaryExists(TestContext context) {
     String userId = randomId();
     String loanId = randomId();
+    Date dueDate = new Date();
 
     UserSummary userSummary = new UserSummary()
       .withUserId(userId)
       .withOpenLoans(singletonList(
         new OpenLoan()
-          .withDueDate(new Date())
+          .withDueDate(dueDate)
           .withLoanId(loanId)
           .withRecall(false)
           .withItemClaimedReturned(false)
@@ -91,11 +99,10 @@ public class ItemClaimedReturnedEventHandlerTest extends EventHandlerTestBase {
 
     waitFor(userSummaryRepository.save(userSummary));
 
-    ItemClaimedReturnedEvent event = new ItemClaimedReturnedEvent()
-      .withUserId(userId)
-      .withLoanId(loanId);
+    waitFor(itemCheckedOutEventHandler.handle(buildItemCheckedOutEvent(userId, loanId, dueDate)));
 
-    String summaryId = waitFor(eventHandler.handle(event));
+    String summaryId = waitFor(itemClaimedReturnedEventHandler.handle(
+      buildItemClaimedReturnedEvent(userId, loanId)));
 
     userSummary.getOpenLoans().get(0).setItemClaimedReturned(true);
 
