@@ -10,6 +10,8 @@ import org.folio.rest.persist.PostgresClient;
 import io.vertx.core.Vertx;
 
 public class PostgresUtils {
+  private PostgresUtils() { }
+
   public static PostgresClient getPostgresClient(Map<String, String> okapiHeaders, Vertx vertx) {
     String tenantId = calculateTenantId(okapiHeaders.get(XOkapiHeaders.TENANT.toLowerCase()));
     return PostgresClient.getInstance(vertx, tenantId);
