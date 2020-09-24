@@ -25,9 +25,9 @@ import org.folio.rest.jaxrs.model.PatronBlockLimit;
 import org.folio.rest.jaxrs.model.UserSummary;
 import org.folio.rest.persist.PostgresClient;
 import org.folio.rest.tools.utils.TenantTool;
+import org.folio.util.AsyncProcessingContext;
 import org.folio.util.CustomCompositeFuture;
 import org.joda.time.DateTime;
-import org.folio.util.AsyncProcessingContext;
 
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
@@ -43,6 +43,7 @@ public class PatronBlocksService {
   private static final String DEFAULT_ERROR_MESSAGE = "Failed to calculate automated patron blocks";
 
   private final UserSummaryRepository userSummaryRepository;
+  private final UserSummaryService userSummaryService;
   private final PatronBlockConditionsRepository conditionsRepository;
   private final PatronBlockLimitsRepository limitsRepository;
   private final UsersClient usersClient;
@@ -53,6 +54,7 @@ public class PatronBlocksService {
     String tenantId = TenantTool.calculateTenantId(okapiHeaders.get(TENANT));
     PostgresClient postgresClient = PostgresClient.getInstance(vertx, tenantId);
     userSummaryRepository = new UserSummaryRepository(postgresClient);
+    userSummaryService = new UserSummaryService(postgresClient);
     conditionsRepository = new PatronBlockConditionsRepository(postgresClient);
     limitsRepository = new PatronBlockLimitsRepository(postgresClient);
     usersClient = new UsersClient(vertx, okapiHeaders);
@@ -63,11 +65,10 @@ public class PatronBlocksService {
   }
 
   public Future<AutomatedPatronBlocks> getBlocksForUser(String userId) {
-    return userSummaryRepository.getByUserId(userId)
-      .compose(optionalSummary -> optionalSummary
-        .map(userSummary -> new BlocksCalculationContext().withUserSummary(userSummary))
-        .map(this::getBlocksForSummary)
-        .orElseGet(() -> succeededFuture(new AutomatedPatronBlocks())));
+    return userSummaryService.getByUserId(userId)
+      .map(userSummary -> new BlocksCalculationContext().withUserSummary(userSummary))
+      .compose(this::getBlocksForSummary)
+      .otherwise(new AutomatedPatronBlocks());
   }
 
   private Future<AutomatedPatronBlocks> getBlocksForSummary(BlocksCalculationContext ctx) {

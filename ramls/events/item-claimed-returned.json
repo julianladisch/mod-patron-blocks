@@ -5,7 +5,7 @@
   "description": "Item claimed returned event",
   "properties": {
     "id": {
-      "description" : "A globally unique (UUID) identifier for the event",
+      "description" : "A globally unique identifier (UUID) for the event",
       "type": "string",
       "$ref": "../raml-util/schemas/uuid.schema"
     },

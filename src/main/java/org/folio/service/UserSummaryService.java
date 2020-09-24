@@ -136,7 +136,8 @@ public class UserSummaryService {
     }
     else {
       return userSummaryRepository.delete(ctx.userSummary.getId())
-        .map(ctx.userSummary.getId());
+        .map(ctx.userSummary.getId())
+        .otherwise(ctx.userSummary.getId());
     }
   }
 
@@ -308,10 +309,10 @@ public class UserSummaryService {
   }
 
   private boolean isEmpty(UserSummary userSummary) {
-    if (userSummary != null) {
-      if (userSummary.getOpenLoans() != null && userSummary.getOpenFeesFines() != null) {
-        return userSummary.getOpenLoans().size() == 0 && userSummary.getOpenFeesFines().size() == 0;
-      }
+    if (userSummary != null && userSummary.getOpenLoans() != null &&
+      userSummary.getOpenFeesFines() != null) {
+
+        return userSummary.getOpenLoans().isEmpty() && userSummary.getOpenFeesFines().isEmpty();
     }
 
     return true;
