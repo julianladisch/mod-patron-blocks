@@ -2,7 +2,6 @@ package org.folio.service;
 
 import java.util.List;
 
-import org.folio.domain.EventType;
 import org.folio.repository.BaseRepository;
 import org.folio.rest.jaxrs.model.FeeFineBalanceChangedEvent;
 import org.folio.rest.jaxrs.model.ItemCheckedInEvent;
