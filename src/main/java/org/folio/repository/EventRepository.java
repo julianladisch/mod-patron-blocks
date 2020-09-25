@@ -1,11 +1,7 @@
 package org.folio.repository;
 
-import static io.vertx.core.Future.succeededFuture;
-
 import java.util.List;
-import java.util.Optional;
 
-import org.folio.rest.jaxrs.model.UserSummary;
 import org.folio.rest.persist.Criteria.Criteria;
 import org.folio.rest.persist.Criteria.Criterion;
 import org.folio.rest.persist.Criteria.Limit;
