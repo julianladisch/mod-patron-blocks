@@ -15,7 +15,6 @@ import java.util.stream.Collectors;
 import org.folio.domain.ActionBlocks;
 import org.folio.repository.PatronBlockConditionsRepository;
 import org.folio.repository.PatronBlockLimitsRepository;
-import org.folio.repository.UserSummaryRepository;
 import org.folio.rest.client.CirculationStorageClient;
 import org.folio.rest.client.UsersClient;
 import org.folio.rest.jaxrs.model.AutomatedPatronBlock;
@@ -42,7 +41,6 @@ public class PatronBlocksService {
 
   private static final String DEFAULT_ERROR_MESSAGE = "Failed to calculate automated patron blocks";
 
-  private final UserSummaryRepository userSummaryRepository;
   private final UserSummaryService userSummaryService;
   private final PatronBlockConditionsRepository conditionsRepository;
   private final PatronBlockLimitsRepository limitsRepository;
@@ -53,7 +51,6 @@ public class PatronBlocksService {
   public PatronBlocksService(Map<String, String> okapiHeaders, Vertx vertx) {
     String tenantId = TenantTool.calculateTenantId(okapiHeaders.get(TENANT));
     PostgresClient postgresClient = PostgresClient.getInstance(vertx, tenantId);
-    userSummaryRepository = new UserSummaryRepository(postgresClient);
     userSummaryService = new UserSummaryService(postgresClient);
     conditionsRepository = new PatronBlockConditionsRepository(postgresClient);
     limitsRepository = new PatronBlockLimitsRepository(postgresClient);

@@ -42,7 +42,7 @@ import lombok.NoArgsConstructor;
 import lombok.With;
 
 public class UserSummaryService {
-  protected static final Logger log = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
+  private static final Logger log = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
 
   private static final String FAILED_TO_REBUILD_USER_SUMMARY_ERROR_MESSAGE =
     "Failed to rebuild user summary";
@@ -131,7 +131,7 @@ public class UserSummaryService {
         .orElse(0L)))
       .forEachOrdered(event -> handleEvent(ctx, event));
 
-    if (!isEmpty(ctx.userSummary)) {
+    if (isNotEmpty(ctx.userSummary)) {
       return userSummaryRepository.upsert(ctx.userSummary, ctx.userSummary.getId());
     }
     else {
@@ -316,6 +316,10 @@ public class UserSummaryService {
     }
 
     return true;
+  }
+
+  private boolean isNotEmpty(UserSummary userSummary) {
+    return !isEmpty(userSummary);
   }
 
   @With

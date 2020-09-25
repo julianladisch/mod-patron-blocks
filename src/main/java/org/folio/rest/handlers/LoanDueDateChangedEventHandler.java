@@ -22,7 +22,7 @@ public class LoanDueDateChangedEventHandler extends EventHandler<LoanDueDateChan
   public Future<String> handle(LoanDueDateChangedEvent event) {
     return eventService.save(event)
       .map(eventId -> event.getUserId())
-      .compose(eventId -> userSummaryService.rebuild(event.getUserId()))
+      .compose(userSummaryService::rebuild)
       .onComplete(result -> logResult(result, event));
   }
 }
