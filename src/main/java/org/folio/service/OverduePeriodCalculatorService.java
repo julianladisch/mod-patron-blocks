@@ -36,6 +36,10 @@ public class OverduePeriodCalculatorService {
     this.circulationStorageClient = new CirculationStorageClient(vertx, okapiHeaders);
   }
 
+  public OverduePeriodCalculatorService(CirculationStorageClient circulationStorageClient) {
+    this.circulationStorageClient = circulationStorageClient;
+  }
+
   public Future<Integer> getMinutes(Loan loan, DateTime systemTime) {
     if (loan == null || loan.getLoanPolicyId() == null || loan.getDueDate() == null
       || systemTime == null) {

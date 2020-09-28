@@ -54,10 +54,8 @@ public class PatronBlocksService {
     conditionsRepository = new PatronBlockConditionsRepository(postgresClient);
     limitsRepository = new PatronBlockLimitsRepository(postgresClient);
     usersClient = new UsersClient(vertx, okapiHeaders);
-    overduePeriodCalculatorService =
-      new OverduePeriodCalculatorService(vertx, okapiHeaders);
-    circulationStorageClient =
-      new CirculationStorageClient(vertx, okapiHeaders);
+    circulationStorageClient = new CirculationStorageClient(vertx, okapiHeaders);
+    overduePeriodCalculatorService = new OverduePeriodCalculatorService(circulationStorageClient);
   }
 
   public Future<AutomatedPatronBlocks> getBlocksForUser(String userId) {
