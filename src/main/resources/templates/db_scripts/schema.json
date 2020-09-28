@@ -34,14 +34,8 @@
       ]
     },
     {
-      "tableName": "sync-requests",
-      "withMetadata": true,
-      "uniqueIndex": [
-        {
-          "fieldName": "id",
-          "tOps": "ADD"
-        }
-      ]
+      "tableName": "sync_requests",
+      "withMetadata": true
     }
   ]
 }

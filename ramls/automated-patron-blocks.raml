@@ -13,66 +13,77 @@ types:
   loan: !include loan.json
   errors: !include raml-util/schemas/errors.schema
   automatedPatronBlocks: !include automated-patron-blocks.json
-  synchronization-request: !include synchronization-request.json
-  synchronization-response: !include synchronization-response.json
-  synchronization-retrieve: !include synchronization-retrieve.json
+  synchronizationRequest: !include synchronization-request.json
+  synchronizationResponse: !include synchronization-response.json
+  synchronizationJob: !include synchronization-job.json
 
 traits:
   validate: !include raml-util/traits/validation.raml
+  language: !include raml-util/traits/language.raml
 
-/automated-patron-blocks/{userId}:
-  get:
-    responses:
-      200:
-        body:
-          application/json:
-            schema: automatedPatronBlocks
-            example: !include examples/automated-patron-blocks.sample
-      400:
-        description: "Invalid user ID in request"
-        body:
-          text/plain:
-            example: "Bad request, e.g. invalid user UUID"
-      500:
-        description: "Internal server error, e.g. due to misconfiguration"
-        body:
-          text/plain:
-            example: "Internal server error, contact administrator"
-
-/automated-patron-blocks/synchronization-request:
-  post:
-    description: "Run synchronization"
-    body:
-      application/json:
-        type: synchronization-request
-    responses:
-      201:
-        description: "Synchronization was done successfully"
-        body:
-          application/json:
-            type: synchronization-response
-            example: !include examples/synchronization-response.sample
-      500:
-        description: "Internal server error"
-        body:
-          text/plain:
-            example: "Internal server error, please contact administrator"
-  /{sync-request-id}:
+/automated-patron-blocks:
+  /{userId}:
     get:
-      description: "Checks synchronization status"
       responses:
         200:
           body:
             application/json:
-              schema: synchronization-retrieve
-              example: !include examples/synchronization-retrieve.sample
+              schema: automatedPatronBlocks
+              example: !include examples/automated-patron-blocks.sample
         400:
-          description: "Invalid ID in request"
+          description: "Invalid user ID in request"
           body:
             text/plain:
-              example: "Bad request, e.g. invalid sync-request UUID"
+              example: "Bad request, e.g. invalid user UUID"
         500:
           description: "Internal server error, e.g. due to misconfiguration"
           body:
             text/plain:
               example: "Internal server error, contact administrator"
+  /synchronization:
+    /request:
+      post:
+        body:
+          application/json:
+            type: synchronizationRequest
+        responses:
+          201:
+            description: "Synchronization was done successfully"
+            body:
+              application/json:
+                type: synchronizationResponse
+                example: !include examples/synchronization-response.sample
+          500:
+            description: "Internal server error"
+            body:
+              text/plain:
+                example: "Internal server error, please contact administrator"
+      /{syncRequestId}:
+        get:
+          description: "Checks synchronization status"
+          responses:
+            200:
+              body:
+                application/json:
+                  schema: synchronizationJob
+                  example: !include examples/synchronization-job.sample
+            404:
+              description: "The request was not found"
+              body:
+                text/plain:
+                  example: "Bad request, e.g. invalid user UUID"
+            500:
+              description: "Internal server error, e.g. due to misconfiguration"
+              body:
+                text/plain:
+                  example: "Internal server error, contact administrator"
+    /run:
+      post:
+        responses:
+          202:
+            description: "Synchronization request has been accepted for processing"
+          500:
+            description: "Internal server error"
+            body:
+              text/plain:
+                example: "Internal server error, please contact administrator"

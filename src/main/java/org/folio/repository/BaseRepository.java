@@ -20,7 +20,7 @@ import io.vertx.sqlclient.RowSet;
 public class BaseRepository<T> {
   private static final int DEFAULT_LIMIT = 100;
 
-  private final PostgresClient pgClient;
+  protected final PostgresClient pgClient;
   private final String tableName;
   private final Class<T> entityType;
 

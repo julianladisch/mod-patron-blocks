@@ -1,69 +1,124 @@
 package org.folio.service;
 
+import static io.vertx.core.Future.failedFuture;
 import static io.vertx.core.Future.succeededFuture;
+import static org.apache.commons.lang3.math.NumberUtils.DOUBLE_ZERO;
 
+import java.lang.invoke.MethodHandles;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+import org.apache.commons.lang3.StringUtils;
 import org.folio.domain.SynchronizationStatus;
+import org.folio.exception.EntityNotFoundException;
 import org.folio.repository.SynchronizationRequestRepository;
 import org.folio.rest.client.FeesFinesClient;
 import org.folio.rest.client.LoansClient;
+import org.folio.rest.jaxrs.model.Loan;
+import org.folio.rest.jaxrs.model.SynchronizationJob;
 import org.folio.rest.jaxrs.model.SynchronizationRequest;
 import org.folio.rest.jaxrs.model.SynchronizationResponse;
-import org.folio.rest.jaxrs.model.SynchronizationRetrieve;
 import org.folio.rest.persist.PostgresClient;
 import org.folio.rest.tools.utils.TenantTool;
 
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
+import io.vertx.core.logging.Logger;
+import io.vertx.core.logging.LoggerFactory;
 
 public class SynchronizationRequestService {
 
+  private static final Logger log = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
   private final SynchronizationRequestRepository syncRepository;
   private final LoansClient loansClient;
   private final FeesFinesClient feesFinesClient;
-  private int numberOfProcessedLoans = 0;
-  private int numberOfProcessedFeesFines = 0;
+  private final String tenantId;
 
   public SynchronizationRequestService(Map<String, String> okapiHeaders, Vertx vertx) {
-    String tenantId = TenantTool.tenantId(okapiHeaders);
+    tenantId = TenantTool.tenantId(okapiHeaders);
     PostgresClient postgresClient = PostgresClient.getInstance(vertx, tenantId);
     syncRepository = new SynchronizationRequestRepository(postgresClient);
     loansClient = new LoansClient(vertx, okapiHeaders);
     feesFinesClient = new FeesFinesClient(vertx, okapiHeaders);
   }
 
-  public void createSyncRequest(SynchronizationRequest entity) {
+  public Future<SynchronizationResponse> createSyncRequest(SynchronizationRequest request) {
     String syncRecordId = UUID.randomUUID().toString();
-    SynchronizationResponse response = new SynchronizationResponse()
+    SynchronizationJob entity = new SynchronizationJob()
       .withId(syncRecordId)
-      .withStatus(SynchronizationStatus.OPEN.name())
-      .withScope(entity.getScope());
-    syncRepository.save(response, syncRecordId);
+      .withStatus(SynchronizationStatus.OPEN.getValue())
+      .withScope(request.getScope().value())
+      .withUserId(request.getUserId())
+      .withTotalNumberOfLoans(DOUBLE_ZERO)
+      .withTotalNumberOfFeesFines(DOUBLE_ZERO)
+      .withNumberOfProcessedLoans(DOUBLE_ZERO)
+      .withNumberOfProcessedFeesFines(DOUBLE_ZERO);
+
+    return syncRepository.save(entity)
+      .map(id -> new SynchronizationResponse()
+        .withId(id)
+        .withScope(entity.getScope())
+        .withStatus(entity.getStatus()));
   }
 
-  public Future<SynchronizationRetrieve> retrieveSyncRequest(String syncRequestId) {
+  public Future<SynchronizationJob> retrieveSyncRequest(String syncRequestId) {
 
     return syncRepository.get(syncRequestId)
-      .compose(optionalSyncResponse -> optionalSyncResponse
-        .map(this::mapToRetrieve)
-        .map(this::fillAdditionalFieldsForSyncRetrieve)
-        .orElseGet(() -> succeededFuture(new SynchronizationRetrieve())));
+      .compose(optionalSyncResponse -> {
+        if (optionalSyncResponse.isPresent()) {
+          return succeededFuture(optionalSyncResponse.get());
+        }
+        return failedFuture(new EntityNotFoundException(
+          "This synchronization request does not exist"));
+      });
   }
 
-  private SynchronizationRetrieve mapToRetrieve(SynchronizationResponse syncResponse) {
-    return new SynchronizationRetrieve()
-      .withId(syncResponse.getId())
-      .withScope(syncResponse.getScope())
-      .withStatus(syncResponse.getStatus());
+  public Future<SynchronizationJob> runSynchronization() {
+
+     return syncRepository.getJobsByStatus(SynchronizationStatus.IN_PROGRESS)
+        .compose(reqList -> doSynchronization(reqList));
+
   }
 
-  private Future<SynchronizationRetrieve> fillAdditionalFieldsForSyncRetrieve(
-    SynchronizationRetrieve syncRetrieve) {
+  private Future<SynchronizationJob> doSynchronization(
+    List<SynchronizationJob> reqList) {
+
+    if (!reqList.isEmpty()) {
+      log.debug("Synchronization is in-progress now");
+      return succeededFuture();
+    }
+
+    return syncRepository.getTheOldestSyncRequest(tenantId)
+      .map(syncJob -> updateStatusOfRecord(syncJob, SynchronizationStatus.IN_PROGRESS))
+      .compose(syncJob -> removeAllEvents(syncJob)) //remove all events
+      // create new event
+      // process the new event
+      // update status of event (done or failed)
+      // remove all events
+      //.compose()
+
+  }
+
+  private Future<SynchronizationJob> removeAllEvents(SynchronizationJob syncJob) {
+
+    return null;
+  }
+
+  private SynchronizationJob updateStatusOfRecord(SynchronizationJob syncJob,
+    SynchronizationStatus syncStatus) {
+
+    syncJob.setStatus(syncStatus.getValue());
+    syncRepository.update(syncJob, syncJob.getId());
+
+    return syncJob;
+  }
+
+  private Future<SynchronizationJob> fillAdditionalFieldsForSyncRetrieve(
+    SynchronizationJob syncRetrieve) {
 
     String userId = null;
-    if (!"full".equalsIgnoreCase(syncRetrieve.getScope())) {
+    if ("user".equalsIgnoreCase(syncRetrieve.getScope())) {
       userId = parseUserId(syncRetrieve.getScope());
     }
     return addNumberOfLoans(userId)
@@ -71,18 +126,19 @@ public class SynchronizationRequestService {
 
   }
 
-  private Future<SynchronizationRetrieve> addNumberOfLoans(String userId) {
+  private Future<SynchronizationJob> addNumberOfLoans(String userId) {
     if (userId != null) {
-      //loansClient.
+      Future<Loan> openLoansForUserId = loansClient.findOpenLoansForUserId(userId);
+      Loan result = openLoansForUserId.result();
     }
     return null;
   }
 
-  private Future<SynchronizationRetrieve> addNumberOfFeesFines(String userId) {
+  private Future<SynchronizationJob> addNumberOfFeesFines(String userId) {
     return null;
   }
 
   private String parseUserId(String scope) {
-    return scope.substring(scope.indexOf(":"));
+    return StringUtils.substringAfterLast(scope, ":");
   }
 }

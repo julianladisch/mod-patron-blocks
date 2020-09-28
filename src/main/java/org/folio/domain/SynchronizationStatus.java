@@ -8,4 +8,8 @@ public enum SynchronizationStatus {
   SynchronizationStatus(String value) {
     this.value = value;
   }
+
+  public String getValue() {
+    return value;
+  }
 }

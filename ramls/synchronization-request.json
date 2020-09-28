@@ -5,7 +5,16 @@
   "properties": {
     "scope": {
       "type": "string",
-      "description": "Scope of re-sync data. Format: [user:{user-uuid}] or [full] for all users"
+      "description": "Scope of re-sync data",
+      "enum": [
+        "user",
+        "full"
+      ]
+    },
+    "userId": {
+      "type": "string",
+      "description": "Users ID for if scope is [user]",
+      "$ref": "raml-util/schemas/uuid.schema"
     }
   },
   "additionalProperties": false,

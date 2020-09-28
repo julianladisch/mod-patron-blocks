@@ -128,7 +128,7 @@
           "methods":[
             "POST"
           ],
-          "pathPattern":"/automated-patron-blocks/synchronization-request",
+          "pathPattern":"/automated-patron-blocks/synchronization/request",
           "permissionsRequired": [
             "patron-blocks.synchronization-request.post"
           ]
@@ -137,7 +137,7 @@
           "methods":[
             "GET"
           ],
-          "pathPattern":"/automated-patron-blocks/synchronization-request/{sync-request-id}",
+          "pathPattern":"/automated-patron-blocks/synchronization/request/{syncRequestId}",
           "permissionsRequired": [
             "patron-blocks.synchronization-request.get"
           ]
@@ -215,6 +215,24 @@
           "methods": ["DELETE"],
           "pathPattern": "/patron-block-limits/{id}",
           "permissionsRequired": ["patron-block-limits.item.delete"]
+        }
+      ]
+    },
+    {
+      "id": "_timer",
+      "version": "1.0",
+      "interfaceType": "system",
+      "handlers": [
+        {
+          "methods": [
+            "POST"
+          ],
+          "pathPattern": "/automated-patron-blocks/synchronization/run",
+          "modulePermissions": [
+            "patron-blocks.synchronization-run.post"
+          ],
+          "unit": "minute",
+          "delay": "3"
         }
       ]
     }
