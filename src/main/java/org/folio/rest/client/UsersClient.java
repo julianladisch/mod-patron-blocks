@@ -1,6 +1,7 @@
 package org.folio.rest.client;
 
 import static io.vertx.core.Future.succeededFuture;
+import static org.folio.rest.client.WebClientProvider.getWebClient;
 
 import java.lang.invoke.MethodHandles;
 import java.util.Map;
@@ -11,13 +12,12 @@ import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
-import io.vertx.ext.web.client.WebClient;
 
 public class UsersClient extends OkapiClient {
   private static final Logger log = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
 
   public UsersClient(Vertx vertx, Map<String, String> okapiHeaders) {
-    super(WebClient.create(vertx), okapiHeaders);
+    super(getWebClient(vertx), okapiHeaders);
   }
 
   public Future<String> findPatronGroupIdForUser(String userId) {
