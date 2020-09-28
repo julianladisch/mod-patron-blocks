@@ -2,16 +2,12 @@ package org.folio.rest.impl;
 
 import static java.lang.String.format;
 import static org.folio.repository.UserSummaryRepository.USER_SUMMARY_TABLE_NAME;
-import static org.folio.rest.utils.EntityBuilder.buildUserSummary;
+import static org.folio.rest.utils.EntityBuilder.buildItemCheckedOutEvent;
 import static org.hamcrest.core.IsEqual.equalTo;
-
-import java.util.ArrayList;
-import java.util.List;
 
 import org.folio.repository.UserSummaryRepository;
 import org.folio.rest.TestBase;
-import org.folio.rest.jaxrs.model.OpenFeeFine;
-import org.folio.rest.jaxrs.model.OpenLoan;
+import org.folio.rest.handlers.ItemCheckedOutEventHandler;
 import org.folio.rest.jaxrs.model.UserSummary;
 import org.junit.Before;
 import org.junit.Test;
@@ -25,6 +21,9 @@ import io.vertx.ext.unit.junit.VertxUnitRunner;
 public class UserSummaryAPITest extends TestBase {
   private final UserSummaryRepository userSummaryRepository =
     new UserSummaryRepository(postgresClient);
+
+  private final ItemCheckedOutEventHandler itemCheckedOutEventHandler =
+    new ItemCheckedOutEventHandler(postgresClient);
 
   @Before
   public void beforeEach() {
@@ -56,7 +55,8 @@ public class UserSummaryAPITest extends TestBase {
   public void shouldReturn200WhenUserSummaryExistsAndIsValid() {
     String userId = randomId();
 
-    createSummary(userId, new ArrayList<>(), new ArrayList<>());
+    waitFor(itemCheckedOutEventHandler.handle(
+      buildItemCheckedOutEvent(userId, randomId(), null)));
 
     UserSummary userSummary = waitFor(userSummaryRepository.getByUserId(userId)).get();
 
@@ -69,11 +69,5 @@ public class UserSummaryAPITest extends TestBase {
 
   private Response sendRequest(String userId) {
     return okapiClient.get("user-summary/" + userId);
-  }
-
-  private String createSummary(String userId, List<OpenFeeFine> feesFines,
-    List<OpenLoan> openLoans) {
-
-    return waitFor(userSummaryRepository.save(buildUserSummary(userId, feesFines, openLoans)));
   }
 }

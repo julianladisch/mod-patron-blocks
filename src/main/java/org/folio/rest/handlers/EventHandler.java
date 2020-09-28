@@ -1,15 +1,16 @@
 package org.folio.rest.handlers;
 
-import static org.folio.rest.tools.utils.TenantTool.calculateTenantId;
+import static org.folio.util.PostgresUtils.getPostgresClient;
 
 import java.lang.invoke.MethodHandles;
 import java.util.Map;
 
 import org.folio.domain.Event;
 import org.folio.domain.EventType;
-import org.folio.okapi.common.XOkapiHeaders;
 import org.folio.repository.UserSummaryRepository;
 import org.folio.rest.persist.PostgresClient;
+import org.folio.service.EventService;
+import org.folio.service.UserSummaryService;
 
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
@@ -21,15 +22,20 @@ import io.vertx.core.logging.LoggerFactory;
 public abstract class EventHandler<E extends Event> {
   protected static final Logger log = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
   protected final UserSummaryRepository userSummaryRepository;
+  protected final EventService eventService;
+  protected final UserSummaryService userSummaryService;
 
-  public EventHandler(Map<String, String> okapiHeaders, Vertx vertx) {
-    String tenantId = calculateTenantId(okapiHeaders.get(XOkapiHeaders.TENANT.toLowerCase()));
-    userSummaryRepository = new UserSummaryRepository(
-      PostgresClient.getInstance(vertx, tenantId));
+  protected EventHandler(Map<String, String> okapiHeaders, Vertx vertx) {
+    PostgresClient postgresClient = getPostgresClient(okapiHeaders, vertx);
+    userSummaryRepository = new UserSummaryRepository(postgresClient);
+    eventService = new EventService(postgresClient);
+    userSummaryService = new UserSummaryService(postgresClient);
   }
 
-  public EventHandler(PostgresClient postgresClient) {
+  protected EventHandler(PostgresClient postgresClient) {
     userSummaryRepository = new UserSummaryRepository(postgresClient);
+    eventService = new EventService(postgresClient);
+    userSummaryService = new UserSummaryService(postgresClient);
   }
 
   /**
@@ -50,5 +56,4 @@ public abstract class EventHandler<E extends Event> {
         eventType, result.result());
     }
   }
-
 }

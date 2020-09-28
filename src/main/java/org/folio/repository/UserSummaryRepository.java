@@ -35,23 +35,6 @@ public class UserSummaryRepository extends BaseRepository<UserSummary> {
     return super.update(entity, entity.getId());
   }
 
-  public Future<Optional<UserSummary>> getByUserId(String userId) {
-    Criterion criterion = new Criterion(new Criteria()
-        .addField(USER_ID_FIELD)
-        .setOperation(OPERATION_EQUALS)
-        .setVal(userId)
-        .setJSONB(true));
-
-    return this.get(criterion)
-      .compose(results -> {
-        if (results.isEmpty()) {
-          return succeededFuture(Optional.empty());
-        }
-
-        return succeededFuture(Optional.ofNullable(results.get(0)));
-      });
-  }
-
   public Future<UserSummary> findByUserIdOrBuildNew(String userId) {
     return getByUserId(userId)
       .map(summary -> summary.orElseGet(() -> buildEmptyUserSummary(userId)));
@@ -64,10 +47,26 @@ public class UserSummaryRepository extends BaseRepository<UserSummary> {
       .map(result -> result.stream().findFirst());
   }
 
+  public Future<Optional<UserSummary>> getByUserId(String userId) {
+    Criterion criterion = new Criterion(new Criteria()
+      .addField(USER_ID_FIELD)
+      .setOperation(OPERATION_EQUALS)
+      .setVal(userId)
+      .setJSONB(true));
+
+    return this.get(criterion)
+      .compose(results -> {
+        if (results.isEmpty()) {
+          return succeededFuture(Optional.empty());
+        }
+
+        return succeededFuture(Optional.ofNullable(results.get(0)));
+      });
+  }
+
   private UserSummary buildEmptyUserSummary(String userId) {
     return new UserSummary()
       .withId(randomId())
       .withUserId(userId);
   }
-
 }

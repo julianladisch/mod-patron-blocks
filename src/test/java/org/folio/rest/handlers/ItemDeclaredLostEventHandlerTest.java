@@ -2,6 +2,9 @@ package org.folio.rest.handlers;
 
 import static java.util.Collections.singletonList;
 import static org.folio.repository.UserSummaryRepository.USER_SUMMARY_TABLE_NAME;
+import static org.folio.rest.utils.EntityBuilder.buildDefaultMetadata;
+import static org.folio.rest.utils.EntityBuilder.buildItemCheckedOutEvent;
+import static org.folio.rest.utils.EntityBuilder.buildItemDeclaredLostEvent;
 
 import java.util.Date;
 
@@ -17,8 +20,11 @@ import io.vertx.ext.unit.junit.VertxUnitRunner;
 
 @RunWith(VertxUnitRunner.class)
 public class ItemDeclaredLostEventHandlerTest extends EventHandlerTestBase {
-  private static final ItemDeclaredLostEventHandler eventHandler =
+  private static final ItemDeclaredLostEventHandler itemDeclaredLostEventHandler =
     new ItemDeclaredLostEventHandler(postgresClient);
+
+  private static final ItemCheckedOutEventHandler itemCheckedOutEventHandler =
+    new ItemCheckedOutEventHandler(postgresClient);
 
   @Before
   public void beforeEach(TestContext context) {
@@ -33,9 +39,10 @@ public class ItemDeclaredLostEventHandlerTest extends EventHandlerTestBase {
 
     ItemDeclaredLostEvent event = new ItemDeclaredLostEvent()
       .withUserId(userId)
-      .withLoanId(loanId);
+      .withLoanId(loanId)
+      .withMetadata(buildDefaultMetadata());
 
-    String summaryId = waitFor(eventHandler.handle(event));
+    String summaryId = waitFor(itemDeclaredLostEventHandler.handle(event));
 
     UserSummary userSummaryToCompare = new UserSummary()
       .withUserId(userId)
@@ -52,27 +59,24 @@ public class ItemDeclaredLostEventHandlerTest extends EventHandlerTestBase {
   public void shouldFlipItemLostFlagWhenUserSummaryExists(TestContext context) {
     String userId = randomId();
     String loanId = randomId();
+    Date dueDate = new Date();
 
-    UserSummary userSummary = new UserSummary()
+    String userSummaryId = waitFor(itemCheckedOutEventHandler.handle(
+      buildItemCheckedOutEvent(userId, loanId, dueDate)));
+
+    waitFor(itemDeclaredLostEventHandler.handle(
+      buildItemDeclaredLostEvent(userId, loanId)));
+
+    UserSummary expectedUserSummary = new UserSummary()
       .withUserId(userId)
       .withOpenLoans(singletonList(
         new OpenLoan()
-          .withDueDate(new Date())
+          .withDueDate(dueDate)
           .withLoanId(loanId)
           .withRecall(false)
           .withItemClaimedReturned(false)
-          .withItemLost(false)));
+          .withItemLost(true)));
 
-    waitFor(userSummaryRepository.save(userSummary));
-
-    ItemDeclaredLostEvent event = new ItemDeclaredLostEvent()
-      .withUserId(userId)
-      .withLoanId(loanId);
-
-    String summaryId = waitFor(eventHandler.handle(event));
-
-    userSummary.getOpenLoans().get(0).setItemLost(true);
-
-    checkUserSummary(summaryId, userSummary, context);
+    checkUserSummary(userSummaryId, expectedUserSummary, context);
   }
 }

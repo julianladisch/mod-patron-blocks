@@ -4,6 +4,11 @@
   "javaInterfaces" : ["org.folio.domain.Event"],
   "description": "Item declared lost event",
   "properties": {
+    "id": {
+      "description" : "A globally unique identifier (UUID) for the event",
+      "type": "string",
+      "$ref": "../raml-util/schemas/uuid.schema"
+    },
     "userId": {
       "description": "ID of the user that declared an item lost",
       "type": "string",
@@ -13,6 +18,12 @@
       "description": "ID of the loan associated with a lost item",
       "type": "string",
       "$ref": "../raml-util/schemas/uuid.schema"
+    },
+    "metadata": {
+      "description": "Metadata about creation and changes, provided by the server (client should not provide)",
+      "type": "object",
+      "$ref": "../raml-util/schemas/metadata.schema",
+      "readonly": true
     }
   },
   "additionalProperties": false,
