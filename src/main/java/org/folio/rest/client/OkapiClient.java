@@ -7,6 +7,7 @@ import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
 import static org.folio.okapi.common.XOkapiHeaders.TENANT;
 import static org.folio.okapi.common.XOkapiHeaders.TOKEN;
 import static org.folio.okapi.common.XOkapiHeaders.URL;
+import static org.folio.rest.client.WebClientProvider.getWebClient;
 
 import java.lang.invoke.MethodHandles;
 import java.util.Map;
@@ -19,6 +20,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
+import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
@@ -35,9 +37,9 @@ public class OkapiClient {
   private final String tenant;
   private final String token;
 
-  OkapiClient(WebClient webClient, Map<String, String> okapiHeaders) {
+  OkapiClient(Vertx vertx, Map<String, String> okapiHeaders) {
     CaseInsensitiveMap<String, String> headers = new CaseInsensitiveMap<>(okapiHeaders);
-    this.webClient = webClient;
+    this.webClient = getWebClient(vertx);
     okapiUrl = headers.get(URL);
     tenant = headers.get(TENANT);
     token = headers.get(TOKEN);

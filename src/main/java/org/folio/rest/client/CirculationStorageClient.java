@@ -1,7 +1,5 @@
 package org.folio.rest.client;
 
-import static org.folio.rest.client.WebClientProvider.getWebClient;
-
 import java.util.Map;
 
 import org.folio.rest.jaxrs.model.Loan;
@@ -13,7 +11,7 @@ import io.vertx.core.Vertx;
 public class CirculationStorageClient extends OkapiClient {
 
   public CirculationStorageClient(Vertx vertx, Map<String, String> okapiHeaders) {
-    super(getWebClient(vertx), okapiHeaders);
+    super(vertx, okapiHeaders);
   }
 
   public Future<Loan> findLoanById(String loanId) {
