@@ -1,11 +1,11 @@
 package org.folio.rest.handlers;
 
 import static org.folio.repository.UserSummaryRepository.USER_SUMMARY_TABLE_NAME;
+import static org.folio.rest.utils.EntityBuilder.buildDefaultMetadata;
+import static org.folio.rest.utils.EntityBuilder.buildItemCheckedOutEvent;
 
-import java.math.BigDecimal;
-import java.util.ArrayList;
 import java.util.Collections;
-import java.util.List;
+import java.util.Optional;
 
 import org.folio.rest.jaxrs.model.ItemCheckedOutEvent;
 import org.folio.rest.jaxrs.model.OpenLoan;
@@ -20,7 +20,7 @@ import io.vertx.ext.unit.junit.VertxUnitRunner;
 
 @RunWith(VertxUnitRunner.class)
 public class ItemCheckedOutEventHandlerTest extends EventHandlerTestBase {
-  private static final ItemCheckedOutEventHandler eventHandler =
+  private static final ItemCheckedOutEventHandler itemCheckedOutEventHandler =
     new ItemCheckedOutEventHandler(postgresClient);
 
   @Before
@@ -38,9 +38,10 @@ public class ItemCheckedOutEventHandlerTest extends EventHandlerTestBase {
     ItemCheckedOutEvent event = new ItemCheckedOutEvent()
       .withUserId(userId)
       .withLoanId(loanId)
-      .withDueDate(dueDate.toDate());
+      .withDueDate(dueDate.toDate())
+      .withMetadata(buildDefaultMetadata());
 
-    String summaryId = waitFor(eventHandler.handle(event));
+    String summaryId = waitFor(itemCheckedOutEventHandler.handle(event));
 
     UserSummary userSummaryToCompare = new UserSummary()
       .withUserId(userId)
@@ -59,58 +60,44 @@ public class ItemCheckedOutEventHandlerTest extends EventHandlerTestBase {
     String loanId = randomId();
     DateTime dueDate = DateTime.now();
 
-    List<OpenLoan> existingOpenLoans = new ArrayList<>();
-    existingOpenLoans.add(new OpenLoan()
-      .withLoanId(randomId())
-      .withDueDate(dueDate.toDate())
-      .withRecall(false)
-      .withItemLost(false));
+    waitFor(itemCheckedOutEventHandler.handle(
+      buildItemCheckedOutEvent(userId, randomId(), dueDate.toDate())));
 
-    UserSummary existingUserSummary = new UserSummary()
-      .withUserId(userId)
-      .withOpenLoans(existingOpenLoans);
+    UserSummary expectedUserSummary = waitFor(userSummaryRepository.getByUserId(userId)
+      .map(Optional::get));
 
-    waitFor(userSummaryRepository.save(existingUserSummary));
+    String summaryId = waitFor(itemCheckedOutEventHandler.handle(
+      buildItemCheckedOutEvent(userId, loanId, dueDate.toDate())));
 
-    ItemCheckedOutEvent event = new ItemCheckedOutEvent()
-      .withUserId(userId)
-      .withLoanId(loanId)
-      .withDueDate(dueDate.toDate());
-
-    String summaryId = waitFor(eventHandler.handle(event));
-
-    existingOpenLoans.add(new OpenLoan()
+    expectedUserSummary.getOpenLoans().add(new OpenLoan()
       .withLoanId(loanId)
       .withRecall(false)
       .withItemLost(false)
       .withDueDate(dueDate.toDate()));
 
-    checkUserSummary(summaryId, existingUserSummary, context);
+    checkUserSummary(summaryId, expectedUserSummary, context);
   }
 
   @Test
-  public void shouldFailWhenOpenLoanWithTheSameLoanIdExists(TestContext context) {
+  public void shouldNotChangeWhenOpenLoanWithTheSameLoanIdExists(TestContext context) {
     String userId = randomId();
     String loanId = randomId();
     DateTime dueDate = DateTime.now();
 
-    List<OpenLoan> existingOpenLoans = new ArrayList<>();
-    existingOpenLoans.add(new OpenLoan()
-      .withLoanId(loanId)
-      .withDueDate(dueDate.toDate())
-      .withRecall(false));
+    waitFor(itemCheckedOutEventHandler.handle(
+      buildItemCheckedOutEvent(userId, loanId, dueDate.toDate())));
 
-    UserSummary existingUserSummary = new UserSummary()
-      .withUserId(userId)
-      .withOpenLoans(existingOpenLoans);
+    UserSummary initialUserSummary = waitFor(userSummaryRepository.getByUserId(userId)
+      .map(Optional::get));
 
-    waitFor(userSummaryRepository.save(existingUserSummary));
+    waitFor(itemCheckedOutEventHandler.handle(
+      buildItemCheckedOutEvent(userId, loanId, dueDate.toDate())));
 
-    ItemCheckedOutEvent event = new ItemCheckedOutEvent()
-      .withUserId(userId)
-      .withLoanId(loanId)
-      .withDueDate(dueDate.toDate());
+    UserSummary updatedUserSummary = waitFor(userSummaryRepository.getByUserId(userId)
+      .map(Optional::get));
 
-    context.assertNull(waitFor(eventHandler.handle(event)));
+    context.assertEquals(initialUserSummary.getId(), updatedUserSummary.getId());
+
+    checkUserSummary(updatedUserSummary.getId(), initialUserSummary, context);
   }
 }

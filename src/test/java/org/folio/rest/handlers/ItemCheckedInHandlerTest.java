@@ -1,16 +1,15 @@
 package org.folio.rest.handlers;
 
-import static java.util.Collections.singletonList;
 import static org.folio.repository.UserSummaryRepository.USER_SUMMARY_TABLE_NAME;
+import static org.folio.rest.utils.EntityBuilder.buildItemCheckedInEvent;
+import static org.folio.rest.utils.EntityBuilder.buildItemCheckedOutEvent;
 
-import java.math.BigDecimal;
-import java.util.Arrays;
 import java.util.Date;
 import java.util.Optional;
 
 import org.folio.rest.jaxrs.model.ItemCheckedInEvent;
-import org.folio.rest.jaxrs.model.OpenLoan;
 import org.folio.rest.jaxrs.model.UserSummary;
+import org.joda.time.DateTime;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -20,7 +19,9 @@ import io.vertx.ext.unit.junit.VertxUnitRunner;
 
 @RunWith(VertxUnitRunner.class)
 public class ItemCheckedInHandlerTest extends EventHandlerTestBase {
-  private static final ItemCheckedInEventHandler eventHandler =
+  private static final ItemCheckedOutEventHandler itemCheckedOutEventHandler =
+    new ItemCheckedOutEventHandler(postgresClient);
+  private static final ItemCheckedInEventHandler itemCheckedInEventHandler =
     new ItemCheckedInEventHandler(postgresClient);
 
   @Before
@@ -31,74 +32,59 @@ public class ItemCheckedInHandlerTest extends EventHandlerTestBase {
 
   @Test
   public void existingLoanIsRemovedFromSummary(TestContext context) {
-    OpenLoan existingLoan1 = new OpenLoan()
-      .withLoanId(randomId())
-      .withDueDate(new Date())
-      .withRecall(false);
+    String userId = randomId();
+    String loan1Id = randomId();
+    String loan2Id = randomId();
+    DateTime dueDate1 = DateTime.now();
+    DateTime dueDate2 = DateTime.now();
 
-    OpenLoan existingLoan2 = new OpenLoan()
-      .withLoanId(randomId())
-      .withDueDate(new Date())
-      .withItemLost(false)
-      .withRecall(false);
+    waitFor(itemCheckedOutEventHandler.handle(buildItemCheckedOutEvent(userId, loan1Id,
+      dueDate1.toDate())));
+    waitFor(itemCheckedOutEventHandler.handle(buildItemCheckedOutEvent(userId, loan2Id,
+      dueDate2.toDate())));
 
-    final String userId = randomId();
+    UserSummary initialUserSummary = waitFor(userSummaryRepository.getByUserId(userId)
+      .map(Optional::get));
 
-    UserSummary initialUserSummary = new UserSummary()
-      .withId(randomId())
-      .withUserId(userId)
-      .withOpenLoans(Arrays.asList(existingLoan1, existingLoan2));
+    context.assertNotNull(initialUserSummary);
 
-    String savedSummaryId = waitFor(userSummaryRepository.save(initialUserSummary));
+    String handledSummaryId = waitFor(itemCheckedInEventHandler.handle(
+      buildItemCheckedInEvent(userId, loan2Id, new Date())));
 
-    ItemCheckedInEvent event = createEvent(userId, existingLoan2.getLoanId(), new Date());
-    String handledSummaryId = waitFor(eventHandler.handle(event));
-    context.assertEquals(savedSummaryId, handledSummaryId);
+    context.assertEquals(initialUserSummary.getId(), handledSummaryId);
 
-    UserSummary expectedSummary = initialUserSummary.withOpenLoans(singletonList(existingLoan1));
-    checkUserSummary(savedSummaryId, expectedSummary, context);
+    initialUserSummary.getOpenLoans().removeIf(openLoan -> openLoan.getLoanId().equals(loan2Id));
+
+    checkUserSummary(handledSummaryId, initialUserSummary, context);
   }
 
   @Test
   public void existingSummaryRemainsIntactWhenWhenLoanDoesNotExist(TestContext context) {
     final String userId = randomId();
+    String loanId = randomId();
+    DateTime dueDate = DateTime.now();
 
-    OpenLoan existingLoan = new OpenLoan()
-      .withLoanId(randomId())
-      .withDueDate(new Date())
-      .withRecall(false);
+    String savedSummaryId = waitFor(itemCheckedOutEventHandler.handle(
+      buildItemCheckedOutEvent(userId, loanId, dueDate.toDate())));
 
-    UserSummary initialUserSummary = new UserSummary()
-      .withId(randomId())
-      .withUserId(userId);
+    UserSummary initialUserSummary = waitFor(userSummaryRepository.getByUserId(userId)
+      .map(Optional::get));
 
-    initialUserSummary.getOpenLoans().add(existingLoan);
+    waitFor(itemCheckedInEventHandler.handle(
+      buildItemCheckedInEvent(userId, randomId(), new Date())));
 
-    String savedSummaryId = waitFor(userSummaryRepository.save(initialUserSummary));
-    ItemCheckedInEvent event = createEvent(userId, randomId(), new Date());
-    String handledSummaryId = waitFor(eventHandler.handle(event));
-
-    context.assertNull(handledSummaryId);
     checkUserSummary(savedSummaryId, initialUserSummary, context);
   }
 
   @Test
   public void eventIsIgnoredWhenSummaryForUserDoesNotExist(TestContext context) {
     String userId = randomId();
-    ItemCheckedInEvent event = createEvent(userId, randomId(), new Date());
+    ItemCheckedInEvent event = buildItemCheckedInEvent(userId, randomId(), new Date());
 
-    String handledSummaryId = waitFor(eventHandler.handle(event));
-    context.assertNull(handledSummaryId);
+    waitFor(itemCheckedInEventHandler.handle(event));
 
     Optional<UserSummary> optionalSummary = waitFor(userSummaryRepository.getByUserId(userId));
     context.assertFalse(optionalSummary.isPresent());
-  }
-
-  private static ItemCheckedInEvent createEvent(String userId, String loanId, Date returnDate) {
-    return new ItemCheckedInEvent()
-      .withUserId(userId)
-      .withLoanId(loanId)
-      .withReturnDate(returnDate);
   }
 
 }

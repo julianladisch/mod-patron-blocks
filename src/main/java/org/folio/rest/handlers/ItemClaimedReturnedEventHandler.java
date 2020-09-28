@@ -1,12 +1,8 @@
 package org.folio.rest.handlers;
 
-import java.util.List;
 import java.util.Map;
 
-import org.apache.commons.lang3.StringUtils;
 import org.folio.rest.jaxrs.model.ItemClaimedReturnedEvent;
-import org.folio.rest.jaxrs.model.OpenLoan;
-import org.folio.rest.jaxrs.model.UserSummary;
 import org.folio.rest.persist.PostgresClient;
 
 import io.vertx.core.Future;
@@ -24,26 +20,8 @@ public class ItemClaimedReturnedEventHandler extends EventHandler<ItemClaimedRet
 
   @Override
   public Future<String> handle(ItemClaimedReturnedEvent event) {
-    return userSummaryRepository.findByUserIdOrBuildNew(event.getUserId())
-      .compose(summary -> updateUserSummary(summary, event))
+    return eventService.save(event)
+      .compose(eventId -> userSummaryService.rebuild(event.getUserId()))
       .onComplete(result -> logResult(result, event));
-  }
-
-  private Future<String> updateUserSummary(UserSummary userSummary, ItemClaimedReturnedEvent event) {
-    List<OpenLoan> openLoans = userSummary.getOpenLoans();
-
-    final OpenLoan openLoan = openLoans.stream()
-      .filter(loan -> StringUtils.equals(loan.getLoanId(), event.getLoanId()))
-      .findFirst()
-      .orElseGet(() -> {
-        OpenLoan newOpenLoan = new OpenLoan().withLoanId(event.getLoanId());
-        openLoans.add(newOpenLoan);
-        return newOpenLoan;
-      });
-
-    openLoan.setItemClaimedReturned(true);
-    openLoan.setItemLost(false);
-
-    return userSummaryRepository.upsert(userSummary, userSummary.getId());
   }
 }

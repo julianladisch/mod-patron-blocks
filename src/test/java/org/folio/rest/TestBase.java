@@ -10,14 +10,11 @@ import static com.github.tomakehurst.wiremock.client.WireMock.urlMatching;
 import static java.lang.String.format;
 
 import java.lang.invoke.MethodHandles;
-import java.util.ArrayList;
 import java.util.Base64;
 import java.util.Collections;
-import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
-import java.util.function.Supplier;
 
 import org.awaitility.Awaitility;
 import org.folio.rest.client.TenantClient;
@@ -177,21 +174,5 @@ public class TestBase {
 
   protected static String toJson(Object event) {
     return JsonObject.mapFrom(event).encodePrettily();
-  }
-
-  protected <T> List<T> fillListOfSize(T object, int listSize) {
-    List<T> list = new ArrayList<>();
-    for (int i = 0; i < listSize; i++) {
-      list.add(object);
-    }
-    return list;
-  }
-
-  protected <T> List<T> fillListOfSize(Supplier<T> supplier, int listSize) {
-    List<T> list = new ArrayList<>();
-    for (int i = 0; i < listSize; i++) {
-      list.add(supplier.get());
-    }
-    return list;
   }
 }

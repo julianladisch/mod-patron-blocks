@@ -4,6 +4,11 @@
   "javaInterfaces" : ["org.folio.domain.Event"],
   "description": "Loan due date changed event",
   "properties": {
+    "id": {
+      "description" : "A globally unique identifier (UUID) for the event",
+      "type": "string",
+      "$ref": "../raml-util/schemas/uuid.schema"
+    },
     "userId": {
       "description": "Unique ID of the user the loan was created for",
       "type": "string",
@@ -22,6 +27,12 @@
     "dueDateChangedByRecall": {
       "description": "Indicates if due date was changed as a result of a recall",
       "type": "boolean"
+    },
+    "metadata": {
+      "description": "Metadata about creation and changes, provided by the server (client should not provide)",
+      "type": "object",
+      "$ref": "../raml-util/schemas/metadata.schema",
+      "readonly": true
     }
   },
   "additionalProperties": false,

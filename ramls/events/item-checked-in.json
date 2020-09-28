@@ -4,6 +4,11 @@
   "javaInterfaces" : ["org.folio.domain.Event"],
   "description": "Item checked in event",
   "properties": {
+    "id": {
+      "description" : "A globally unique identifier (UUID) for the event",
+      "type": "string",
+      "$ref": "../raml-util/schemas/uuid.schema"
+    },
     "userId": {
       "description": "Unique ID of a user",
       "type": "string",
@@ -18,6 +23,12 @@
       "description": "Loan return date",
       "type": "string",
       "format": "date-time"
+    },
+    "metadata": {
+      "description": "Metadata about creation and changes, provided by the server (client should not provide)",
+      "type": "object",
+      "$ref": "../raml-util/schemas/metadata.schema",
+      "readonly": true
     }
   },
   "additionalProperties": false,

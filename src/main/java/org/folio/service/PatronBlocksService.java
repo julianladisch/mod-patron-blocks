@@ -15,7 +15,6 @@ import java.util.stream.Collectors;
 import org.folio.domain.ActionBlocks;
 import org.folio.repository.PatronBlockConditionsRepository;
 import org.folio.repository.PatronBlockLimitsRepository;
-import org.folio.repository.UserSummaryRepository;
 import org.folio.rest.client.CirculationStorageClient;
 import org.folio.rest.client.UsersClient;
 import org.folio.rest.jaxrs.model.AutomatedPatronBlock;
@@ -25,6 +24,7 @@ import org.folio.rest.jaxrs.model.PatronBlockLimit;
 import org.folio.rest.jaxrs.model.UserSummary;
 import org.folio.rest.persist.PostgresClient;
 import org.folio.rest.tools.utils.TenantTool;
+import org.folio.util.AsyncProcessingContext;
 import org.folio.util.CustomCompositeFuture;
 import org.joda.time.DateTime;
 
@@ -38,9 +38,10 @@ import lombok.With;
 
 public class PatronBlocksService {
   private static final Logger log = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
+
   private static final String DEFAULT_ERROR_MESSAGE = "Failed to calculate automated patron blocks";
 
-  private final UserSummaryRepository userSummaryRepository;
+  private final UserSummaryService userSummaryService;
   private final PatronBlockConditionsRepository conditionsRepository;
   private final PatronBlockLimitsRepository limitsRepository;
   private final UsersClient usersClient;
@@ -50,7 +51,7 @@ public class PatronBlocksService {
   public PatronBlocksService(Map<String, String> okapiHeaders, Vertx vertx) {
     String tenantId = TenantTool.calculateTenantId(okapiHeaders.get(TENANT));
     PostgresClient postgresClient = PostgresClient.getInstance(vertx, tenantId);
-    userSummaryRepository = new UserSummaryRepository(postgresClient);
+    userSummaryService = new UserSummaryService(postgresClient);
     conditionsRepository = new PatronBlockConditionsRepository(postgresClient);
     limitsRepository = new PatronBlockLimitsRepository(postgresClient);
     usersClient = new UsersClient(vertx, okapiHeaders);
@@ -61,11 +62,10 @@ public class PatronBlocksService {
   }
 
   public Future<AutomatedPatronBlocks> getBlocksForUser(String userId) {
-    return userSummaryRepository.getByUserId(userId)
-      .compose(optionalSummary -> optionalSummary
-        .map(userSummary -> new BlocksCalculationContext().withUserSummary(userSummary))
-        .map(ctx -> getBlocksForSummary(ctx))
-        .orElseGet(() -> succeededFuture(new AutomatedPatronBlocks())));
+    return userSummaryService.getByUserId(userId)
+      .map(userSummary -> new BlocksCalculationContext().withUserSummary(userSummary))
+      .compose(this::getBlocksForSummary)
+      .otherwise(new AutomatedPatronBlocks());
   }
 
   private Future<AutomatedPatronBlocks> getBlocksForSummary(BlocksCalculationContext ctx) {
@@ -98,7 +98,7 @@ public class PatronBlocksService {
 
   private Future<BlocksCalculationContext> addUserGroupIdToContext(BlocksCalculationContext ctx) {
     if (ctx.userSummary == null || ctx.userSummary.getUserId() == null) {
-      logAddingToContextError("user group ID");
+      ctx.logFailedValidationError("addUserGroupIdToContext");
       return failedFuture(DEFAULT_ERROR_MESSAGE);
     }
 
@@ -110,7 +110,7 @@ public class PatronBlocksService {
     BlocksCalculationContext ctx) {
 
     if (ctx.userGroupId == null) {
-      logAddingToContextError("patron block limits");
+      ctx.logFailedValidationError("addPatronBlockLimitsToContext");
       return failedFuture(DEFAULT_ERROR_MESSAGE);
     }
 
@@ -145,7 +145,8 @@ public class PatronBlocksService {
 
         return ctx.withOverdueMinutes(overdueMinutes);
       })
-      .onFailure(throwable -> logAddingToContextError("overdue minutes", throwable.getMessage()));
+      .onFailure(throwable -> log.error(
+        format("Failed to perform 'addOverdueMinutesToContext': %s", throwable.getMessage())));
 
     if (result.failed()) {
       return failedFuture(DEFAULT_ERROR_MESSAGE);
@@ -161,7 +162,7 @@ public class PatronBlocksService {
     if (ctx.currentPatronBlockLimit == null ||
       ctx.currentPatronBlockLimit.getConditionId() == null) {
 
-      logAddingToContextError("current condition");
+      ctx.logFailedValidationError("addCurrentConditionToContext");
       return ctx;
     }
 
@@ -173,8 +174,8 @@ public class PatronBlocksService {
       .orElse(null);
 
     if (patronBlockCondition == null) {
-      logAddingToContextError("current condition",
-        format("cannot find condition by ID %s", conditionId));
+      ctx.logFailedValidationError("addCurrentConditionToContext",
+        format("Cannot find condition by ID %s", conditionId));
       return ctx;
     }
 
@@ -187,7 +188,7 @@ public class PatronBlocksService {
     if (ctx.userSummary == null || ctx.currentPatronBlockLimit == null ||
       ctx.currentPatronBlockCondition == null || ctx.overdueMinutes == null) {
 
-      logAddingToContextError("action blocks by limit and condition");
+      ctx.logFailedValidationError("addActionBlocksByLimitAndConditionToContext");
       return ctx;
     }
 
@@ -207,7 +208,7 @@ public class PatronBlocksService {
 
   private AutomatedPatronBlock createBlockForLimit(BlocksCalculationContext ctx) {
     if (ctx.currentPatronBlockCondition == null || ctx.currentActionBlocks == null) {
-      log.error("Failed to create automated patron block - context is invalid");
+      ctx.logFailedValidationError("createBlockForLimit");
       return null;
     }
 
@@ -219,25 +220,10 @@ public class PatronBlocksService {
       .withMessage(ctx.currentPatronBlockCondition.getMessage());
   }
 
-  private void logAddingToContextError(String parameterName, String additionalMessage) {
-    String message = format("Blocks calculation context is invalid, failed to add %s",
-      parameterName);
-
-    if (additionalMessage != null) {
-      message += format(". %s", additionalMessage);
-    }
-
-    log.error(message);
-  }
-
-  private void logAddingToContextError(String parameterName) {
-    logAddingToContextError(parameterName, null);
-  }
-
   @With
   @AllArgsConstructor
   @NoArgsConstructor(force = true)
-  private static class BlocksCalculationContext {
+  private static class BlocksCalculationContext extends AsyncProcessingContext {
     final UserSummary userSummary;
     final String userGroupId;
     final List<PatronBlockLimit> patronBlockLimits;
@@ -246,6 +232,11 @@ public class PatronBlocksService {
     final PatronBlockLimit currentPatronBlockLimit;
     final PatronBlockCondition currentPatronBlockCondition;
     final ActionBlocks currentActionBlocks;
+
+    @Override
+    protected String getName() {
+      return "blocks-calculation-context";
+    }
   }
 
   @AllArgsConstructor
