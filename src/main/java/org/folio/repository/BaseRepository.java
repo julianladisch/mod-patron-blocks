@@ -21,7 +21,7 @@ public class BaseRepository<T> {
   private static final int DEFAULT_LIMIT = 100;
 
   protected final PostgresClient pgClient;
-  private final String tableName;
+  protected final String tableName;
   private final Class<T> entityType;
 
   public BaseRepository(PostgresClient pgClient, String tableName, Class<T> entityType) {

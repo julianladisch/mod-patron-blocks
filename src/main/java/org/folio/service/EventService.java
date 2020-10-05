@@ -12,6 +12,7 @@ import org.folio.rest.jaxrs.model.LoanDueDateChangedEvent;
 import org.folio.rest.persist.PostgresClient;
 import org.folio.util.UuidHelper;
 
+import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 
 public class EventService {
@@ -96,5 +97,27 @@ public class EventService {
 
   public Future<List<FeeFineBalanceChangedEvent>> getFeeFineBalanceChangedEvents(String userId) {
     return feeFineBalanceChangedEventRepository.getByUserId(userId);
+  }
+
+  public Future<Void> removeAllEvents(String tenantId) {
+
+    return CompositeFuture.all(itemCheckedOutEventRepository.removeAll(tenantId),
+        itemCheckedInEventRepository.removeAll(tenantId),
+        itemClaimedReturnedEventRepository.removeAll(tenantId),
+        itemDeclaredLostEventRepository.removeAll(tenantId),
+        loanDueDateChangedEventRepository.removeAll(tenantId),
+        feeFineBalanceChangedEventRepository.removeAll(tenantId))
+      .mapEmpty();
+  }
+
+  public Future<Void> removeAllEventsForUser(String tenantId, String userId) {
+
+    return CompositeFuture.all(itemCheckedOutEventRepository.removeByUserId(tenantId, userId),
+      itemCheckedInEventRepository.removeByUserId(tenantId, userId),
+      itemClaimedReturnedEventRepository.removeByUserId(tenantId, userId),
+      itemDeclaredLostEventRepository.removeByUserId(tenantId, userId),
+      loanDueDateChangedEventRepository.removeByUserId(tenantId, userId),
+      feeFineBalanceChangedEventRepository.removeByUserId(tenantId, userId))
+      .mapEmpty();
   }
 }

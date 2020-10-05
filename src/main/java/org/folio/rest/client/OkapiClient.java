@@ -20,6 +20,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.buffer.Buffer;
+import io.vertx.core.json.JsonObject;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
 import io.vertx.ext.web.client.HttpRequest;
@@ -83,6 +84,60 @@ public class OkapiClient {
           return failedFuture(e);
         }
       }
+    });
+  }
+
+//  <T> Future<T> getMany(String path, Class<T> responseType) {
+//  Future<JsonObject> getMany(String path) {
+//    Promise<HttpResponse<Buffer>> promise = Promise.promise();
+//    int limit = 50;
+//    int offset = 0;
+//    AtomicInteger numberOfLoadedRecords = new AtomicInteger();
+//    AtomicInteger totalNumberOfRecords = new AtomicInteger();
+//
+//
+//    while(numberOfLoadedRecords.get() < totalNumberOfRecords.get()) {
+//      offset = offset + limit;
+//
+//      HttpRequest<Buffer> request = getAbs(path)
+//        .addQueryParam("limit", String.valueOf(limit))
+//        .addQueryParam("offset", String.valueOf(offset));
+//
+//      request.send(promise);
+//
+//      promise.future().compose(response -> {
+//        int responseStatus = response.statusCode();
+//        if (responseStatus != 200) {
+////        String errorMessage = String.format("Failed to fetch %s by ID: %s. Response: %d %s",
+////          responseType.getName(), id, responseStatus, response.bodyAsString());
+////        log.error(errorMessage);
+//          return failedFuture(new EntityNotFoundException("errorMessage"));
+//        }
+//        log.info("Fetched by ID: {}/{}. Response body: \n{}", path, response.bodyAsString());
+//        JsonObject json = response.bodyAsJson(JsonObject.class);
+//        numberOfLoadedRecords.set(numberOfLoadedRecords.get() +
+//          json.getJsonArray("loans").size());
+//        totalNumberOfRecords.set(json.getInteger("totalRecords"));
+//        return succeededFuture(json);
+//      });
+//    }
+//  }
+
+  Future<JsonObject> getManyByPage(String path, int limit, int offset) {
+    Promise<HttpResponse<Buffer>> promise = Promise.promise();
+    HttpRequest<Buffer> request = getAbs(path)
+      .addQueryParam("limit", String.valueOf(limit))
+      .addQueryParam("offset", String.valueOf(offset));
+    request.send(promise);
+
+    return promise.future().compose(response -> {
+        int responseStatus = response.statusCode();
+        if (responseStatus != 200) {
+          var errorMessage = String.format("Failed to fetch entities by path: %s. Response: %d %s",
+          path, responseStatus, response.bodyAsString());
+        log.error(errorMessage);
+        }
+        return succeededFuture(response.bodyAsJsonObject());
     });
   }
 }
