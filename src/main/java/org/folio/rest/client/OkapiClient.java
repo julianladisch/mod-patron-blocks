@@ -38,7 +38,7 @@ public class OkapiClient {
   private final String tenant;
   private final String token;
 
-  OkapiClient(Vertx vertx, Map<String, String> okapiHeaders) {
+  public OkapiClient(Vertx vertx, Map<String, String> okapiHeaders) {
     CaseInsensitiveMap<String, String> headers = new CaseInsensitiveMap<>(okapiHeaders);
     this.webClient = getWebClient(vertx);
     okapiUrl = headers.get(URL);
