@@ -23,19 +23,19 @@
     },
     "totalNumberOfLoans": {
       "description": "Total number of loans",
-      "type": "number"
+      "type": "integer"
     },
     "totalNumberOfFeesFines": {
       "description": "Total number of fees/fines",
-      "type": "number"
+      "type": "integer"
     },
     "numberOfProcessedLoans": {
       "description": "Total number of processed loans",
-      "type": "number"
+      "type": "integer"
     },
     "numberOfProcessedFeesFines": {
       "description": "Total number of processed fees/fines",
-      "type": "number"
+      "type": "integer"
     },
     "errors": {
       "description": "Contains array of errors",

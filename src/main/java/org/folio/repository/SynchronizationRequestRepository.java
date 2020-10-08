@@ -1,7 +1,5 @@
 package org.folio.repository;
 
-import static io.vertx.core.Future.failedFuture;
-import static io.vertx.core.Future.succeededFuture;
 import static org.folio.rest.persist.PostgresClient.convertToPsqlStandard;
 
 import java.util.List;
@@ -12,7 +10,6 @@ import org.folio.rest.persist.Criteria.Criteria;
 import org.folio.rest.persist.Criteria.Criterion;
 import org.folio.rest.persist.PostgresClient;
 
-import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.json.JsonObject;
@@ -31,23 +28,23 @@ public class SynchronizationRequestRepository extends BaseRepository<Synchroniza
   public Future<String> save(SynchronizationJob entity) {
     return save(entity, entity.getId());
   }
-
-  public Future<List<SynchronizationJob>> checkIfSynchronizationIsAllowed() {
-
-    Criterion criterion = new Criterion(new Criteria()
-      .addField("'status'")
-      .setOperation("=")
-      .setVal("in-progress")
-      .setJSONB(true));
-
-    return get(criterion)
-      .map(requestList -> {
-        if (!requestList.isEmpty()) {
-          throw new RuntimeException("");
-        }
-        return requestList;
-      });
-  }
+//
+//  public Future<List<SynchronizationJob>> checkIfSynchronizationIsAllowed() {
+//
+//    Criterion criterion = new Criterion(new Criteria()
+//      .addField("'status'")
+//      .setOperation("=")
+//      .setVal("in-progress")
+//      .setJSONB(true));
+//
+//    return get(criterion)
+//      .map(requestList -> {
+//        if (!requestList.isEmpty()) {
+//          throw new RuntimeException("There is a synchJob in progress now");
+//        }
+//        return requestList;
+//      });
+//  }
 
   public Future<List<SynchronizationJob>> getJobsByStatus(
     SynchronizationStatus syncStatus) {
@@ -93,10 +90,10 @@ public class SynchronizationRequestRepository extends BaseRepository<Synchroniza
       .withId(json.getString("id"))
       .withScope(json.getString("scope"))
       .withStatus(json.getString("status"))
-      .withTotalNumberOfLoans(json.getDouble("totalNumberOfLoans"))
-      .withTotalNumberOfFeesFines(json.getDouble("totalNumberOfFeesFines"))
-      .withNumberOfProcessedLoans(json.getDouble("numberOfProcessedLoans"))
-      .withNumberOfProcessedFeesFines(json.getDouble("numberOfProcessedFeesFines"));
+      .withTotalNumberOfLoans(json.getInteger("totalNumberOfLoans"))
+      .withTotalNumberOfFeesFines(json.getInteger("totalNumberOfFeesFines"))
+      .withNumberOfProcessedLoans(json.getInteger("numberOfProcessedLoans"))
+      .withNumberOfProcessedFeesFines(json.getInteger("numberOfProcessedFeesFines"));
 
     String userId = json.getString("userId");
     if (userId != null && !userId.isBlank()) {

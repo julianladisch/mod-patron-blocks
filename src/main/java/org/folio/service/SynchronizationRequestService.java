@@ -3,7 +3,6 @@ package org.folio.service;
 import static io.vertx.core.Future.failedFuture;
 import static io.vertx.core.Future.succeededFuture;
 import static org.apache.commons.lang.BooleanUtils.isTrue;
-import static org.apache.commons.lang3.math.NumberUtils.DOUBLE_ZERO;
 import static org.folio.domain.SynchronizationStatus.DONE;
 import static org.folio.domain.SynchronizationStatus.FAILED;
 import static org.folio.domain.SynchronizationStatus.IN_PROGRESS;
@@ -47,7 +46,6 @@ import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
-import io.vertx.ext.web.client.WebClient;
 
 public class SynchronizationRequestService {
 
@@ -90,10 +88,10 @@ public class SynchronizationRequestService {
       .withStatus(SynchronizationStatus.OPEN.getValue())
       .withScope(request.getScope().value())
       .withUserId(request.getUserId())
-      .withTotalNumberOfLoans(DOUBLE_ZERO)
-      .withTotalNumberOfFeesFines(DOUBLE_ZERO)
-      .withNumberOfProcessedLoans(DOUBLE_ZERO)
-      .withNumberOfProcessedFeesFines(DOUBLE_ZERO);
+      .withTotalNumberOfLoans(0)
+      .withTotalNumberOfFeesFines(0)
+      .withNumberOfProcessedLoans(0)
+      .withNumberOfProcessedFeesFines(0);
 
     return syncRepository.save(entity)
       .map(id -> new SynchronizationResponse()
@@ -135,8 +133,7 @@ public class SynchronizationRequestService {
         .compose(this::createEventsByFeesFines)
         .onSuccess(syncJob -> updateStatusOfJob(syncJob, DONE))
         .onFailure(throwable -> updateJobAsFailed(synchronizationJob,
-          throwable.getLocalizedMessage()))
-        .compose(syncJob -> cleanExistingEvents(syncJob, tenantId));
+          throwable.getLocalizedMessage()));
   }
 
   private Future<SynchronizationJob> createEventsByLoans(SynchronizationJob syncJob) {
@@ -146,7 +143,9 @@ public class SynchronizationRequestService {
 
      return okapiClient.getManyByPage(path, PAGE_LIMIT, 0)
        .compose(response -> {
-         int numberOfPages = calculateNumberOfPages(response);
+         int totalRecords = response.getInteger("totalRecords");
+         int numberOfPages = (int) Math.ceil((totalRecords / (double) PAGE_LIMIT));
+
          Future<JsonObject> future = succeededFuture();
          for (int i = 0; i < numberOfPages; i++) {
            int pageNumber = i;
@@ -154,15 +153,17 @@ public class SynchronizationRequestService {
              okapiClient.getManyByPage(path, PAGE_LIMIT, i * PAGE_LIMIT)
                .compose(jsonPage -> {
                  if (jsonPage == null || jsonPage.size() == 0) {
-                   String errorMessage = String.format("Error in receiving page number %d of loans: %s",
-                     pageNumber, path);
+                   String errorMessage = String.format(
+                     "Error in receiving page number %d of loans: %s", pageNumber, path);
                    log.error(errorMessage);
                    return failedFuture(errorMessage);
                  }
-                 vertx.executeBlocking(promise -> generateEventsByLoans(mapJsonToLoans(jsonPage)),
+                 vertx.executeBlocking(promise -> generateEventsByLoans(mapJsonToLoans(jsonPage))
+                     .onComplete(v -> promise.complete()),
                    handler -> {
                      if (handler.succeeded()) {
-                       updateSyncJobWithProcessedLoans(syncJob, jsonPage.size());
+                       updateSyncJobWithProcessedLoans(syncJob,
+                         jsonPage.getJsonArray("loans").size(), totalRecords);
                      } else {
                        updateSyncJobWithError(syncJob, handler.cause().getLocalizedMessage());
                      }
@@ -173,7 +174,7 @@ public class SynchronizationRequestService {
            future.compose(v -> readPage);
            future = readPage;
          }
-       return succeededFuture(syncJob);
+       return future.map(syncJob);
      });
   }
 
@@ -184,7 +185,9 @@ public class SynchronizationRequestService {
 
     return okapiClient.getManyByPage(path, PAGE_LIMIT, 0)
       .compose(response -> {
-        int numberOfPages = calculateNumberOfPages(response);
+        int totalRecords = response.getInteger("totalRecords");
+        int numberOfPages = (int) Math.ceil((totalRecords / (double) PAGE_LIMIT));
+
         Future<JsonObject> future = succeededFuture();
         for (int i = 0; i < numberOfPages; i++) {
           int pageNumber = i;
@@ -192,26 +195,28 @@ public class SynchronizationRequestService {
             okapiClient.getManyByPage(path, PAGE_LIMIT, i * PAGE_LIMIT);
           readPage.compose(jsonPage -> {
             if (jsonPage == null || jsonPage.size() == 0) {
-              String errorMessage = String.format("Error in receiving page number %d of accounts: %s",
-                pageNumber, path);
+              String errorMessage = String.format(
+                "Error in receiving page number %d of accounts: %s", pageNumber, path);
               log.error(errorMessage);
               return failedFuture(errorMessage);
             }
-            vertx.executeBlocking(promise -> generateEventsByAccounts(mapJsonToAccounts(jsonPage)),
+            vertx.executeBlocking(promise -> generateEventsByAccounts(mapJsonToAccounts(jsonPage))
+                .onComplete(v -> promise.complete()),
               handler -> {
                 if (handler.succeeded()) {
-                  updateSyncJobWithProcessedAccounts(syncJob, jsonPage.size());
+                  updateSyncJobWithProcessedAccounts(syncJob,
+                    jsonPage.getJsonArray("accounts").size(), totalRecords);
                 } else {
                   updateSyncJobWithError(syncJob, handler.cause().getLocalizedMessage());
                 }
               }
             );
-            return succeededFuture(syncJob);
+            return succeededFuture(jsonPage);
           });
           future.compose(v -> readPage);
           future = readPage;
         }
-        return succeededFuture(syncJob);
+        return future.map(syncJob);
       });
   }
 
@@ -222,23 +227,28 @@ public class SynchronizationRequestService {
       .mapEmpty();
   }
 
-  private int calculateNumberOfPages(JsonObject response) {
-    int totalRecords = response.getInteger("totalRecords");
-    return (int) Math.ceil((totalRecords / (double) PAGE_LIMIT));
-  }
-
   private void updateSyncJobWithError(SynchronizationJob syncJob, String localizedMessage) {
     List<String> errors = syncJob.getErrors();
     errors.add(localizedMessage);
     syncRepository.update(syncJob.withErrors(errors), syncJob.getId());
   }
 
-  private void updateSyncJobWithProcessedLoans(SynchronizationJob syncJob, int size) {
-    syncRepository.update(syncJob.withNumberOfProcessedLoans((double) size), syncJob.getId());
+  private void updateSyncJobWithProcessedLoans(SynchronizationJob syncJob, int processed,
+    int total) {
+
+    SynchronizationJob updatedSyncJob = syncJob
+      .withNumberOfProcessedLoans(processed)
+      .withTotalNumberOfLoans(total);
+    syncRepository.update(updatedSyncJob, syncJob.getId());
   }
 
-  private void updateSyncJobWithProcessedAccounts(SynchronizationJob syncJob, int size) {
-    syncRepository.update(syncJob.withNumberOfProcessedFeesFines((double) size), syncJob.getId());
+  private void updateSyncJobWithProcessedAccounts(SynchronizationJob syncJob, int processed,
+    int total) {
+
+    SynchronizationJob updatedSyncJob = syncJob
+      .withNumberOfProcessedFeesFines(processed)
+      .withTotalNumberOfFeesFines(total);
+    syncRepository.update(updatedSyncJob, syncJob.getId());
   }
 
   private Future<Void> generateEventsByLoans(List<Loan> loans) {
