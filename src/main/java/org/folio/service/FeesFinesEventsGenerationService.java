@@ -21,8 +21,8 @@ import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
 
 public class FeesFinesEventsGenerationService extends EventsGenerationService {
-  private final EventHandler<FeeFineBalanceChangedEvent> feeFineBalanceChangedEventHandler;
   private static final int PAGE_LIMIT = 50;
+  private final EventHandler<FeeFineBalanceChangedEvent> feeFineBalanceChangedEventHandler;
 
   public FeesFinesEventsGenerationService(Map<String, String> okapiHeaders, Vertx vertx,
     SynchronizationRequestRepository syncRepository) {

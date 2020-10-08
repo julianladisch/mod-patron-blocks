@@ -19,12 +19,12 @@ import io.vertx.core.logging.LoggerFactory;
 
 public abstract class EventsGenerationService {
 
+  protected static final Logger log = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
   protected final SynchronizationRequestRepository syncRepository;
   protected final OkapiClient okapiClient;
   protected final Vertx vertx;
-  protected static final Logger log = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
 
-  public EventsGenerationService(Map<String, String> okapiHeaders, Vertx vertx,
+  protected EventsGenerationService(Map<String, String> okapiHeaders, Vertx vertx,
     SynchronizationRequestRepository syncRepository) {
 
     this.vertx = vertx;
@@ -42,12 +42,14 @@ public abstract class EventsGenerationService {
   }
 
   protected Date parseDateFromJson(JsonObject representation, String fieldName) {
+    Date date = null;
     try {
       String dueDate = representation.getString(fieldName);
-      return DateUtils.parseDate(dueDate, "yyyy-MM-dd'T'HH:mm:ss.SSSZ");
+      date = DateUtils.parseDate(dueDate, "yyyy-MM-dd'T'HH:mm:ss.SSSZ");
     } catch (Exception e) {
-      throw new RuntimeException("Date parsing error for field: " + fieldName);
+      log.error("Date parsing error for field: " + fieldName);
     }
+    return date;
   }
 
   protected void updateSyncJobWithError(SynchronizationJob syncJob, String localizedMessage) {

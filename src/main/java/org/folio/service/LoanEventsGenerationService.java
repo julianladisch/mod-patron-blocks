@@ -29,13 +29,13 @@ import io.vertx.core.json.JsonObject;
 
 public class LoanEventsGenerationService extends EventsGenerationService {
 
+  private static final String DECLARED_LOST_STATUS = "Declared lost";
+  private static final String CLAIMED_RETURNED_STATUS = "Claimed returned";
+  private static final int PAGE_LIMIT = 50;
   private final EventHandler<ItemCheckedOutEvent> checkedOutEventHandler;
   private final EventHandler<ItemDeclaredLostEvent> declaredLostEventHandler;
   private final EventHandler<ItemClaimedReturnedEvent> claimedReturnedEventHandler;
   private final EventHandler<LoanDueDateChangedEvent> dueDateChangedEventHandler;
-  private static final String DECLARED_LOST_STATUS = "Declared lost";
-  private static final String CLAIMED_RETURNED_STATUS = "Claimed returned";
-  private static final int PAGE_LIMIT = 50;
 
   public LoanEventsGenerationService(Map<String, String> okapiHeaders, Vertx vertx,
     SynchronizationRequestRepository syncRepository) {
