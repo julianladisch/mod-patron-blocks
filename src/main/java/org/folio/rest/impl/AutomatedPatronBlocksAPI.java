@@ -1,10 +1,10 @@
 package org.folio.rest.impl;
 
-import static io.vertx.core.Future.failedFuture;
 import static io.vertx.core.Future.succeededFuture;
 import static java.lang.String.format;
 import static org.folio.util.UuidUtil.isUuid;
 
+import java.lang.invoke.MethodHandles;
 import java.util.Map;
 
 import javax.ws.rs.core.Response;
@@ -18,8 +18,13 @@ import org.folio.service.SynchronizationRequestService;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Context;
 import io.vertx.core.Handler;
+import io.vertx.core.logging.Logger;
+import io.vertx.core.logging.LoggerFactory;
 
 public class AutomatedPatronBlocksAPI implements AutomatedPatronBlocks {
+
+  private static final Logger log = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
+
 
   @Override
   public void getAutomatedPatronBlocksByUserId(String userId,
@@ -84,15 +89,16 @@ public class AutomatedPatronBlocksAPI implements AutomatedPatronBlocks {
   public void postAutomatedPatronBlocksSynchronizationRun(Map<String, String> okapiHeaders,
     Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
 
-    new SynchronizationRequestService(okapiHeaders, vertxContext.owner())
-      .runSynchronization()
-      .onSuccess(response -> asyncResultHandler.handle(succeededFuture(
-        GetAutomatedPatronBlocksSynchronizationRequestBySyncRequestIdResponse
-          .respond200WithApplicationJson(response))))
-      .onFailure(throwable -> {
-        String errorMessage = throwable.getLocalizedMessage();
-        GetAutomatedPatronBlocksSynchronizationRequestBySyncRequestIdResponse
-          .respond500WithTextPlain(errorMessage);
-      });
+    PostAutomatedPatronBlocksSynchronizationRunResponse.respond202();
+
+    vertxContext.owner().executeBlocking(promise ->
+      new SynchronizationRequestService(okapiHeaders, vertxContext.owner())
+        .runSynchronization(), response -> {
+          if (response.failed()) {
+            log.error("Synchronization error processing");
+          } else {
+            log.debug("Synchronization has been completed");
+          }
+    });
   }
 }

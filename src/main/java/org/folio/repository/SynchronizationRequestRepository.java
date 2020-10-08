@@ -15,6 +15,7 @@ import org.folio.rest.persist.PostgresClient;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
+import io.vertx.core.json.JsonObject;
 import io.vertx.sqlclient.Row;
 import io.vertx.sqlclient.RowSet;
 
@@ -64,17 +65,20 @@ public class SynchronizationRequestRepository extends BaseRepository<Synchroniza
     String tableName = String.format("%s.%s", convertToPsqlStandard(tenantId),
       SYNC_REQUESTS_TABLE);
 
-    String sql = String.format("SELECT ALL FROM %s ORDER BY max(" +
-      "jsonb #>> '{metadata,createdDate}') ASC", tableName, SYNC_REQUESTS_LIMIT);
+    String sql = String.format("SELECT jsonb FROM %s WHERE jsonb->>'status' = 'open' " +
+      "ORDER BY(jsonb #>> '{metadata,createdDate}') ASC LIMIT '%d'", tableName,
+      SYNC_REQUESTS_LIMIT);
 
     return select(sql)
       .map(requests -> {
         if (requests.size() == 0) {
-          throw new RuntimeException("");
+          throw new RuntimeException("There are no open requests");
         }
         return requests.iterator().next();
       })
-    .map(row -> mapSynchronizationJob(row));
+      .map(row -> row.getValue(0))
+      .map(JsonObject.class::cast)
+      .map(this::mapSynchronizationJob);
   }
 
   public Future<RowSet<Row>> select(String sql) {
@@ -83,18 +87,18 @@ public class SynchronizationRequestRepository extends BaseRepository<Synchroniza
     return promise.future();
   }
 
-  private SynchronizationJob mapSynchronizationJob(Row row) {
+  private SynchronizationJob mapSynchronizationJob(JsonObject json) {
     SynchronizationJob synchronizationJob = new SynchronizationJob();
     synchronizationJob
-      .withId(row.getString("id"))
-      .withScope(row.getString("scope"))
-      .withStatus(row.getString("status"))
-      .withTotalNumberOfLoans(row.getDouble("totalNumberOfLoans"))
-      .withTotalNumberOfFeesFines(row.getDouble("totalNumberOfFeesFines"))
-      .withNumberOfProcessedLoans(row.getDouble("numberOfProcessedLoans"))
-      .withNumberOfProcessedFeesFines(row.getDouble("numberOfProcessedFeesFines"));
+      .withId(json.getString("id"))
+      .withScope(json.getString("scope"))
+      .withStatus(json.getString("status"))
+      .withTotalNumberOfLoans(json.getDouble("totalNumberOfLoans"))
+      .withTotalNumberOfFeesFines(json.getDouble("totalNumberOfFeesFines"))
+      .withNumberOfProcessedLoans(json.getDouble("numberOfProcessedLoans"))
+      .withNumberOfProcessedFeesFines(json.getDouble("numberOfProcessedFeesFines"));
 
-    String userId = row.getString("userId");
+    String userId = json.getString("userId");
     if (userId != null && !userId.isBlank()) {
       synchronizationJob.withUserId(userId);
     }
