@@ -75,7 +75,7 @@ public class SynchronizationRequestService {
     PostgresClient postgresClient = PostgresClient.getInstance(vertx, tenantId);
     this.syncRepository = new SynchronizationRequestRepository(postgresClient);
     this.eventService = new EventService(postgresClient);
-    this.okapiClient = new OkapiClient(WebClient.create(vertx), okapiHeaders);
+    this.okapiClient = new OkapiClient(vertx, okapiHeaders);
     this.checkedOutEventHandler = new ItemCheckedOutEventHandler (okapiHeaders, vertx);
     this.declaredLostEventHandler = new ItemDeclaredLostEventHandler(okapiHeaders, vertx);
     this.claimedReturnedEventHandler = new ItemClaimedReturnedEventHandler(okapiHeaders, vertx);
