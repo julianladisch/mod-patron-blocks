@@ -28,23 +28,6 @@ public class SynchronizationRequestRepository extends BaseRepository<Synchroniza
   public Future<String> save(SynchronizationJob entity) {
     return save(entity, entity.getId());
   }
-//
-//  public Future<List<SynchronizationJob>> checkIfSynchronizationIsAllowed() {
-//
-//    Criterion criterion = new Criterion(new Criteria()
-//      .addField("'status'")
-//      .setOperation("=")
-//      .setVal("in-progress")
-//      .setJSONB(true));
-//
-//    return get(criterion)
-//      .map(requestList -> {
-//        if (!requestList.isEmpty()) {
-//          throw new RuntimeException("There is a synchJob in progress now");
-//        }
-//        return requestList;
-//      });
-//  }
 
   public Future<List<SynchronizationJob>> getJobsByStatus(
     SynchronizationStatus syncStatus) {
