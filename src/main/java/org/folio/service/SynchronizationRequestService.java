@@ -42,8 +42,10 @@ public class SynchronizationRequestService {
     PostgresClient postgresClient = PostgresClient.getInstance(vertx, tenantId);
     this.syncRepository = new SynchronizationRequestRepository(postgresClient);
     this.eventService = new EventService(postgresClient);
-    this.loanEventsGenerationService = new LoanEventsGenerationService(okapiHeaders, vertx, syncRepository);
-    this.feesFinesEventsGenerationService = new FeesFinesEventsGenerationService(okapiHeaders, vertx, syncRepository);
+    this.loanEventsGenerationService = new LoanEventsGenerationService(
+      okapiHeaders, vertx, syncRepository);
+    this.feesFinesEventsGenerationService = new FeesFinesEventsGenerationService(
+      okapiHeaders, vertx, syncRepository);
   }
 
   public Future<SynchronizationResponse> createSyncRequest(SynchronizationRequest request) {
@@ -77,6 +79,7 @@ public class SynchronizationRequestService {
   }
 
   public Future<SynchronizationJob> runSynchronization() {
+    System.out.println("SynchronizationRequestService: 80 " + Thread.currentThread().getName());
      return syncRepository.getJobsByStatus(IN_PROGRESS)
        .compose(this::doSynchronization);
   }
@@ -92,18 +95,18 @@ public class SynchronizationRequestService {
   }
 
   private Future<SynchronizationJob> doSynchronization(SynchronizationJob synchronizationJob) {
-      return succeededFuture(updateStatusOfJob(synchronizationJob, IN_PROGRESS))
+      return succeededFuture(loanEventsGenerationService.updateStatusOfJob(
+        synchronizationJob, IN_PROGRESS))
         .compose(syncJob -> cleanExistingEvents(syncJob, tenantId))
         .compose(this::createEventsByLoans)
         .compose(this::createEventsByFeesFines)
-        .onSuccess(syncJob -> updateStatusOfJob(syncJob, DONE))
         .onFailure(throwable -> updateJobAsFailed(synchronizationJob,
           throwable.getLocalizedMessage()));
   }
 
   private Future<SynchronizationJob> createEventsByLoans(SynchronizationJob syncJob) {
      String path = USER_SCOPE.equalsIgnoreCase(syncJob.getScope())
-       ? String.format("/loan-storage/loans?query=userId=%s&status.name=open", syncJob.getUserId())
+       ? String.format("/loan-storage/loans?query=userId=%s and status.name=open", syncJob.getUserId())
        : "/loan-storage/loans?query=status.name=open";
 
      return loanEventsGenerationService.generateEvents(syncJob, path);
@@ -111,7 +114,7 @@ public class SynchronizationRequestService {
 
   private Future<SynchronizationJob> createEventsByFeesFines(SynchronizationJob syncJob) {
     String path = USER_SCOPE.equalsIgnoreCase(syncJob.getScope())
-      ? String.format("/accounts?query=userId=%s&status.name=open", syncJob.getUserId())
+      ? String.format("/accounts?query=userId=%s and status.name=open", syncJob.getUserId())
       : "/accounts?query=status.name=open";
 
     return feesFinesEventsGenerationService.generateEvents(syncJob, path);
@@ -127,16 +130,6 @@ public class SynchronizationRequestService {
     }
     return eventService.removeAllEventsForUser(tenantId, syncJob.getUserId())
       .map(syncJob);
-  }
-
-  private SynchronizationJob updateStatusOfJob(SynchronizationJob syncJob,
-    SynchronizationStatus syncStatus) {
-
-    syncJob.setStatus(syncStatus.getValue());
-    log.debug("Status of synchronization job has been updated: " + syncStatus.getValue());
-    syncRepository.update(syncJob, syncJob.getId());
-
-    return syncJob;
   }
 
   private void updateJobAsFailed(SynchronizationJob syncJob, String errorMessage) {

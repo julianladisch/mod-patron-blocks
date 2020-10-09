@@ -4,12 +4,12 @@ import static io.vertx.core.Future.failedFuture;
 import static io.vertx.core.Future.succeededFuture;
 import static org.apache.commons.lang.BooleanUtils.isTrue;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
 import org.folio.repository.SynchronizationRequestRepository;
-import org.folio.rest.client.OkapiClient;
 import org.folio.rest.handlers.EventHandler;
 import org.folio.rest.handlers.ItemCheckedOutEventHandler;
 import org.folio.rest.handlers.ItemClaimedReturnedEventHandler;
@@ -31,7 +31,6 @@ public class LoanEventsGenerationService extends EventsGenerationService {
 
   private static final String DECLARED_LOST_STATUS = "Declared lost";
   private static final String CLAIMED_RETURNED_STATUS = "Claimed returned";
-  private static final int PAGE_LIMIT = 50;
   private final EventHandler<ItemCheckedOutEvent> checkedOutEventHandler;
   private final EventHandler<ItemDeclaredLostEvent> declaredLostEventHandler;
   private final EventHandler<ItemClaimedReturnedEvent> claimedReturnedEventHandler;
@@ -52,37 +51,35 @@ public class LoanEventsGenerationService extends EventsGenerationService {
     return okapiClient.getManyByPage(path, PAGE_LIMIT, 0)
       .compose(response -> {
         int totalRecords = response.getInteger("totalRecords");
-        int numberOfPages = (int) Math.ceil((totalRecords / (double) PAGE_LIMIT));
+        int numberOfPages = calculateNumberOfPages(totalRecords);
 
-        Future<JsonObject> future = succeededFuture();
+        List<Future> generatedEventsForPages = new ArrayList<>();
         for (int i = 0; i < numberOfPages; i++) {
           int pageNumber = i;
-          Future<JsonObject> readPage =
-            okapiClient.getManyByPage(path, PAGE_LIMIT, i * PAGE_LIMIT)
-              .compose(jsonPage -> {
-                if (jsonPage == null || jsonPage.size() == 0) {
-                  String errorMessage = String.format(
-                    "Error in receiving page number %d of loans: %s", pageNumber, path);
-                  log.error(errorMessage);
-                  return failedFuture(errorMessage);
-                }
-                vertx.executeBlocking(promise -> generateEventsByLoans(mapJsonToLoans(jsonPage))
-                    .onComplete(v -> promise.complete()),
-                  result -> {
-                    if (result.succeeded()) {
-                      updateSyncJobWithProcessedLoans(syncJob,
-                        jsonPage.getJsonArray("loans").size(), totalRecords);
-                    } else {
-                      updateSyncJobWithError(syncJob, result.cause().getLocalizedMessage());
-                    }
+          Future<JsonObject> readPage = okapiClient.getManyByPage(path, PAGE_LIMIT, i * PAGE_LIMIT)
+            .compose(jsonPage -> {
+              if (jsonPage == null || jsonPage.size() == 0) {
+                String errorMessage = String.format(
+                  "Error in receiving page number %d of loans: %s", pageNumber, path);
+                log.error(errorMessage);
+                return failedFuture(errorMessage);
+              }
+              return generateEventsByLoans(mapJsonToLoans(jsonPage))
+                .onComplete(result -> {
+                  if (result.succeeded()) {
+                    updateSyncJobWithProcessedLoans(syncJob,
+                      syncJob.getNumberOfProcessedLoans() + jsonPage.getJsonArray("loans").size(),
+                      totalRecords);
+                  } else {
+                    updateSyncJobWithError(syncJob, result.cause().getLocalizedMessage());
                   }
-                );
-                return succeededFuture(jsonPage);
-              });
-          future.compose(v -> readPage);
-          future = readPage;
+                })
+                .map(jsonPage);
+            });
+          generatedEventsForPages.add(readPage);
         }
-        return future.map(syncJob);
+        updateJobWhenGenerationsCompleted(syncJob, generatedEventsForPages);
+        return succeededFuture(syncJob);
       });
   }
 
