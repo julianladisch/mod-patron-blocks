@@ -94,6 +94,7 @@ public class SynchronizationAPITests extends TestBase {
   public void checkOutEventShouldBeCreatedAfterSynchronization() {
     Date dueDate = now().plusHours(1).toDate();
     stubLoans(dueDate, false, "Checked out");
+    stubAccountsWithEmptyResponse();
     String syncRequestId = createOpenSynchronizationRequestByUser();
     EventRepository<ItemCheckedOutEvent> checkOutEventRepository = new EventRepository<>(
       postgresClient, ITEM_CHECKED_OUT_EVENT_TABLE_NAME, ItemCheckedOutEvent.class);
@@ -110,7 +111,7 @@ public class SynchronizationAPITests extends TestBase {
   @Test
   public void claimedReturnedEventShouldBeCreatedAfterSynchronization() {
     stubLoans(now().plusHours(1).toDate(), false, "Claimed returned");
-
+    stubAccountsWithEmptyResponse();
     String syncRequestId = createOpenSynchronizationRequestByUser();
     EventRepository<ItemClaimedReturnedEvent> itemClaimedReturnedEventRepository =
       new EventRepository<>(postgresClient, ITEM_CLAIMED_RETURNED_EVENT_TABLE_NAME,
@@ -128,6 +129,7 @@ public class SynchronizationAPITests extends TestBase {
   @Test
   public void declaredLostEventShouldBeCreatedAfterSynchronization() {
     stubLoans(now().plusHours(1).toDate(), false, "Declared lost");
+    stubAccountsWithEmptyResponse();
     String syncRequestId = createOpenSynchronizationRequestByUser();
     EventRepository<ItemDeclaredLostEvent> itemDeclaredLostEventRepository =
       new EventRepository<>(postgresClient, ITEM_DECLARED_LOST_EVENT_TABLE_NAME,
@@ -146,7 +148,7 @@ public class SynchronizationAPITests extends TestBase {
   public void dueDateChangedEventShouldBeCreatedAfterSynchronization() {
     Date dueDate = now().plusHours(1).toDate();
     stubLoans(dueDate, true, "Checked out");
-
+    stubAccountsWithEmptyResponse();
     String syncRequestId = createOpenSynchronizationRequestByUser();
     EventRepository<LoanDueDateChangedEvent> loanDueDateChangedEventRepository = new EventRepository<>(
       postgresClient, LOAN_DUE_DATE_CHANGED_EVENT_TABLE_NAME, LoanDueDateChangedEvent.class);
@@ -202,6 +204,22 @@ public class SynchronizationAPITests extends TestBase {
         .withBody(makeLoanResponseBody(dueDate, recall, randomId(), itemStatus))));
   }
 
+  private static void stubAccounts() {
+    wireMock.stubFor(get(urlPathMatching("/accounts"))
+      .atPriority(5)
+      .willReturn(aResponse()
+        .withStatus(200)
+        .withBody(makeAccountsResponseBody())));
+  }
+
+  private static void stubAccountsWithEmptyResponse() {
+    wireMock.stubFor(get(urlPathMatching("/accounts"))
+      .atPriority(5)
+      .willReturn(aResponse()
+        .withStatus(200)
+        .withBody(makeAccountsEmptyResponseBody())));
+  }
+
   private static String makeLoanResponseBody(Date dueDate, boolean recall, String itemId, String itemStatus) {
 
       JsonObject loan = new JsonObject()
@@ -218,5 +236,30 @@ public class SynchronizationAPITests extends TestBase {
             .add(loan))
           .put("totalRecords", 1)
         .encodePrettily();
+  }
+
+  private static String makeAccountsResponseBody() {
+
+    JsonObject account = new JsonObject()
+      .put("id", randomId())
+      .put("userId", USER_ID)
+      .put("loanId", randomId())
+      .put("feeFineId", randomId())
+      .put("feeFineType", "Type1")
+      .put("remaining", 1.0);
+
+    return new JsonObject()
+      .put("accounts", new JsonArray()
+        .add(account))
+      .put("totalRecords", 1)
+      .encodePrettily();
+  }
+
+  private static String makeAccountsEmptyResponseBody() {
+
+    return new JsonObject()
+      .put("accounts", new JsonArray())
+      .put("totalRecords", 0)
+      .encodePrettily();
   }
 }
