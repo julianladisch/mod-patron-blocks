@@ -2,7 +2,6 @@ package org.folio.service;
 
 import static io.vertx.core.Future.failedFuture;
 import static io.vertx.core.Future.succeededFuture;
-import static org.folio.domain.SynchronizationStatus.DONE;
 import static org.folio.domain.SynchronizationStatus.FAILED;
 import static org.folio.domain.SynchronizationStatus.IN_PROGRESS;
 

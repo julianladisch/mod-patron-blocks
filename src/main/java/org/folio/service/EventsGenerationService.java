@@ -25,7 +25,7 @@ import io.vertx.core.logging.LoggerFactory;
 public abstract class EventsGenerationService {
 
   protected static final Logger log = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
-  protected static final int PAGE_LIMIT = 100;
+  protected static final int PAGE_LIMIT = 50;
   protected final SynchronizationRequestRepository syncRepository;
   protected final OkapiClient okapiClient;
   protected final Vertx vertx;
@@ -71,17 +71,19 @@ public abstract class EventsGenerationService {
     return (int) Math.ceil((totalRecords / (double) PAGE_LIMIT));
   }
 
-  protected void updateJobWhenGenerationsCompleted(SynchronizationJob syncJob,
+  protected CompositeFuture updateJobWhenGenerationsCompleted(SynchronizationJob syncJob,
     List<Future> generatedEventsForPages) {
 
-    CompositeFuture.all(generatedEventsForPages)
-      .onComplete(result -> {
-        if (result.succeeded()) {
-          updateStatusOfJob(syncJob, DONE);
-        } else {
-          updateSyncJobWithError(syncJob, result.cause().getLocalizedMessage());
-        }
-      });
+//    if (generatedEventsForPages.size() > 0) {
+      return CompositeFuture.all(generatedEventsForPages)
+        .onComplete(result -> {
+          if (result.succeeded()) {
+            updateStatusOfJob(syncJob, DONE);
+          } else {
+            updateSyncJobWithError(syncJob, result.cause().getLocalizedMessage());
+          }
+        });
+//    }
   }
 
   public SynchronizationJob updateStatusOfJob(SynchronizationJob syncJob,

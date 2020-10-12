@@ -48,7 +48,7 @@ public class LoanEventsGenerationService extends EventsGenerationService {
 
   @Override
   public Future<SynchronizationJob> generateEvents(SynchronizationJob syncJob, String path) {
-    return okapiClient.getManyByPage(path, PAGE_LIMIT, 0)
+    return okapiClient.getManyByPage(path, 0, 0)
       .compose(response -> {
         int totalRecords = response.getInteger("totalRecords");
         int numberOfPages = calculateNumberOfPages(totalRecords);
@@ -78,8 +78,9 @@ public class LoanEventsGenerationService extends EventsGenerationService {
             });
           generatedEventsForPages.add(readPage);
         }
-        updateJobWhenGenerationsCompleted(syncJob, generatedEventsForPages);
-        return succeededFuture(syncJob);
+        return updateJobWhenGenerationsCompleted(syncJob, generatedEventsForPages)
+          .map(syncJob);
+
       });
   }
 
