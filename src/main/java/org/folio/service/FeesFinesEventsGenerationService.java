@@ -71,8 +71,8 @@ public class FeesFinesEventsGenerationService extends EventsGenerationService {
 
   private Future<Void> generateEventsByAccounts(List<Account> records) {
     return CompositeFuture.all(records.stream()
-      .map(this::generateFeeFineBalanceChangedEvent)
-      .collect(Collectors.toList()))
+        .map(this::generateFeeFineBalanceChangedEvent)
+        .collect(Collectors.toList()))
       .mapEmpty();
   }
 

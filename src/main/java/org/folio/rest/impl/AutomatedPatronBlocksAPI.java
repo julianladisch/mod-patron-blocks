@@ -96,7 +96,8 @@ public class AutomatedPatronBlocksAPI implements AutomatedPatronBlocks {
   public void postAutomatedPatronBlocksSynchronizationRun(Map<String, String> okapiHeaders,
     Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
 
-    PostAutomatedPatronBlocksSynchronizationRunResponse.respond202();
+    asyncResultHandler.handle(succeededFuture(
+      PostAutomatedPatronBlocksSynchronizationRunResponse.respond202()));
 
     vertxContext.owner().executeBlocking(promise ->
       new SynchronizationRequestService(okapiHeaders, vertxContext.owner())

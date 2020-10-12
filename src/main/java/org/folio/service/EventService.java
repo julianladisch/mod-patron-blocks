@@ -39,10 +39,10 @@ public class EventService {
       ITEM_CHECKED_IN_EVENT_TABLE_NAME, ItemCheckedInEvent.class);
 
     itemClaimedReturnedEventRepository = new EventRepository<>(postgresClient,
-      ITEM_DECLARED_LOST_EVENT_TABLE_NAME, ItemClaimedReturnedEvent.class);
+      ITEM_CLAIMED_RETURNED_EVENT_TABLE_NAME, ItemClaimedReturnedEvent.class);
 
     itemDeclaredLostEventRepository = new EventRepository<>(postgresClient,
-      ITEM_CLAIMED_RETURNED_EVENT_TABLE_NAME, ItemDeclaredLostEvent.class);
+      ITEM_DECLARED_LOST_EVENT_TABLE_NAME, ItemDeclaredLostEvent.class);
 
     loanDueDateChangedEventRepository = new EventRepository<>(postgresClient,
       LOAN_DUE_DATE_CHANGED_EVENT_TABLE_NAME, LoanDueDateChangedEvent.class);

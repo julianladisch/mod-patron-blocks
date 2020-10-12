@@ -120,23 +120,22 @@ public class LoanEventsGenerationService extends EventsGenerationService {
       .compose(v -> generateDueDateChangedEvent(loan));
   }
 
-  private Future<Void> generateClaimedReturnedEvent(Loan loan) {
+  private Future<String> generateClaimedReturnedEvent(Loan loan) {
     if (CLAIMED_RETURNED_STATUS.equalsIgnoreCase(loan.getItemStatus())) {
       return claimedReturnedEventHandler.handle(new ItemClaimedReturnedEvent()
         .withLoanId(loan.getId())
         .withUserId(loan.getUserId())
-        .withMetadata(loan.getMetadata()))
-        .mapEmpty();
+        .withMetadata(loan.getMetadata()));
     }
     return succeededFuture(null);
   }
 
-  private Future<Void> generateDeclaredLostEvent(Loan loan) {
+  private Future<String> generateDeclaredLostEvent(Loan loan) {
     if (DECLARED_LOST_STATUS.equals(loan.getItemStatus())) {
-      declaredLostEventHandler.handle(new ItemDeclaredLostEvent()
-        .withLoanId(loan.getId())
-        .withUserId(loan.getUserId())
-        .withMetadata(loan.getMetadata()));
+      return declaredLostEventHandler.handle(new ItemDeclaredLostEvent()
+          .withLoanId(loan.getId())
+          .withUserId(loan.getUserId())
+          .withMetadata(loan.getMetadata()));
     }
     return succeededFuture(null);
   }
@@ -144,11 +143,11 @@ public class LoanEventsGenerationService extends EventsGenerationService {
   private Future<Void> generateDueDateChangedEvent(Loan loan) {
     if (isTrue(loan.getDueDateChangedByRecall())) {
       dueDateChangedEventHandler.handle(new LoanDueDateChangedEvent()
-        .withLoanId(loan.getId())
-        .withUserId(loan.getUserId())
-        .withDueDate(loan.getDueDate())
-        .withDueDateChangedByRecall(loan.getDueDateChangedByRecall())
-        .withMetadata(loan.getMetadata()));
+          .withLoanId(loan.getId())
+          .withUserId(loan.getUserId())
+          .withDueDate(loan.getDueDate())
+          .withDueDateChangedByRecall(loan.getDueDateChangedByRecall())
+          .withMetadata(loan.getMetadata()));
     }
     return succeededFuture(null);
   }

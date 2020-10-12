@@ -54,7 +54,8 @@ public abstract class EventsGenerationService {
     String dueDate = representation.getString(fieldName);
     Date date = null;
     try {
-      date = DateUtils.parseDate(dueDate, "yyyy-MM-dd'T'HH:mm:ss.SSSZ");
+//      date = DateUtils.parseDate(dueDate, "yyyy-MM-dd'T'HH:mm:ss.SSSZ");
+      date = DateUtils.parseDate(dueDate, "yyyy-MM-dd'T'HH:mm:ss.SSSXXX");
     } catch (ParseException e) {
       log.error("Date parsing error for field: " + fieldName);
     }
@@ -74,16 +75,14 @@ public abstract class EventsGenerationService {
   protected CompositeFuture updateJobWhenGenerationsCompleted(SynchronizationJob syncJob,
     List<Future> generatedEventsForPages) {
 
-//    if (generatedEventsForPages.size() > 0) {
-      return CompositeFuture.all(generatedEventsForPages)
-        .onComplete(result -> {
-          if (result.succeeded()) {
-            updateStatusOfJob(syncJob, DONE);
-          } else {
-            updateSyncJobWithError(syncJob, result.cause().getLocalizedMessage());
-          }
-        });
-//    }
+    return CompositeFuture.all(generatedEventsForPages)
+      .onComplete(result -> {
+        if (result.succeeded()) {
+          updateStatusOfJob(syncJob, DONE);
+        } else {
+          updateSyncJobWithError(syncJob, result.cause().getLocalizedMessage());
+        }
+      });
   }
 
   public SynchronizationJob updateStatusOfJob(SynchronizationJob syncJob,

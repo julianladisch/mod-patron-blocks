@@ -115,17 +115,17 @@ public class EntityBuilder {
   }
 
   public static SynchronizationJob buildSynchronizationRequest(String scope, String userId,
-    SynchronizationStatus status, long totalNumberOfLoans, long totalNumberOfFeesFines,
-    long numberOfProcessedLoans, long numberOfProcessedFeesFines) {
+    SynchronizationStatus status, int totalNumberOfLoans, int totalNumberOfFeesFines,
+    int numberOfProcessedLoans, int numberOfProcessedFeesFines) {
 
     return new SynchronizationJob()
       .withId(randomId())
       .withUserId(userId)
       .withScope(scope)
       .withStatus(status.getValue())
-      .withTotalNumberOfLoans((double) totalNumberOfLoans)
-      .withTotalNumberOfFeesFines((double) totalNumberOfFeesFines)
-      .withNumberOfProcessedLoans((double) numberOfProcessedLoans)
-      .withNumberOfProcessedFeesFines((double) numberOfProcessedFeesFines);
+      .withTotalNumberOfLoans(totalNumberOfLoans)
+      .withTotalNumberOfFeesFines(totalNumberOfFeesFines)
+      .withNumberOfProcessedLoans(numberOfProcessedLoans)
+      .withNumberOfProcessedFeesFines(numberOfProcessedFeesFines);
   }
 }
