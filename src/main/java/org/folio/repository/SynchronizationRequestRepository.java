@@ -1,7 +1,5 @@
 package org.folio.repository;
 
-import static io.vertx.core.Future.failedFuture;
-import static io.vertx.core.Future.succeededFuture;
 import static org.folio.rest.persist.PostgresClient.convertToPsqlStandard;
 
 import java.util.List;
@@ -12,9 +10,9 @@ import org.folio.rest.persist.Criteria.Criteria;
 import org.folio.rest.persist.Criteria.Criterion;
 import org.folio.rest.persist.PostgresClient;
 
-import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
+import io.vertx.core.json.JsonObject;
 import io.vertx.sqlclient.Row;
 import io.vertx.sqlclient.RowSet;
 
@@ -29,23 +27,6 @@ public class SynchronizationRequestRepository extends BaseRepository<Synchroniza
 
   public Future<String> save(SynchronizationJob entity) {
     return save(entity, entity.getId());
-  }
-
-  public Future<List<SynchronizationJob>> checkIfSynchronizationIsAllowed() {
-
-    Criterion criterion = new Criterion(new Criteria()
-      .addField("'status'")
-      .setOperation("=")
-      .setVal("in-progress")
-      .setJSONB(true));
-
-    return get(criterion)
-      .map(requestList -> {
-        if (!requestList.isEmpty()) {
-          throw new RuntimeException("");
-        }
-        return requestList;
-      });
   }
 
   public Future<List<SynchronizationJob>> getJobsByStatus(
@@ -64,17 +45,20 @@ public class SynchronizationRequestRepository extends BaseRepository<Synchroniza
     String tableName = String.format("%s.%s", convertToPsqlStandard(tenantId),
       SYNC_REQUESTS_TABLE);
 
-    String sql = String.format("SELECT ALL FROM %s ORDER BY max(" +
-      "jsonb #>> '{metadata,createdDate}') ASC", tableName, SYNC_REQUESTS_LIMIT);
+    String sql = String.format("SELECT jsonb FROM %s WHERE jsonb->>'status' = 'open' " +
+      "ORDER BY(jsonb #>> '{metadata,createdDate}') ASC LIMIT '%d'", tableName,
+      SYNC_REQUESTS_LIMIT);
 
     return select(sql)
       .map(requests -> {
         if (requests.size() == 0) {
-          throw new RuntimeException("");
+          throw new RuntimeException("There are no open requests");
         }
         return requests.iterator().next();
       })
-    .map(row -> mapSynchronizationJob(row));
+      .map(row -> row.getValue(0))
+      .map(JsonObject.class::cast)
+      .map(this::mapSynchronizationJob);
   }
 
   public Future<RowSet<Row>> select(String sql) {
@@ -83,18 +67,18 @@ public class SynchronizationRequestRepository extends BaseRepository<Synchroniza
     return promise.future();
   }
 
-  private SynchronizationJob mapSynchronizationJob(Row row) {
+  private SynchronizationJob mapSynchronizationJob(JsonObject json) {
     SynchronizationJob synchronizationJob = new SynchronizationJob();
     synchronizationJob
-      .withId(row.getString("id"))
-      .withScope(row.getString("scope"))
-      .withStatus(row.getString("status"))
-      .withTotalNumberOfLoans(row.getDouble("totalNumberOfLoans"))
-      .withTotalNumberOfFeesFines(row.getDouble("totalNumberOfFeesFines"))
-      .withNumberOfProcessedLoans(row.getDouble("numberOfProcessedLoans"))
-      .withNumberOfProcessedFeesFines(row.getDouble("numberOfProcessedFeesFines"));
+      .withId(json.getString("id"))
+      .withScope(json.getString("scope"))
+      .withStatus(json.getString("status"))
+      .withTotalNumberOfLoans(json.getInteger("totalNumberOfLoans"))
+      .withTotalNumberOfFeesFines(json.getInteger("totalNumberOfFeesFines"))
+      .withNumberOfProcessedLoans(json.getInteger("numberOfProcessedLoans"))
+      .withNumberOfProcessedFeesFines(json.getInteger("numberOfProcessedFeesFines"));
 
-    String userId = row.getString("userId");
+    String userId = json.getString("userId");
     if (userId != null && !userId.isBlank()) {
       synchronizationJob.withUserId(userId);
     }

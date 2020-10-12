@@ -229,7 +229,9 @@
           ],
           "pathPattern": "/automated-patron-blocks/synchronization/run",
           "modulePermissions": [
-            "patron-blocks.synchronization-run.post"
+            "patron-blocks.synchronization-run.post",
+            "circulation-storage.loans.collection.get",
+            "accounts.collection.get"
           ],
           "unit": "minute",
           "delay": "3"

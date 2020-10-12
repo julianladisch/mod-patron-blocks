@@ -11,13 +11,12 @@ import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
-import io.vertx.ext.web.client.WebClient;
 
 public class UsersClient extends OkapiClient {
   private static final Logger log = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
 
   public UsersClient(Vertx vertx, Map<String, String> okapiHeaders) {
-    super(WebClient.create(vertx), okapiHeaders);
+    super(vertx, okapiHeaders);
   }
 
   public Future<String> findPatronGroupIdForUser(String userId) {
