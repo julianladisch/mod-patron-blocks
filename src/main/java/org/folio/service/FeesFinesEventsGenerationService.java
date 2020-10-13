@@ -9,7 +9,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-import org.folio.repository.SynchronizationRequestRepository;
+import org.folio.repository.SynchronizationJobRepository;
 import org.folio.rest.handlers.EventHandler;
 import org.folio.rest.handlers.FeeFineBalanceChangedEventHandler;
 import org.folio.rest.jaxrs.model.Account;
@@ -25,7 +25,7 @@ public class FeesFinesEventsGenerationService extends EventsGenerationService {
   private final EventHandler<FeeFineBalanceChangedEvent> feeFineBalanceChangedEventHandler;
 
   public FeesFinesEventsGenerationService(Map<String, String> okapiHeaders, Vertx vertx,
-    SynchronizationRequestRepository syncRepository) {
+    SynchronizationJobRepository syncRepository) {
 
     super(okapiHeaders, vertx, syncRepository);
     this.feeFineBalanceChangedEventHandler = new FeeFineBalanceChangedEventHandler(
@@ -34,7 +34,7 @@ public class FeesFinesEventsGenerationService extends EventsGenerationService {
 
   @Override
   public Future<SynchronizationJob> generateEvents(SynchronizationJob syncJob, String path) {
-    return okapiClient.getManyByPage(path, 0, 0)
+    return okapiClient.getMany(path, 0, 0)
       .compose(response -> {
         int totalRecords = response.getInteger("totalRecords");
         int numberOfPages = calculateNumberOfPages(totalRecords);
@@ -42,9 +42,9 @@ public class FeesFinesEventsGenerationService extends EventsGenerationService {
         List<Future> generatedEventsForPages = new ArrayList<>();
         for (int i = 0; i < numberOfPages; i++) {
           int pageNumber = i;
-          Future<JsonObject> readPage = okapiClient.getManyByPage(path, PAGE_LIMIT, i * PAGE_LIMIT)
+          Future<JsonObject> readPage = okapiClient.getMany(path, PAGE_LIMIT, i * PAGE_LIMIT)
             .compose(jsonPage -> {
-              if (jsonPage == null || jsonPage.size() == 0) {
+              if (jsonPage == null || jsonPage.getJsonArray("accounts").size() == 0) {
                 String errorMessage = String.format(
                   "Error in receiving page number %d of accounts: %s", pageNumber, path);
                 log.error(errorMessage);
@@ -64,7 +64,7 @@ public class FeesFinesEventsGenerationService extends EventsGenerationService {
             });
           generatedEventsForPages.add(readPage);
         }
-        return updateJobWhenGenerationsCompleted(syncJob, generatedEventsForPages)
+        return CompositeFuture.all(generatedEventsForPages)
           .map(syncJob);
       });
   }

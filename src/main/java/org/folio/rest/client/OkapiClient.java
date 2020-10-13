@@ -89,7 +89,7 @@ public class OkapiClient {
     });
   }
 
-  public Future<JsonObject> getManyByPage(String path, int limit, int offset) {
+  public Future<JsonObject> getMany(String path, int limit, int offset) {
     Promise<HttpResponse<Buffer>> promise = Promise.promise();
     HttpRequest<Buffer> request = getAbs(path)
       .addQueryParam("limit", String.valueOf(limit))

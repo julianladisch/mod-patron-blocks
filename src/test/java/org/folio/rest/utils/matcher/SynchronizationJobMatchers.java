@@ -13,18 +13,18 @@ import org.hamcrest.Matcher;
 
 import io.vertx.core.json.JsonObject;
 
-public class SynchronizationRequestMatchers {
-  private SynchronizationRequestMatchers() { }
+public class SynchronizationJobMatchers {
+  private SynchronizationJobMatchers() { }
 
-  public static Matcher<JsonObject> newSynchronizationRequestFull(String id) {
-    return synchronizationRequest(id, "full", null, "open", 0, 0, 0, 0);
+  public static Matcher<JsonObject> newSynchronizationJobFull(String id) {
+    return synchronizationJob(id, "full", null, "open", 0, 0, 0, 0);
   }
 
-  public static Matcher<JsonObject> newSynchronizationRequestByUser(String id, String userId) {
-    return synchronizationRequest(id, "user", userId, "open", 0, 0, 0, 0);
+  public static Matcher<JsonObject> newSynchronizationJobByUser(String id, String userId) {
+    return synchronizationJob(id, "user", userId, "open", 0, 0, 0, 0);
   }
 
-  public static Matcher<JsonObject> synchronizationRequest(String id, String scope, String userId,
+  public static Matcher<JsonObject> synchronizationJob(String id, String scope, String userId,
     String status, int totalNumberOfLoans, int totalNumberOfFeesFines,
     int numberOfProcessedLoans, int numberOfProcessedFeesFines) {
 

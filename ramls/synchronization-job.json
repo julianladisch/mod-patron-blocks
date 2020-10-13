@@ -10,7 +10,11 @@
     },
     "scope": {
       "type": "string",
-      "description": "Scope of re-sync data."
+      "description": "Scope of re-sync data",
+      "enum": [
+        "user",
+        "full"
+      ]
     },
     "userId": {
       "type": "string",
@@ -52,12 +56,6 @@
   },
   "additionalProperties": false,
   "required": [
-    "id",
-    "scope",
-    "status",
-    "totalNumberOfLoans",
-    "totalNumberOfFeesFines",
-    "numberOfProcessedLoans",
-    "numberOfProcessedFeesFines"
+    "scope"
   ]
 }

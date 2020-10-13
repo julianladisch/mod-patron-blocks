@@ -9,7 +9,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-import org.folio.repository.SynchronizationRequestRepository;
+import org.folio.repository.SynchronizationJobRepository;
 import org.folio.rest.handlers.EventHandler;
 import org.folio.rest.handlers.ItemCheckedOutEventHandler;
 import org.folio.rest.handlers.ItemClaimedReturnedEventHandler;
@@ -37,7 +37,7 @@ public class LoanEventsGenerationService extends EventsGenerationService {
   private final EventHandler<LoanDueDateChangedEvent> dueDateChangedEventHandler;
 
   public LoanEventsGenerationService(Map<String, String> okapiHeaders, Vertx vertx,
-    SynchronizationRequestRepository syncRepository) {
+    SynchronizationJobRepository syncRepository) {
 
     super(okapiHeaders, vertx, syncRepository);
     this.checkedOutEventHandler = new ItemCheckedOutEventHandler(okapiHeaders, vertx);
@@ -48,7 +48,7 @@ public class LoanEventsGenerationService extends EventsGenerationService {
 
   @Override
   public Future<SynchronizationJob> generateEvents(SynchronizationJob syncJob, String path) {
-    return okapiClient.getManyByPage(path, 0, 0)
+    return okapiClient.getMany(path, 0, 0)
       .compose(response -> {
         int totalRecords = response.getInteger("totalRecords");
         int numberOfPages = calculateNumberOfPages(totalRecords);
@@ -56,9 +56,9 @@ public class LoanEventsGenerationService extends EventsGenerationService {
         List<Future> generatedEventsForPages = new ArrayList<>();
         for (int i = 0; i < numberOfPages; i++) {
           int pageNumber = i;
-          Future<JsonObject> readPage = okapiClient.getManyByPage(path, PAGE_LIMIT, i * PAGE_LIMIT)
+          Future<JsonObject> readPage = okapiClient.getMany(path, PAGE_LIMIT, i * PAGE_LIMIT)
             .compose(jsonPage -> {
-              if (jsonPage == null || jsonPage.size() == 0) {
+              if (jsonPage == null || jsonPage.getJsonArray("loans").size() == 0) {
                 String errorMessage = String.format(
                   "Error in receiving page number %d of loans: %s", pageNumber, path);
                 log.error(errorMessage);
@@ -78,7 +78,7 @@ public class LoanEventsGenerationService extends EventsGenerationService {
             });
           generatedEventsForPages.add(readPage);
         }
-        return updateJobWhenGenerationsCompleted(syncJob, generatedEventsForPages)
+        return CompositeFuture.all(generatedEventsForPages)
           .map(syncJob);
 
       });
@@ -96,7 +96,7 @@ public class LoanEventsGenerationService extends EventsGenerationService {
     return new Loan()
       .withId(representation.getString("id"))
       .withUserId(representation.getString("userId"))
-      .withDueDate(parseDateFromJson(representation, "dueDate"))
+      .withDueDate(getDateFromJson(representation, "dueDate"))
       .withItemStatus(representation.getString("itemStatus"))
       .withDueDateChangedByRecall(representation.getBoolean("dueDateChangedByRecall"))
       .withMetadata(mapMetadataFromJson(representation.getJsonObject("metadata")));

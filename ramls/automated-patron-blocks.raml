@@ -14,8 +14,6 @@ types:
   account: !include accountdata.json
   errors: !include raml-util/schemas/errors.schema
   automatedPatronBlocks: !include automated-patron-blocks.json
-  synchronizationRequest: !include synchronization-request.json
-  synchronizationResponse: !include synchronization-response.json
   synchronizationJob: !include synchronization-job.json
 
 traits:
@@ -42,26 +40,32 @@ traits:
             text/plain:
               example: "Internal server error, contact administrator"
   /synchronization:
-    /request:
+    /job:
       post:
+        is: [validate]
         body:
           application/json:
-            type: synchronizationRequest
+            type: synchronizationJob
         responses:
           201:
             description: "Synchronization was done successfully"
             body:
               application/json:
-                type: synchronizationResponse
-                example: !include examples/synchronization-response.sample
+                type: synchronizationJob
+                example: !include examples/synchronization-job.sample
+          422:
+            description: "Job request is not valid"
+            body:
+              text/plain:
+                example: "The job is not valid"
           500:
             description: "Internal server error"
             body:
               text/plain:
                 example: "Internal server error, please contact administrator"
-      /{syncRequestId}:
+      /{syncJobId}:
         get:
-          description: "Checks synchronization status"
+          description: "Checks synchronization status of job"
           responses:
             200:
               body:
@@ -69,7 +73,7 @@ traits:
                   schema: synchronizationJob
                   example: !include examples/synchronization-job.sample
             404:
-              description: "The request was not found"
+              description: "The job was not found"
               body:
                 text/plain:
                   example: "Bad request, e.g. invalid user UUID"
@@ -78,11 +82,11 @@ traits:
               body:
                 text/plain:
                   example: "Internal server error, contact administrator"
-    /run:
+    /start:
       post:
         responses:
           202:
-            description: "Synchronization request has been accepted for processing"
+            description: "Synchronization job has been accepted for processing"
           500:
             description: "Internal server error"
             body:

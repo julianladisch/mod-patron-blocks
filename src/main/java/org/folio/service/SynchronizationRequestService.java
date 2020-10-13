@@ -2,6 +2,7 @@ package org.folio.service;
 
 import static io.vertx.core.Future.failedFuture;
 import static io.vertx.core.Future.succeededFuture;
+import static org.folio.domain.SynchronizationStatus.DONE;
 import static org.folio.domain.SynchronizationStatus.FAILED;
 import static org.folio.domain.SynchronizationStatus.IN_PROGRESS;
 
@@ -12,10 +13,9 @@ import java.util.UUID;
 
 import org.folio.domain.SynchronizationStatus;
 import org.folio.exception.EntityNotFoundException;
-import org.folio.repository.SynchronizationRequestRepository;
+import org.folio.exception.UserIdNotFoundException;
+import org.folio.repository.SynchronizationJobRepository;
 import org.folio.rest.jaxrs.model.SynchronizationJob;
-import org.folio.rest.jaxrs.model.SynchronizationRequest;
-import org.folio.rest.jaxrs.model.SynchronizationResponse;
 import org.folio.rest.persist.PostgresClient;
 import org.folio.rest.tools.utils.TenantTool;
 
@@ -30,7 +30,7 @@ public class SynchronizationRequestService {
   private static final String FULL_SCOPE = "full";
   private static final String USER_SCOPE = "user";
 
-  private final SynchronizationRequestRepository syncRepository;
+  private final SynchronizationJobRepository syncRepository;
   private final LoanEventsGenerationService loanEventsGenerationService;
   private final FeesFinesEventsGenerationService feesFinesEventsGenerationService;
   private final EventService eventService;
@@ -39,7 +39,7 @@ public class SynchronizationRequestService {
   public SynchronizationRequestService(Map<String, String> okapiHeaders, Vertx vertx) {
     this.tenantId = TenantTool.tenantId(okapiHeaders);
     PostgresClient postgresClient = PostgresClient.getInstance(vertx, tenantId);
-    this.syncRepository = new SynchronizationRequestRepository(postgresClient);
+    this.syncRepository = new SynchronizationJobRepository(postgresClient);
     this.eventService = new EventService(postgresClient);
     this.loanEventsGenerationService = new LoanEventsGenerationService(
       okapiHeaders, vertx, syncRepository);
@@ -47,12 +47,17 @@ public class SynchronizationRequestService {
       okapiHeaders, vertx, syncRepository);
   }
 
-  public Future<SynchronizationResponse> createSyncRequest(SynchronizationRequest request) {
+  public Future<SynchronizationJob> createSynchronizationJob(SynchronizationJob request) {
+    if (SynchronizationJob.Scope.USER == request.getScope() && request.getUserId() == null) {
+      return failedFuture(new UserIdNotFoundException(
+        "UserId is required for synchronization job with scope: USER"));
+    }
+
     String syncRecordId = UUID.randomUUID().toString();
     SynchronizationJob entity = new SynchronizationJob()
       .withId(syncRecordId)
       .withStatus(SynchronizationStatus.OPEN.getValue())
-      .withScope(request.getScope().value())
+      .withScope(request.getScope())
       .withUserId(request.getUserId())
       .withTotalNumberOfLoans(0)
       .withTotalNumberOfFeesFines(0)
@@ -60,13 +65,13 @@ public class SynchronizationRequestService {
       .withNumberOfProcessedFeesFines(0);
 
     return syncRepository.save(entity)
-      .map(id -> new SynchronizationResponse()
+      .map(id -> new SynchronizationJob()
         .withId(id)
         .withScope(entity.getScope())
         .withStatus(entity.getStatus()));
   }
 
-  public Future<SynchronizationJob> retrieveSyncRequest(String syncRequestId) {
+  public Future<SynchronizationJob> getSynchronizationJob(String syncRequestId) {
     return syncRepository.get(syncRequestId)
       .compose(optionalSyncResponse -> {
         if (optionalSyncResponse.isPresent()) {
@@ -82,8 +87,10 @@ public class SynchronizationRequestService {
        .compose(this::doSynchronization);
   }
 
-  private Future<SynchronizationJob> doSynchronization(List<SynchronizationJob> reqList) {
-    if (!reqList.isEmpty()) {
+  private Future<SynchronizationJob> doSynchronization(
+    List<SynchronizationJob> inProgressSynchronizationJobs) {
+
+    if (!inProgressSynchronizationJobs.isEmpty()) {
       log.debug("Synchronization is in-progress now");
       return succeededFuture();
     }
@@ -93,26 +100,27 @@ public class SynchronizationRequestService {
   }
 
   private Future<SynchronizationJob> doSynchronization(SynchronizationJob synchronizationJob) {
-      return succeededFuture(loanEventsGenerationService.updateStatusOfJob(
+      return succeededFuture(updateStatusOfJob(
         synchronizationJob, IN_PROGRESS))
         .compose(syncJob -> cleanExistingEvents(syncJob, tenantId))
         .compose(this::createEventsByLoans)
         .compose(this::createEventsByFeesFines)
         .onFailure(throwable -> updateJobAsFailed(synchronizationJob,
-          throwable.getLocalizedMessage()));
+          throwable.getLocalizedMessage()))
+        .onSuccess(syncJob -> updateStatusOfJob(syncJob, DONE));
   }
 
   private Future<SynchronizationJob> createEventsByLoans(SynchronizationJob syncJob) {
-     String path = USER_SCOPE.equalsIgnoreCase(syncJob.getScope())
-       ? String.format("/loan-storage/loans?query=userId=%s and status.name=open", syncJob.getUserId())
+     String path = USER_SCOPE.equalsIgnoreCase(syncJob.getScope().value())
+       ? String.format("/loan-storage/loans?query=userId=%s and status.name=Open", syncJob.getUserId())
        : "/loan-storage/loans?query=status.name=open";
 
      return loanEventsGenerationService.generateEvents(syncJob, path);
   }
 
   private Future<SynchronizationJob> createEventsByFeesFines(SynchronizationJob syncJob) {
-    String path = USER_SCOPE.equalsIgnoreCase(syncJob.getScope())
-      ? String.format("/accounts?query=userId=%s and status.name=open", syncJob.getUserId())
+    String path = USER_SCOPE.equalsIgnoreCase(syncJob.getScope().value())
+      ? String.format("/accounts?query=userId=%s and status.name=Open", syncJob.getUserId())
       : "/accounts?query=status.name=open";
 
     return feesFinesEventsGenerationService.generateEvents(syncJob, path);
@@ -121,7 +129,7 @@ public class SynchronizationRequestService {
   private Future<SynchronizationJob> cleanExistingEvents(SynchronizationJob syncJob,
     String tenantId) {
 
-    String scope = syncJob.getScope();
+    String scope = syncJob.getScope().value();
     if (FULL_SCOPE.equalsIgnoreCase(scope)) {
       return eventService.removeAllEvents(tenantId)
         .map(syncJob);
@@ -135,5 +143,15 @@ public class SynchronizationRequestService {
     syncJob.setStatus(FAILED.getValue());
     log.error("Synchronization job failed " + errorMessage);
     syncRepository.update(syncJob, syncJob.getId());
+  }
+
+  public SynchronizationJob updateStatusOfJob(SynchronizationJob syncJob,
+    SynchronizationStatus syncStatus) {
+
+    syncJob.setStatus(syncStatus.getValue());
+    log.debug("Status of synchronization job has been updated: " + syncStatus.getValue());
+    syncRepository.update(syncJob, syncJob.getId());
+
+    return syncJob;
   }
 }

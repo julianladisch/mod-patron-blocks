@@ -114,9 +114,9 @@ public class EntityBuilder {
       .withMetadata(buildDefaultMetadata());
   }
 
-  public static SynchronizationJob buildSynchronizationRequest(String scope, String userId,
-    SynchronizationStatus status, int totalNumberOfLoans, int totalNumberOfFeesFines,
-    int numberOfProcessedLoans, int numberOfProcessedFeesFines) {
+  public static SynchronizationJob buildSynchronizationJob(SynchronizationJob.Scope scope,
+    String userId, SynchronizationStatus status, int totalNumberOfLoans,
+    int totalNumberOfFeesFines, int numberOfProcessedLoans, int numberOfProcessedFeesFines) {
 
     return new SynchronizationJob()
       .withId(randomId())

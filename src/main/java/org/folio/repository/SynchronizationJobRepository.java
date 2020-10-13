@@ -16,13 +16,13 @@ import io.vertx.core.json.JsonObject;
 import io.vertx.sqlclient.Row;
 import io.vertx.sqlclient.RowSet;
 
-public class SynchronizationRequestRepository extends BaseRepository<SynchronizationJob> {
+public class SynchronizationJobRepository extends BaseRepository<SynchronizationJob> {
 
-  private static final String SYNC_REQUESTS_TABLE = "sync_requests";
-  private static final int SYNC_REQUESTS_LIMIT = 1;
+  private static final String SYNCHRONIZATION_JOBS_TABLE = "synchronization_jobs";
+  private static final int SYNC_JOBS_LIMIT = 1;
 
-  public SynchronizationRequestRepository(PostgresClient pgClient) {
-    super(pgClient, SYNC_REQUESTS_TABLE, SynchronizationJob.class);
+  public SynchronizationJobRepository(PostgresClient pgClient) {
+    super(pgClient, SYNCHRONIZATION_JOBS_TABLE, SynchronizationJob.class);
   }
 
   public Future<String> save(SynchronizationJob entity) {
@@ -43,11 +43,11 @@ public class SynchronizationRequestRepository extends BaseRepository<Synchroniza
 
   public Future<SynchronizationJob> getTheOldestSyncRequest(String tenantId) {
     String tableName = String.format("%s.%s", convertToPsqlStandard(tenantId),
-      SYNC_REQUESTS_TABLE);
+      SYNCHRONIZATION_JOBS_TABLE);
 
     String sql = String.format("SELECT jsonb FROM %s WHERE jsonb->>'status' = 'open' " +
       "ORDER BY(jsonb #>> '{metadata,createdDate}') ASC LIMIT '%d'", tableName,
-      SYNC_REQUESTS_LIMIT);
+      SYNC_JOBS_LIMIT);
 
     return select(sql)
       .map(requests -> {
@@ -58,7 +58,7 @@ public class SynchronizationRequestRepository extends BaseRepository<Synchroniza
       })
       .map(row -> row.getValue(0))
       .map(JsonObject.class::cast)
-      .map(this::mapSynchronizationJob);
+      .map(jsonObject -> jsonObject.mapTo(SynchronizationJob.class));
   }
 
   public Future<RowSet<Row>> select(String sql) {
@@ -67,22 +67,22 @@ public class SynchronizationRequestRepository extends BaseRepository<Synchroniza
     return promise.future();
   }
 
-  private SynchronizationJob mapSynchronizationJob(JsonObject json) {
-    SynchronizationJob synchronizationJob = new SynchronizationJob();
-    synchronizationJob
-      .withId(json.getString("id"))
-      .withScope(json.getString("scope"))
-      .withStatus(json.getString("status"))
-      .withTotalNumberOfLoans(json.getInteger("totalNumberOfLoans"))
-      .withTotalNumberOfFeesFines(json.getInteger("totalNumberOfFeesFines"))
-      .withNumberOfProcessedLoans(json.getInteger("numberOfProcessedLoans"))
-      .withNumberOfProcessedFeesFines(json.getInteger("numberOfProcessedFeesFines"));
+//  private SynchronizationJob mapSynchronizationJob(JsonObject json) {
+//    SynchronizationJob synchronizationJob = new SynchronizationJob();
+//    synchronizationJob
+//      .withId(json.getString("id"))
+//      .withScope(SynchronizationJob.Scope.fromValue(json.getString("scope")))
+//      .withStatus(json.getString("status"))
+//      .withTotalNumberOfLoans(json.getInteger("totalNumberOfLoans"))
+//      .withTotalNumberOfFeesFines(json.getInteger("totalNumberOfFeesFines"))
+//      .withNumberOfProcessedLoans(json.getInteger("numberOfProcessedLoans"))
+//      .withNumberOfProcessedFeesFines(json.getInteger("numberOfProcessedFeesFines"));
+//
+//    String userId = json.getString("userId");
+//    if (userId != null && !userId.isBlank()) {
+//      synchronizationJob.withUserId(userId);
+//    }
 
-    String userId = json.getString("userId");
-    if (userId != null && !userId.isBlank()) {
-      synchronizationJob.withUserId(userId);
-    }
-
-    return synchronizationJob;
-  }
+//    return synchronizationJob;
+//  }
 }

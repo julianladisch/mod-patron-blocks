@@ -106,7 +106,7 @@
       ]
     },
     {
-      "tableName": "sync_requests",
+      "tableName": "synchronization_jobs",
       "withMetadata": true
     }
   ]

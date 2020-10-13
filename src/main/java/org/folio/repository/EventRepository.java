@@ -31,22 +31,6 @@ public class EventRepository<T> extends BaseRepository<T> {
     ).setLimit(new Limit(NUMBER_OF_EVENTS_LIMIT)));
   }
 
-  public Future<Void> removeAll(String tenantId) {
-    Promise<Void> promise = Promise.promise();
-
-    String deleteAllQuery = String.format("DELETE FROM %s_%s.%s", tenantId,
-      PomReader.INSTANCE.getModuleName(), tableName);
-    pgClient.execute(deleteAllQuery, reply -> {
-      if (reply.failed()) {
-        promise.future().failed();
-      } else {
-        promise.complete();
-      }
-    });
-
-    return promise.future();
-  }
-
   public Future<Void> removeByUserId(String tenantId, String userId) {
     Promise<Void> promise = Promise.promise();
 

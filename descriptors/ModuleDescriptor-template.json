@@ -128,18 +128,18 @@
           "methods":[
             "POST"
           ],
-          "pathPattern":"/automated-patron-blocks/synchronization/request",
+          "pathPattern":"/automated-patron-blocks/synchronization/job",
           "permissionsRequired": [
-            "patron-blocks.synchronization-request.post"
+            "patron-blocks.synchronization.job.post"
           ]
         },
         {
           "methods":[
             "GET"
           ],
-          "pathPattern":"/automated-patron-blocks/synchronization/request/{syncRequestId}",
+          "pathPattern":"/automated-patron-blocks/synchronization/job/{syncJobId}",
           "permissionsRequired": [
-            "patron-blocks.synchronization-request.get"
+            "patron-blocks.synchronization.job.get"
           ]
         }
       ]
@@ -227,14 +227,16 @@
           "methods": [
             "POST"
           ],
-          "pathPattern": "/automated-patron-blocks/synchronization/run",
+          "pathPattern": "/automated-patron-blocks/synchronization/start",
           "modulePermissions": [
             "patron-blocks.synchronization-run.post",
             "circulation-storage.loans.collection.get",
-            "accounts.collection.get"
+            "circulation-storage.loans.item.get",
+            "accounts.collection.get",
+            "accounts.item.get"
           ],
           "unit": "minute",
-          "delay": "3"
+          "delay": "1"
         }
       ]
     }
@@ -296,14 +298,14 @@
       "description": "Get UserSummary object by user ID"
     },
     {
-      "permissionName": "patron-blocks.synchronization-request.post",
-      "displayName": "Synchronization request - post Synchronization request",
-      "description": "Post Synchronization request"
+      "permissionName": "patron-blocks.synchronization.job.post",
+      "displayName": "Synchronization job - post Synchronization job",
+      "description": "Post Synchronization job"
     },
     {
-      "permissionName": "patron-blocks.synchronization-request.get",
-      "displayName": "Synchronization request - get Synchronization request by ID",
-      "description": "Get Synchronization request"
+      "permissionName": "patron-blocks.synchronization.job.get",
+      "displayName": "Synchronization job - get Synchronization job by ID",
+      "description": "Get Synchronization job"
     }
   ],
   "launchDescriptor": {

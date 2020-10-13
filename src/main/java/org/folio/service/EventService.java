@@ -100,7 +100,6 @@ public class EventService {
   }
 
   public Future<Void> removeAllEvents(String tenantId) {
-
     return CompositeFuture.all(itemCheckedOutEventRepository.removeAll(tenantId),
         itemCheckedInEventRepository.removeAll(tenantId),
         itemClaimedReturnedEventRepository.removeAll(tenantId),
@@ -111,7 +110,6 @@ public class EventService {
   }
 
   public Future<Void> removeAllEventsForUser(String tenantId, String userId) {
-
     return CompositeFuture.all(itemCheckedOutEventRepository.removeByUserId(tenantId, userId),
       itemCheckedInEventRepository.removeByUserId(tenantId, userId),
       itemClaimedReturnedEventRepository.removeByUserId(tenantId, userId),

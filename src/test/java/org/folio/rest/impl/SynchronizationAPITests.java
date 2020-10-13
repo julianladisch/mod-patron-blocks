@@ -6,10 +6,12 @@ import static com.github.tomakehurst.wiremock.client.WireMock.urlPathMatching;
 import static java.lang.String.format;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.apache.commons.lang3.StringUtils.EMPTY;
-import static org.folio.rest.utils.EntityBuilder.buildSynchronizationRequest;
-import static org.folio.rest.utils.matcher.SynchronizationRequestMatchers.newSynchronizationRequestByUser;
-import static org.folio.rest.utils.matcher.SynchronizationRequestMatchers.newSynchronizationRequestFull;
-import static org.folio.rest.utils.matcher.SynchronizationRequestMatchers.synchronizationJobMatcher;
+import static org.folio.rest.jaxrs.model.SynchronizationJob.Scope.FULL;
+import static org.folio.rest.jaxrs.model.SynchronizationJob.Scope.USER;
+import static org.folio.rest.utils.EntityBuilder.buildSynchronizationJob;
+import static org.folio.rest.utils.matcher.SynchronizationJobMatchers.newSynchronizationJobByUser;
+import static org.folio.rest.utils.matcher.SynchronizationJobMatchers.newSynchronizationJobFull;
+import static org.folio.rest.utils.matcher.SynchronizationJobMatchers.synchronizationJobMatcher;
 import static org.hamcrest.Matchers.is;
 import static org.joda.time.LocalDateTime.now;
 import static org.junit.Assert.assertThat;
@@ -19,7 +21,7 @@ import java.util.Date;
 import org.awaitility.Awaitility;
 import org.folio.domain.SynchronizationStatus;
 import org.folio.repository.EventRepository;
-import org.folio.repository.SynchronizationRequestRepository;
+import org.folio.repository.SynchronizationJobRepository;
 import org.folio.rest.TestBase;
 import org.folio.rest.jaxrs.model.FeeFineBalanceChangedEvent;
 import org.folio.rest.jaxrs.model.ItemCheckedOutEvent;
@@ -41,10 +43,8 @@ import io.vertx.ext.unit.junit.VertxUnitRunner;
 
 @RunWith(VertxUnitRunner.class)
 public class SynchronizationAPITests extends TestBase {
-  private static final String SCOPE_FULL = "full";
-  private static final String SCOPE_USER = "user";
   private static final String USER_ID = randomId();
-  private static final String SYNC_REQUESTS = "sync_requests";
+  private static final String SYNCHRONIZATION_JOBS_TABLE_NAME = "synchronization_jobs";
   private static final String ITEM_CHECKED_OUT_EVENT_TABLE_NAME = "item_checked_out_event";
   private static final String ITEM_DECLARED_LOST_EVENT_TABLE_NAME = "item_declared_lost_event";
   private static final String ITEM_CLAIMED_RETURNED_EVENT_TABLE_NAME = "item_claimed_returned_event";
@@ -65,8 +65,8 @@ public class SynchronizationAPITests extends TestBase {
   private EventRepository<FeeFineBalanceChangedEvent> feeFineBalanceChangedEventRepository = new EventRepository<>(
     postgresClient, FEE_FINE_BALANCE_CHANGED_EVENT_TABLE_NAME, FeeFineBalanceChangedEvent.class);
 
-  private final SynchronizationRequestRepository synchronizationRequestRepository =
-    new SynchronizationRequestRepository(postgresClient);
+  private final SynchronizationJobRepository synchronizationJobRepository =
+    new SynchronizationJobRepository(postgresClient);
 
   @Before
   public void beforeEach() {
@@ -76,34 +76,34 @@ public class SynchronizationAPITests extends TestBase {
     deleteAllFromTable(ITEM_CLAIMED_RETURNED_EVENT_TABLE_NAME);
     deleteAllFromTable(LOAN_DUE_DATE_CHANGED_EVENT_TABLE_NAME);
     deleteAllFromTable(FEE_FINE_BALANCE_CHANGED_EVENT_TABLE_NAME);
-    deleteAllFromTable(SYNC_REQUESTS);
+    deleteAllFromTable(SYNCHRONIZATION_JOBS_TABLE_NAME);
   }
 
   @Test
-  public void shouldRespondWithSynchronizationRequestFull() {
-    String synchronizationRequestId = createOpenSynchronizationRequestFull();
+  public void shouldRespondWithSynchronizationJobFull() {
+    String synchronizationJobId = createOpenSynchronizationJobFull();
 
-    sendGetSynchronizationRequest(synchronizationRequestId)
+    sendGetSynchronizationJob(synchronizationJobId)
       .then()
       .statusCode(200)
       .contentType(ContentType.JSON)
-      .body(is(newSynchronizationRequestFull(synchronizationRequestId)));
+      .body(is(newSynchronizationJobFull(synchronizationJobId)));
   }
 
   @Test
-  public void shouldRespondWithSynchronizationRequestByUser() {
-    String synchronizationRequestId = createOpenSynchronizationRequestByUser();
+  public void shouldRespondWithSynchronizationJobByUser() {
+    String synchronizationJobId = createOpenSynchronizationJobByUser();
 
-    sendGetSynchronizationRequest(synchronizationRequestId)
+    sendGetSynchronizationJob(synchronizationJobId)
       .then()
       .statusCode(200)
       .contentType(ContentType.JSON)
-      .body(is(newSynchronizationRequestByUser(synchronizationRequestId, USER_ID)));
+      .body(is(newSynchronizationJobByUser(synchronizationJobId, USER_ID)));
   }
 
   @Test
-  public void shouldRespond404WithNonExistingSynchronizationRequestId() {
-    sendGetSynchronizationRequest(randomId())
+  public void shouldRespond404WithNonExistingSynchronizationJobId() {
+    sendGetSynchronizationJob(randomId())
       .then()
       .statusCode(404);
   }
@@ -112,7 +112,7 @@ public class SynchronizationAPITests extends TestBase {
   public void checkOutEventShouldBeCreatedAfterSynchronization() {
     stubLoans(now().plusHours(1).toDate(), false, "Checked out");
     stubAccountsWithEmptyResponse();
-    String syncRequestId = createOpenSynchronizationRequestByUser();
+    String syncJobId = createOpenSynchronizationJobByUser();
 
     runSynchronization();
 
@@ -120,14 +120,14 @@ public class SynchronizationAPITests extends TestBase {
       .atMost(5, SECONDS)
       .until(() -> waitFor(checkOutEventRepository.getByUserId(USER_ID)).size(), is(1));
 
-    checkSyncJobUpdatedByLoanEvent(syncRequestId);
+    checkSyncJobUpdatedByLoanEvent(syncJobId);
   }
 
   @Test
   public void claimedReturnedEventShouldBeCreatedAfterSynchronization() {
     stubLoans(now().plusHours(1).toDate(), false, "Claimed returned");
     stubAccountsWithEmptyResponse();
-    String syncRequestId = createOpenSynchronizationRequestByUser();
+    String syncJobId = createOpenSynchronizationJobByUser();
 
     runSynchronization();
 
@@ -135,14 +135,14 @@ public class SynchronizationAPITests extends TestBase {
       .atMost(5, SECONDS)
       .until(() -> waitFor(itemClaimedReturnedEventRepository.getByUserId(USER_ID)).size(), is(1));
 
-    checkSyncJobUpdatedByLoanEvent(syncRequestId);
+    checkSyncJobUpdatedByLoanEvent(syncJobId);
   }
 
   @Test
   public void declaredLostEventShouldBeCreatedAfterSynchronization() {
     stubLoans(now().plusHours(1).toDate(), false, "Declared lost");
     stubAccountsWithEmptyResponse();
-    String syncRequestId = createOpenSynchronizationRequestByUser();
+    String syncJobId = createOpenSynchronizationJobByUser();
 
     runSynchronization();
 
@@ -150,14 +150,14 @@ public class SynchronizationAPITests extends TestBase {
       .atMost(5, SECONDS)
       .until(() -> waitFor(itemDeclaredLostEventRepository.getByUserId(USER_ID)).size(), is(1));
 
-    checkSyncJobUpdatedByLoanEvent(syncRequestId);
+    checkSyncJobUpdatedByLoanEvent(syncJobId);
   }
 
   @Test
   public void dueDateChangedEventShouldBeCreatedAfterSynchronization() {
     stubLoans(now().plusHours(1).toDate(), true, "Checked out");
     stubAccountsWithEmptyResponse();
-    String syncRequestId = createOpenSynchronizationRequestByUser();
+    String syncJobId = createOpenSynchronizationJobByUser();
     EventRepository<LoanDueDateChangedEvent> loanDueDateChangedEventRepository = new EventRepository<>(
       postgresClient, LOAN_DUE_DATE_CHANGED_EVENT_TABLE_NAME, LoanDueDateChangedEvent.class);
 
@@ -167,14 +167,14 @@ public class SynchronizationAPITests extends TestBase {
       .atMost(5, SECONDS)
       .until(() -> waitFor(loanDueDateChangedEventRepository.getByUserId(USER_ID)).size(), is(1));
 
-    checkSyncJobUpdatedByLoanEvent(syncRequestId);
+    checkSyncJobUpdatedByLoanEvent(syncJobId);
   }
 
   @Test
   public void feeFineBalanceEventShouldBeCreatedAfterSynchronization() {
     stubLoansWithEmptyResponse();
     stubAccounts();
-    String syncRequestId = createOpenSynchronizationRequestFull();
+    String syncJobId = createOpenSynchronizationJobFull();
 
     runSynchronization();
 
@@ -185,7 +185,7 @@ public class SynchronizationAPITests extends TestBase {
 
     Awaitility.await()
       .atMost(30, SECONDS)
-      .until(() -> waitFor(synchronizationRequestRepository.get(syncRequestId))
+      .until(() -> waitFor(synchronizationJobRepository.get(syncJobId))
         .orElse(null), is(synchronizationJobMatcher(DONE_STATUS, 0, 1, 0, 1)));
   }
 
@@ -207,9 +207,9 @@ public class SynchronizationAPITests extends TestBase {
   public void shouldNotDoAnythingIfSynchronizationIsInProgress() {
     stubLoans(now().plusHours(1).toDate(), true, "Checked out");
     stubAccountsWithEmptyResponse();
-    SynchronizationJob synchronizationRequest = buildSynchronizationRequest(SCOPE_FULL, null,
+    SynchronizationJob synchronizationJob = buildSynchronizationJob(FULL, null,
       SynchronizationStatus.IN_PROGRESS, 0, 0, 0, 0);
-    waitFor(synchronizationRequestRepository.save(synchronizationRequest));
+    waitFor(synchronizationJobRepository.save(synchronizationJob));
 
     runSynchronization();
     assertThat(waitFor(checkOutEventRepository.getByUserId(USER_ID)).size(), is(0));
@@ -218,57 +218,75 @@ public class SynchronizationAPITests extends TestBase {
   @Test
   public void syncJobShouldFailIfLoanStorageIsNotResponding() {
     stubAccountsWithEmptyResponse();
-    String syncRequestId = createOpenSynchronizationRequestFull();
+    String syncJobId = createOpenSynchronizationJobFull();
 
     runSynchronization();
 
-    checkThatStatusIsFailed(syncRequestId);
+    checkThatStatusIsFailed(syncJobId);
   }
 
   @Test
   public void syncJobShouldFailIfFeesFinesIsNotResponding() {
     stubLoansWithEmptyResponse();
-    String syncRequestId = createOpenSynchronizationRequestFull();
+    String syncJobId = createOpenSynchronizationJobFull();
 
     runSynchronization();
 
-    checkThatStatusIsFailed(syncRequestId);
+    checkThatStatusIsFailed(syncJobId);
   }
 
-  protected void checkThatStatusIsFailed(String syncRequestId) {
+  @Test
+  public void shouldReturn422IfSyncJobIsNotValid() {
+    createNotValidSynchronizationJobByUser()
+      .then()
+      .statusCode(422);
+  }
+
+  protected void checkThatStatusIsFailed(String syncJobId) {
     Awaitility.await()
       .atMost(30, SECONDS)
-      .until(() -> waitFor(synchronizationRequestRepository.get(syncRequestId))
+      .until(() -> waitFor(synchronizationJobRepository.get(syncJobId))
         .orElse(null), is(synchronizationJobMatcher(FAILED_STATUS, 0, 0, 0, 0)));
   }
 
   protected void runSynchronization() {
-    okapiClient.post("/automated-patron-blocks/synchronization/run", EMPTY)
+    okapiClient.post("/automated-patron-blocks/synchronization/start", EMPTY)
       .then()
       .statusCode(202);
   }
 
-  protected void checkSyncJobUpdatedByLoanEvent(String syncRequestId) {
+  protected void checkSyncJobUpdatedByLoanEvent(String syncJobId) {
     Awaitility.await()
       .atMost(30, SECONDS)
-      .until(() -> waitFor(synchronizationRequestRepository.get(syncRequestId))
+      .until(() -> waitFor(synchronizationJobRepository.get(syncJobId))
         .orElse(null), is(synchronizationJobMatcher(DONE_STATUS, 1, 0, 1, 0)));
   }
 
-  private String createOpenSynchronizationRequestFull() {
-    SynchronizationJob synchronizationRequest = buildSynchronizationRequest(SCOPE_FULL, null,
+  private String createOpenSynchronizationJobFull() {
+    SynchronizationJob synchronizationJob = buildSynchronizationJob(FULL, null,
       SynchronizationStatus.OPEN, 0, 0, 0, 0);
-    return waitFor(synchronizationRequestRepository.save(synchronizationRequest));
+    return waitFor(synchronizationJobRepository.save(synchronizationJob));
   }
 
-  private String createOpenSynchronizationRequestByUser() {
-    SynchronizationJob synchronizationRequest = buildSynchronizationRequest(SCOPE_USER, USER_ID,
+  private String createOpenSynchronizationJobByUser() {
+    SynchronizationJob synchronizationJob = buildSynchronizationJob(USER, USER_ID,
       SynchronizationStatus.OPEN, 0, 0, 0, 0);
-    return waitFor(synchronizationRequestRepository.save(synchronizationRequest));
+    return waitFor(synchronizationJobRepository.save(synchronizationJob));
   }
 
-  private Response sendGetSynchronizationRequest(String id) {
-    return okapiClient.get(format("automated-patron-blocks/synchronization/request/%s", id));
+  private Response createNotValidSynchronizationJobByUser() {
+    SynchronizationJob synchronizationJob = buildSynchronizationJob(USER, null,
+      SynchronizationStatus.OPEN, 0, 0, 0, 0);
+    return postSynchronizationJob(synchronizationJob);
+  }
+
+  private Response sendGetSynchronizationJob(String id) {
+    return okapiClient.get(format("automated-patron-blocks/synchronization/job/%s", id));
+  }
+
+  private Response postSynchronizationJob(SynchronizationJob body) {
+    return okapiClient.post("automated-patron-blocks/synchronization/job",
+      JsonObject.mapFrom(body).encodePrettily());
   }
 
   private static void stubLoans(Date dueDate, boolean recall, String itemStatus) {
@@ -303,7 +321,8 @@ public class SynchronizationAPITests extends TestBase {
         .withBody(makeEmptyResponseBody("accounts"))));
   }
 
-  private static String makeLoanResponseBody(Date dueDate, boolean recall, String itemId, String itemStatus) {
+  private static String makeLoanResponseBody(Date dueDate, boolean recall,
+    String itemId, String itemStatus) {
 
       JsonObject loan = new JsonObject()
         .put("id", randomId())
