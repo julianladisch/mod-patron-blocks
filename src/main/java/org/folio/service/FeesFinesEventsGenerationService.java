@@ -54,7 +54,7 @@ public class FeesFinesEventsGenerationService extends EventsGenerationService {
                 .onComplete(result -> {
                   if (result.succeeded()) {
                     updateSyncJobWithProcessedAccounts(syncJob,
-                      syncJob.getNumberOfProcessedLoans() + jsonPage.getJsonArray("accounts").size(),
+                      syncJob.getNumberOfProcessedFeesFines() + jsonPage.getJsonArray("accounts").size(),
                       totalRecords);
                   } else {
                     updateSyncJobWithError(syncJob, result.cause().getLocalizedMessage());

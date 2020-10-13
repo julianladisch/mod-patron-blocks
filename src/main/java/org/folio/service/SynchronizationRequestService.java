@@ -78,7 +78,6 @@ public class SynchronizationRequestService {
   }
 
   public Future<SynchronizationJob> runSynchronization() {
-    System.out.println("SynchronizationRequestService: 80 " + Thread.currentThread().getName());
      return syncRepository.getJobsByStatus(IN_PROGRESS)
        .compose(this::doSynchronization);
   }

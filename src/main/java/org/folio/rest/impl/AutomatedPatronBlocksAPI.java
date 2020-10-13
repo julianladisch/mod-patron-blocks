@@ -66,26 +66,19 @@ public class AutomatedPatronBlocksAPI implements AutomatedPatronBlocks {
     Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler,
     Context vertxContext) {
 
-    System.out.println("AutomatedPatronBlocksAPI: 69 " + Thread.currentThread().getName());
-
     new SynchronizationRequestService(okapiHeaders, vertxContext.owner())
       .retrieveSyncRequest(syncRequestId)
-      .onSuccess(response -> {
-          System.out.println("AutomatedPatronBlocksAPI: 74 " + Thread.currentThread().getName());
+      .onSuccess(response ->
           asyncResultHandler.handle(succeededFuture(
             GetAutomatedPatronBlocksSynchronizationRequestBySyncRequestIdResponse
-              .respond200WithApplicationJson(response)));
-      })
-
+              .respond200WithApplicationJson(response))))
       .onFailure(throwable -> {
-        System.out.println("AutomatedPatronBlocksAPI: 81 " + Thread.currentThread().getName());
         String errorMessage = throwable.getLocalizedMessage();
         if (throwable instanceof EntityNotFoundException) {
           asyncResultHandler.handle(succeededFuture(
             GetAutomatedPatronBlocksSynchronizationRequestBySyncRequestIdResponse
               .respond404WithTextPlain(errorMessage)));
         } else {
-          System.out.println("AutomatedPatronBlocksAPI: 88 " + Thread.currentThread().getName());
           GetAutomatedPatronBlocksSynchronizationRequestBySyncRequestIdResponse
             .respond500WithTextPlain(errorMessage);
         }
@@ -102,10 +95,7 @@ public class AutomatedPatronBlocksAPI implements AutomatedPatronBlocks {
     vertxContext.owner().executeBlocking(promise ->
       new SynchronizationRequestService(okapiHeaders, vertxContext.owner())
         .runSynchronization()
-        .onComplete(v -> {
-          System.out.println("AutomatedPatronBlocksAPI: 105 " + Thread.currentThread().getName());
-          promise.complete();
-        }),
+        .onComplete(v -> promise.complete()),
       response -> {
         if (response.failed()) {
           log.error("Synchronization error processing");
