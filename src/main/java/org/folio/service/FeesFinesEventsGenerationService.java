@@ -60,7 +60,7 @@ public class FeesFinesEventsGenerationService extends EventsGenerationService {
     generatedEventsForPages.add(readPage);
   }
 
-  private Future<Void> generateEventsByAccounts(List<Account> records) {
+  private Future<String> generateEventsByAccounts(List<Account> records) {
 //    Future<Void> aggregateFuture = succeededFuture();
 //
 //    for (Account account : records) {
@@ -76,7 +76,7 @@ public class FeesFinesEventsGenerationService extends EventsGenerationService {
       .reduce(Future.succeededFuture(), (a, b) -> a.compose(r -> b));
   }
 
-  private Future<Void> generateFeeFineBalanceChangedEvent(Account account) {
+  private Future<String> generateFeeFineBalanceChangedEvent(Account account) {
     log.info("Start generateFeeFineBalanceChangedEvent for account " + account.getId());
     return feeFineBalanceChangedEventHandler.handle(new FeeFineBalanceChangedEvent()
       .withBalance(BigDecimal.valueOf(account.getRemaining()))
@@ -86,8 +86,7 @@ public class FeesFinesEventsGenerationService extends EventsGenerationService {
       .withMetadata(account.getMetadata()))
       .onComplete(ar -> {
         log.info("Finished generateFeeFineBalanceChangedEvent for account " + account.getId());
-      })
-      .mapEmpty();
+      });
   }
 
   private List<Account> mapJsonToAccounts(JsonObject loansJson) {

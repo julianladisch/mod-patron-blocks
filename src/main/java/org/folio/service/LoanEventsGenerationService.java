@@ -109,11 +109,15 @@ public class LoanEventsGenerationService extends EventsGenerationService {
   }
 
   private Future<Void> generateEvent(Loan loan) {
+    log.info("Start generateEvent for loan " + loan.getId());
     return checkedOutEventHandler.handle(new ItemCheckedOutEvent()
       .withLoanId(loan.getId())
       .withUserId(loan.getUserId())
       .withDueDate(loan.getDueDate())
       .withMetadata(loan.getMetadata()))
+      .onComplete(ar -> {
+        log.info("Finished generateEvent for loan " + loan.getId());
+      })
       .compose(v -> generateClaimedReturnedEvent(loan))
       .compose(v -> generateDeclaredLostEvent(loan))
       .compose(v -> generateDueDateChangedEvent(loan));
