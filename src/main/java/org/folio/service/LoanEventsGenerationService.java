@@ -93,15 +93,19 @@ public class LoanEventsGenerationService extends EventsGenerationService {
   }
 
   private Future<Void> generateEventsByLoans(List<Loan> loans) {
-    Future<Void> aggregateFuture = succeededFuture();
+//    Future<Void> aggregateFuture = succeededFuture();
+//
+//    for (Loan loan : loans) {
+//      Future<Void> generateEvents = generateEvent(loan);
+//      aggregateFuture.compose(r -> generateEvents);
+//      aggregateFuture = generateEvents;
+//    }
+//
+//    return aggregateFuture;
 
-    for (Loan loan : loans) {
-      Future<Void> generateEvents = generateEvent(loan);
-      aggregateFuture.compose(r -> generateEvents);
-      aggregateFuture = generateEvents;
-    }
-
-    return aggregateFuture;
+    return loans.stream()
+      .map(this::generateEvent)
+      .reduce(Future.succeededFuture(), (a, b) -> a.compose(r -> b));
   }
 
   private Future<Void> generateEvent(Loan loan) {

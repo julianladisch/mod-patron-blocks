@@ -61,15 +61,19 @@ public class FeesFinesEventsGenerationService extends EventsGenerationService {
   }
 
   private Future<Void> generateEventsByAccounts(List<Account> records) {
-    Future<Void> aggregateFuture = succeededFuture();
+//    Future<Void> aggregateFuture = succeededFuture();
+//
+//    for (Account account : records) {
+//      Future<Void> generateEvents = generateFeeFineBalanceChangedEvent(account);
+//      aggregateFuture.compose(r -> generateEvents);
+//      aggregateFuture = generateEvents;
+//    }
+//
+//    return aggregateFuture;
 
-    for (Account account : records) {
-      Future<Void> generateEvents = generateFeeFineBalanceChangedEvent(account);
-      aggregateFuture.compose(r -> generateEvents);
-      aggregateFuture = generateEvents;
-    }
-
-    return aggregateFuture;
+    return records.stream()
+      .map(this::generateFeeFineBalanceChangedEvent)
+      .reduce(Future.succeededFuture(), (a, b) -> a.compose(r -> b));
   }
 
   private Future<Void> generateFeeFineBalanceChangedEvent(Account account) {
