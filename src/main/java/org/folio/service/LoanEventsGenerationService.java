@@ -21,7 +21,6 @@ import org.folio.rest.jaxrs.model.Loan;
 import org.folio.rest.jaxrs.model.LoanDueDateChangedEvent;
 import org.folio.rest.jaxrs.model.SynchronizationJob;
 
-import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
@@ -94,10 +93,15 @@ public class LoanEventsGenerationService extends EventsGenerationService {
   }
 
   private Future<Void> generateEventsByLoans(List<Loan> loans) {
-    return CompositeFuture.all(loans.stream()
-      .map(this::generateEvent)
-      .collect(Collectors.toList()))
-      .mapEmpty();
+    Future<Void> aggregateFuture = succeededFuture();
+
+    for (Loan loan : loans) {
+      Future<Void> generateEvents = generateEvent(loan);
+      aggregateFuture.compose(r -> generateEvents);
+      aggregateFuture = generateEvents;
+    }
+
+    return aggregateFuture;
   }
 
   private Future<Void> generateEvent(Loan loan) {
@@ -149,6 +153,13 @@ public class LoanEventsGenerationService extends EventsGenerationService {
     SynchronizationJob updatedSyncJob = syncJob
       .withNumberOfProcessedLoans(processed)
       .withTotalNumberOfLoans(total);
-    syncRepository.update(updatedSyncJob, syncJob.getId());
+    syncRepository.update(updatedSyncJob, syncJob.getId())
+      .onComplete(r -> {
+        if (r.failed()) {
+          log.error("updateSyncJobWithProcessedAccounts failed");
+        } else {
+          log.info("updateSyncJobWithProcessedAccounts success");
+        }
+      });
   }
 }

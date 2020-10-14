@@ -1,6 +1,7 @@
 package org.folio.service;
 
 import static io.vertx.core.Future.failedFuture;
+import static io.vertx.core.Future.succeededFuture;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -14,7 +15,6 @@ import org.folio.rest.jaxrs.model.Account;
 import org.folio.rest.jaxrs.model.FeeFineBalanceChangedEvent;
 import org.folio.rest.jaxrs.model.SynchronizationJob;
 
-import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
@@ -61,10 +61,15 @@ public class FeesFinesEventsGenerationService extends EventsGenerationService {
   }
 
   private Future<Void> generateEventsByAccounts(List<Account> records) {
-    return CompositeFuture.all(records.stream()
-        .map(this::generateFeeFineBalanceChangedEvent)
-        .collect(Collectors.toList()))
-      .mapEmpty();
+    Future<Void> aggregateFuture = succeededFuture();
+
+    for (Account account : records) {
+      Future<Void> generateEvents = generateFeeFineBalanceChangedEvent(account);
+      aggregateFuture.compose(r -> generateEvents);
+      aggregateFuture = generateEvents;
+    }
+
+    return aggregateFuture;
   }
 
   private Future<Void> generateFeeFineBalanceChangedEvent(Account account) {
@@ -111,4 +116,3 @@ public class FeesFinesEventsGenerationService extends EventsGenerationService {
       }
     });
   }
-}
