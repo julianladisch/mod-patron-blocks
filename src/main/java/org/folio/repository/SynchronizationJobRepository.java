@@ -18,7 +18,7 @@ import io.vertx.sqlclient.RowSet;
 
 public class SynchronizationJobRepository extends BaseRepository<SynchronizationJob> {
 
-  public static final String SYNCHRONIZATION_JOBS_TABLE = "synchronization_jobs";
+  private static final String SYNCHRONIZATION_JOBS_TABLE = "synchronization_jobs";
   private static final int SYNC_JOBS_LIMIT = 1;
 
   public SynchronizationJobRepository(PostgresClient pgClient) {
