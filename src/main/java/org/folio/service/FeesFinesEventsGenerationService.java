@@ -73,12 +73,16 @@ public class FeesFinesEventsGenerationService extends EventsGenerationService {
   }
 
   private Future<Void> generateFeeFineBalanceChangedEvent(Account account) {
+    log.info("Start generateFeeFineBalanceChangedEvent for account " + account.getId());
     return feeFineBalanceChangedEventHandler.handle(new FeeFineBalanceChangedEvent()
       .withBalance(BigDecimal.valueOf(account.getRemaining()))
       .withFeeFineId(account.getFeeFineId())
       .withUserId(account.getUserId())
       .withLoanId(account.getLoanId())
       .withMetadata(account.getMetadata()))
+      .onComplete(ar -> {
+        log.info("Finished generateFeeFineBalanceChangedEvent for account " + account.getId());
+      })
       .mapEmpty();
   }
 
