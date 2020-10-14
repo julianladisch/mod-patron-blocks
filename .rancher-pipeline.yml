@@ -16,7 +16,7 @@ stages:
     steps:
       - applyAppConfig:
           catalogTemplate: p-wntj9:vega-helmcharts-mod-patron-blocks
-          version: 1.1.0
+          version: 0.1.26
           answers:
             image.repository: docker.dev.folio.org/mod-patron-blocks
             image.tag: vega-modpatblk-41
