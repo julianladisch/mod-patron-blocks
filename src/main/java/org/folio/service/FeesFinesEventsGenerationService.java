@@ -42,13 +42,16 @@ public class FeesFinesEventsGenerationService extends EventsGenerationService {
           log.error(errorMessage);
           return failedFuture(errorMessage);
         }
+        log.info("addGeneratedEventsForEachPagesToList: " + getClass().getSimpleName());
         return generateEventsByAccounts(mapJsonToAccounts(jsonPage))
           .onComplete(result -> {
             if (result.succeeded()) {
+              log.info("success addGeneratedEventsForEachPagesToList: " + getClass().getSimpleName());
               updateSyncJobWithProcessedAccounts(syncJob,
                 syncJob.getNumberOfProcessedFeesFines() + jsonPage.getJsonArray("accounts").size(),
                 totalRecords);
             } else {
+              log.error("failure addGeneratedEventsForEachPagesToList: " + getClass().getSimpleName());
               updateSyncJobWithError(syncJob, result.cause().getLocalizedMessage());
             }
           })
@@ -99,6 +102,13 @@ public class FeesFinesEventsGenerationService extends EventsGenerationService {
     SynchronizationJob updatedSyncJob = syncJob
       .withNumberOfProcessedFeesFines(processed)
       .withTotalNumberOfFeesFines(total);
-    syncRepository.update(updatedSyncJob, syncJob.getId());
+    syncRepository.update(updatedSyncJob, syncJob.getId())
+    .onComplete(r -> {
+      if (r.failed()) {
+        log.error("updateSyncJobWithProcessedAccounts failed");
+      } else {
+        log.info("updateSyncJobWithProcessedAccounts success");
+      }
+    });
   }
 }

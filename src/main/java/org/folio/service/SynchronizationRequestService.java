@@ -100,14 +100,18 @@ public class SynchronizationRequestService {
   }
 
   private Future<SynchronizationJob> doSynchronization(SynchronizationJob synchronizationJob) {
-      return succeededFuture(updateStatusOfJob(
-        synchronizationJob, IN_PROGRESS))
+      return succeededFuture(updateStatusOfJob(synchronizationJob, IN_PROGRESS))
         .compose(syncJob -> cleanExistingEvents(syncJob, tenantId))
         .compose(this::createEventsByLoans)
         .compose(this::createEventsByFeesFines)
-        .onFailure(throwable -> updateJobAsFailed(synchronizationJob,
-          throwable.getLocalizedMessage()))
-        .onSuccess(syncJob -> updateStatusOfJob(syncJob, DONE));
+        .onFailure(throwable -> {
+          log.error("doSynchronization() failed: " + throwable.getLocalizedMessage());
+          updateJobAsFailed(synchronizationJob, throwable.getLocalizedMessage());
+        })
+        .onSuccess(syncJob -> {
+          log.info("doSynchronization() succeeded: " + syncJob.getId());
+          updateStatusOfJob(syncJob, DONE);
+        });
   }
 
   private Future<SynchronizationJob> createEventsByLoans(SynchronizationJob syncJob) {
@@ -142,16 +146,29 @@ public class SynchronizationRequestService {
     syncJob.getErrors().add(errorMessage);
     syncJob.setStatus(FAILED.getValue());
     log.error("Synchronization job failed " + errorMessage);
-    syncRepository.update(syncJob, syncJob.getId());
+    syncRepository.update(syncJob, syncJob.getId())
+    .onComplete(r -> {
+      if (r.failed()) {
+        log.error("updateJobAsFailed failed");
+      } else {
+        log.info("updateJobAsFailed success");
+      }
+    });
   }
 
   public SynchronizationJob updateStatusOfJob(SynchronizationJob syncJob,
     SynchronizationStatus syncStatus) {
 
     syncJob.setStatus(syncStatus.getValue());
-    log.debug("Status of synchronization job has been updated: " + syncStatus.getValue());
-    syncRepository.update(syncJob, syncJob.getId());
-
+    log.info("Status of synchronization job has been updated: " + syncStatus.getValue());
+    syncRepository.update(syncJob, syncJob.getId())
+      .onComplete(r -> {
+        if (r.failed()) {
+          log.error("updateStatusOfJob failed");
+        } else {
+          log.info("updateStatusOfJob success");
+        }
+      });
     return syncJob;
   }
 }

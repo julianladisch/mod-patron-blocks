@@ -57,13 +57,16 @@ public class LoanEventsGenerationService extends EventsGenerationService {
           log.error(errorMessage);
           return failedFuture(errorMessage);
         }
+        log.info("addGeneratedEventsForEachPagesToList: " + getClass().getSimpleName());
         return generateEventsByLoans(mapJsonToLoans(jsonPage))
           .onComplete(result -> {
             if (result.succeeded()) {
+              log.info("success addGeneratedEventsForEachPagesToList: " + getClass().getSimpleName());
               updateSyncJobWithProcessedLoans(syncJob,
                 syncJob.getNumberOfProcessedLoans() + jsonPage.getJsonArray("loans").size(),
                 totalRecords);
             } else {
+              log.info("failure addGeneratedEventsForEachPagesToList: " + getClass().getSimpleName());
               updateSyncJobWithError(syncJob, result.cause().getLocalizedMessage());
             }
           })
