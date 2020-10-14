@@ -66,23 +66,4 @@ public class SynchronizationJobRepository extends BaseRepository<Synchronization
     pgClient.select(sql, promise);
     return promise.future();
   }
-
-//  private SynchronizationJob mapSynchronizationJob(JsonObject json) {
-//    SynchronizationJob synchronizationJob = new SynchronizationJob();
-//    synchronizationJob
-//      .withId(json.getString("id"))
-//      .withScope(SynchronizationJob.Scope.fromValue(json.getString("scope")))
-//      .withStatus(json.getString("status"))
-//      .withTotalNumberOfLoans(json.getInteger("totalNumberOfLoans"))
-//      .withTotalNumberOfFeesFines(json.getInteger("totalNumberOfFeesFines"))
-//      .withNumberOfProcessedLoans(json.getInteger("numberOfProcessedLoans"))
-//      .withNumberOfProcessedFeesFines(json.getInteger("numberOfProcessedFeesFines"));
-//
-//    String userId = json.getString("userId");
-//    if (userId != null && !userId.isBlank()) {
-//      synchronizationJob.withUserId(userId);
-//    }
-
-//    return synchronizationJob;
-//  }
 }

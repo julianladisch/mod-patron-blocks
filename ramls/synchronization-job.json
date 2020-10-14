@@ -4,7 +4,7 @@
   "description": "Synchronization job schema",
   "properties": {
     "id": {
-      "description" : "Sync request ID",
+      "description" : "Synchronization job ID",
       "type": "string",
       "$ref": "raml-util/schemas/uuid.schema"
     },
@@ -22,7 +22,7 @@
       "$ref": "raml-util/schemas/uuid.schema"
     },
     "status": {
-      "description": "Status of sync request",
+      "description": "Status of synchronization job",
       "type": "string"
     },
     "totalNumberOfLoans": {
