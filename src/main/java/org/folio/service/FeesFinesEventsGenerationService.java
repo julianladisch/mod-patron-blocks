@@ -116,3 +116,4 @@ public class FeesFinesEventsGenerationService extends EventsGenerationService {
       }
     });
   }
+}
