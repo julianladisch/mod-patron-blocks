@@ -46,8 +46,9 @@ public abstract class EventsGenerationService {
           addGeneratedEventsForEachPagesToList(syncJob, path, totalRecords,
             generatedEventsForPages, i);
         }
-        return CompositeFuture.all(generatedEventsForPages)
-          .map(syncJob);
+        return generatedEventsForPages.isEmpty()
+          ? Future.succeededFuture(syncJob)
+          : CompositeFuture.all(generatedEventsForPages).map(syncJob);
       });
   }
 
