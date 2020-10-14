@@ -104,6 +104,10 @@
           "tOps": "ADD"
         }
       ]
+    },
+    {
+      "tableName": "synchronization_jobs",
+      "withMetadata": true
     }
   ]
 }

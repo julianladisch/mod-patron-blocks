@@ -22,6 +22,7 @@ import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
+import io.vertx.core.json.JsonObject;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
 import io.vertx.ext.web.client.HttpRequest;
@@ -37,7 +38,7 @@ public class OkapiClient {
   private final String tenant;
   private final String token;
 
-  OkapiClient(Vertx vertx, Map<String, String> okapiHeaders) {
+  public OkapiClient(Vertx vertx, Map<String, String> okapiHeaders) {
     CaseInsensitiveMap<String, String> headers = new CaseInsensitiveMap<>(okapiHeaders);
     this.webClient = getWebClient(vertx);
     okapiUrl = headers.get(URL);
@@ -85,6 +86,24 @@ public class OkapiClient {
           return failedFuture(e);
         }
       }
+    });
+  }
+
+  public Future<JsonObject> getMany(String path, int limit, int offset) {
+    Promise<HttpResponse<Buffer>> promise = Promise.promise();
+    HttpRequest<Buffer> request = getAbs(path)
+      .addQueryParam("limit", String.valueOf(limit))
+      .addQueryParam("offset", String.valueOf(offset));
+    request.send(promise);
+
+    return promise.future().compose(response -> {
+        int responseStatus = response.statusCode();
+        if (responseStatus != 200) {
+          var errorMessage = String.format("Failed to fetch entities by path: %s. Response: %d %s",
+          path, responseStatus, response.bodyAsString());
+          log.error(errorMessage);
+        }
+        return succeededFuture(response.bodyAsJsonObject());
     });
   }
 }

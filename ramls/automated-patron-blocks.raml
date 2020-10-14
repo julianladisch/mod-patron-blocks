@@ -11,27 +11,84 @@ types:
   user: !include user.json
   loanPolicy: !include loan-policy.json
   loan: !include loan.json
+  account: !include accountdata.json
   errors: !include raml-util/schemas/errors.schema
   automatedPatronBlocks: !include automated-patron-blocks.json
+  synchronizationJob: !include synchronization-job.json
 
 traits:
   validate: !include raml-util/traits/validation.raml
+  language: !include raml-util/traits/language.raml
 
-/automated-patron-blocks/{userId}:
-  get:
-    responses:
-      200:
+/automated-patron-blocks:
+  /{userId}:
+    get:
+      responses:
+        200:
+          body:
+            application/json:
+              schema: automatedPatronBlocks
+              example: !include examples/automated-patron-blocks.sample
+        400:
+          description: "Invalid user ID in request"
+          body:
+            text/plain:
+              example: "Bad request, e.g. invalid user UUID"
+        500:
+          description: "Internal server error, e.g. due to misconfiguration"
+          body:
+            text/plain:
+              example: "Internal server error, contact administrator"
+  /synchronization:
+    /job:
+      post:
+        is: [validate]
         body:
           application/json:
-            schema: automatedPatronBlocks
-            example: !include examples/automated-patron-blocks.sample
-      400:
-        description: "Invalid user ID in request"
-        body:
-          text/plain:
-            example: "Bad request, e.g. invalid user UUID"
-      500:
-        description: "Internal server error, e.g. due to misconfiguration"
-        body:
-          text/plain:
-            example: "Internal server error, contact administrator"
+            type: synchronizationJob
+        responses:
+          201:
+            description: "Synchronization was done successfully"
+            body:
+              application/json:
+                type: synchronizationJob
+                example: !include examples/synchronization-job.sample
+          422:
+            description: "Job request is not valid"
+            body:
+              text/plain:
+                example: "The job is not valid"
+          500:
+            description: "Internal server error"
+            body:
+              text/plain:
+                example: "Internal server error, please contact administrator"
+      /{syncJobId}:
+        get:
+          description: "Checks synchronization status of job"
+          responses:
+            200:
+              body:
+                application/json:
+                  schema: synchronizationJob
+                  example: !include examples/synchronization-job.sample
+            404:
+              description: "The job was not found"
+              body:
+                text/plain:
+                  example: "Bad request, e.g. invalid user UUID"
+            500:
+              description: "Internal server error, e.g. due to misconfiguration"
+              body:
+                text/plain:
+                  example: "Internal server error, contact administrator"
+    /start:
+      post:
+        responses:
+          202:
+            description: "Synchronization job has been accepted for processing"
+          500:
+            description: "Internal server error"
+            body:
+              text/plain:
+                example: "Internal server error, please contact administrator"

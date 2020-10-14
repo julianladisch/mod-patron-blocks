@@ -19,10 +19,11 @@ public class LoanDueDateChangedEventHandler extends EventHandler<LoanDueDateChan
   }
 
   @Override
-  public Future<String> handle(LoanDueDateChangedEvent event) {
+  public Future<String> handle(LoanDueDateChangedEvent event, boolean skipUserSummaryRebuilding) {
     return eventService.save(event)
-      .map(eventId -> event.getUserId())
-      .compose(userSummaryService::rebuild)
+      .compose(eventId -> skipUserSummaryRebuilding
+        ? Future.succeededFuture()
+        : userSummaryService.rebuild(event.getUserId()))
       .onComplete(result -> logResult(result, event));
   }
 }

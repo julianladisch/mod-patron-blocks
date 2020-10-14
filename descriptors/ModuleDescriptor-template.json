@@ -123,6 +123,24 @@
           "permissionsRequired": [
             "patron-blocks.events.post"
           ]
+        },
+        {
+          "methods":[
+            "POST"
+          ],
+          "pathPattern":"/automated-patron-blocks/synchronization/job",
+          "permissionsRequired": [
+            "patron-blocks.synchronization.job.post"
+          ]
+        },
+        {
+          "methods":[
+            "GET"
+          ],
+          "pathPattern":"/automated-patron-blocks/synchronization/job/{syncJobId}",
+          "permissionsRequired": [
+            "patron-blocks.synchronization.job.get"
+          ]
         }
       ]
     },
@@ -199,6 +217,28 @@
           "permissionsRequired": ["patron-block-limits.item.delete"]
         }
       ]
+    },
+    {
+      "id": "_timer",
+      "version": "1.0",
+      "interfaceType": "system",
+      "handlers": [
+        {
+          "methods": [
+            "POST"
+          ],
+          "pathPattern": "/automated-patron-blocks/synchronization/start",
+          "modulePermissions": [
+            "patron-blocks.synchronization-run.post",
+            "circulation-storage.loans.collection.get",
+            "circulation-storage.loans.item.get",
+            "accounts.collection.get",
+            "accounts.item.get"
+          ],
+          "unit": "minute",
+          "delay": "1"
+        }
+      ]
     }
   ],
   "permissionSets": [
@@ -256,6 +296,16 @@
       "permissionName": "user-summary.item.get",
       "displayName": "User summary - get UserSummary object",
       "description": "Get UserSummary object by user ID"
+    },
+    {
+      "permissionName": "patron-blocks.synchronization.job.post",
+      "displayName": "Synchronization job - post Synchronization job",
+      "description": "Post Synchronization job"
+    },
+    {
+      "permissionName": "patron-blocks.synchronization.job.get",
+      "displayName": "Synchronization job - get Synchronization job by ID",
+      "description": "Get Synchronization job"
     }
   ],
   "launchDescriptor": {

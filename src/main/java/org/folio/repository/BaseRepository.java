@@ -11,6 +11,7 @@ import org.folio.rest.persist.Criteria.Offset;
 import org.folio.rest.persist.PostgresClient;
 import org.folio.rest.persist.cql.CQLWrapper;
 import org.folio.rest.persist.interfaces.Results;
+import org.folio.rest.tools.PomReader;
 
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
@@ -20,8 +21,8 @@ import io.vertx.sqlclient.RowSet;
 public class BaseRepository<T> {
   private static final int DEFAULT_LIMIT = 100;
 
-  private final PostgresClient pgClient;
-  private final String tableName;
+  protected final PostgresClient pgClient;
+  protected final String tableName;
   private final Class<T> entityType;
 
   public BaseRepository(PostgresClient pgClient, String tableName, Class<T> entityType) {
@@ -85,6 +86,20 @@ public class BaseRepository<T> {
     Promise<RowSet<Row>> promise = Promise.promise();
     pgClient.delete(tableName, id, promise);
     return promise.future().map(updateResult -> updateResult.rowCount() == 1);
+  }
+
+  public Future<Void> removeAll(String tenantId) {
+    Promise<Void> promise = Promise.promise();
+    String deleteAllQuery = String.format("DELETE FROM %s_%s.%s", tenantId,
+      PomReader.INSTANCE.getModuleName(), tableName);
+    pgClient.execute(deleteAllQuery, reply -> {
+      if (reply.failed()) {
+        promise.future().failed();
+      } else {
+        promise.complete();
+      }
+    });
+    return promise.future();
   }
 
   /**

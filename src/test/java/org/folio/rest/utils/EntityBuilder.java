@@ -6,6 +6,7 @@ import java.math.BigDecimal;
 import java.util.Date;
 import java.util.List;
 
+import org.folio.domain.SynchronizationStatus;
 import org.folio.rest.jaxrs.model.FeeFineBalanceChangedEvent;
 import org.folio.rest.jaxrs.model.ItemCheckedInEvent;
 import org.folio.rest.jaxrs.model.ItemCheckedOutEvent;
@@ -15,6 +16,7 @@ import org.folio.rest.jaxrs.model.LoanDueDateChangedEvent;
 import org.folio.rest.jaxrs.model.Metadata;
 import org.folio.rest.jaxrs.model.OpenFeeFine;
 import org.folio.rest.jaxrs.model.OpenLoan;
+import org.folio.rest.jaxrs.model.SynchronizationJob;
 import org.folio.rest.jaxrs.model.UserSummary;
 
 public class EntityBuilder {
@@ -110,5 +112,20 @@ public class EntityBuilder {
       .withDueDate(dueDate)
       .withDueDateChangedByRecall(dueDateChangedByRecall)
       .withMetadata(buildDefaultMetadata());
+  }
+
+  public static SynchronizationJob buildSynchronizationJob(SynchronizationJob.Scope scope,
+    String userId, SynchronizationStatus status, int totalNumberOfLoans,
+    int totalNumberOfFeesFines, int numberOfProcessedLoans, int numberOfProcessedFeesFines) {
+
+    return new SynchronizationJob()
+      .withId(randomId())
+      .withUserId(userId)
+      .withScope(scope)
+      .withStatus(status.getValue())
+      .withTotalNumberOfLoans(totalNumberOfLoans)
+      .withTotalNumberOfFeesFines(totalNumberOfFeesFines)
+      .withNumberOfProcessedLoans(numberOfProcessedLoans)
+      .withNumberOfProcessedFeesFines(numberOfProcessedFeesFines);
   }
 }
