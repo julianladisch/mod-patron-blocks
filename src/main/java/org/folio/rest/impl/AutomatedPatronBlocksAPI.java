@@ -2,7 +2,6 @@ package org.folio.rest.impl;
 
 import static io.vertx.core.Future.succeededFuture;
 import static java.lang.String.format;
-import static org.folio.repository.SynchronizationJobRepository.SYNCHRONIZATION_JOBS_TABLE;
 import static org.folio.util.UuidUtil.isUuid;
 
 import java.lang.invoke.MethodHandles;
@@ -11,9 +10,9 @@ import java.util.Map;
 import javax.ws.rs.core.Response;
 
 import org.folio.exception.EntityNotFoundException;
+import org.folio.exception.UserIdNotFoundException;
 import org.folio.rest.jaxrs.model.SynchronizationJob;
 import org.folio.rest.jaxrs.resource.AutomatedPatronBlocks;
-import org.folio.rest.persist.PgUtil;
 import org.folio.service.PatronBlocksService;
 import org.folio.service.SynchronizationRequestService;
 
@@ -52,15 +51,23 @@ public class AutomatedPatronBlocksAPI implements AutomatedPatronBlocks {
     Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler,
     Context vertxContext) {
 
-    if (SynchronizationJob.Scope.USER == request.getScope() && request.getUserId() == null) {
-      asyncResultHandler.handle(succeededFuture(
-        PostAutomatedPatronBlocksSynchronizationJobResponse.respond422WithTextPlain(
-          "UserId is required for synchronization job with scope: USER")));
-      return;
-    }
-
-    PgUtil.post(SYNCHRONIZATION_JOBS_TABLE, request, okapiHeaders, vertxContext,
-      PostAutomatedPatronBlocksSynchronizationJobResponse.class, asyncResultHandler);
+    new SynchronizationRequestService(okapiHeaders, vertxContext.owner())
+      .createSynchronizationJob(request)
+      .onSuccess(response -> asyncResultHandler.handle(succeededFuture(
+        PostAutomatedPatronBlocksSynchronizationJobResponse
+          .respond201WithApplicationJson(response))))
+      .onFailure(throwable -> {
+        String errorMessage = throwable.getLocalizedMessage();
+        if (throwable instanceof UserIdNotFoundException) {
+          asyncResultHandler.handle(succeededFuture(
+            PostAutomatedPatronBlocksSynchronizationJobResponse.respond422WithTextPlain(
+              errorMessage)));
+        } else {
+          asyncResultHandler.handle(succeededFuture(
+            PostAutomatedPatronBlocksSynchronizationJobResponse
+              .respond500WithTextPlain(errorMessage)));
+        }
+      });
   }
 
   @Override
