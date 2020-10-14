@@ -114,7 +114,7 @@ public class LoanEventsGenerationService extends EventsGenerationService {
       .withLoanId(loan.getId())
       .withUserId(loan.getUserId())
       .withDueDate(loan.getDueDate())
-      .withMetadata(loan.getMetadata()))
+      .withMetadata(loan.getMetadata()), true)
       .onComplete(ar -> {
         log.info("Finished generateEvent for loan " + loan.getId());
       })
@@ -138,7 +138,7 @@ public class LoanEventsGenerationService extends EventsGenerationService {
       return declaredLostEventHandler.handle(new ItemDeclaredLostEvent()
           .withLoanId(loan.getId())
           .withUserId(loan.getUserId())
-          .withMetadata(loan.getMetadata()));
+          .withMetadata(loan.getMetadata()), true);
     }
     return succeededFuture(null);
   }
@@ -150,7 +150,7 @@ public class LoanEventsGenerationService extends EventsGenerationService {
           .withUserId(loan.getUserId())
           .withDueDate(loan.getDueDate())
           .withDueDateChangedByRecall(loan.getDueDateChangedByRecall())
-          .withMetadata(loan.getMetadata()));
+          .withMetadata(loan.getMetadata()), true);
     }
     return succeededFuture(null);
   }
