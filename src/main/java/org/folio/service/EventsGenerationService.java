@@ -1,13 +1,11 @@
 package org.folio.service;
 
-import static org.folio.domain.SynchronizationStatus.DONE;
-
 import java.lang.invoke.MethodHandles;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
 
-import org.folio.domain.SynchronizationStatus;
 import org.folio.repository.SynchronizationJobRepository;
 import org.folio.rest.client.OkapiClient;
 import org.folio.rest.jaxrs.model.Metadata;
@@ -35,8 +33,24 @@ public abstract class EventsGenerationService {
     this.syncRepository = syncRepository;
   }
 
-  public abstract Future<SynchronizationJob> generateEvents(SynchronizationJob syncJob,
-    String path);
+  public Future<SynchronizationJob> generateEvents(SynchronizationJob syncJob, String path) {
+    return okapiClient.getMany(path, 0, 0)
+      .compose(response -> {
+        int totalRecords = response.getInteger("totalRecords");
+        int numberOfPages = calculateNumberOfPages(totalRecords);
+
+        List<Future> generatedEventsForPages = new ArrayList<>();
+        for (int i = 0; i < numberOfPages; i++) {
+          addGeneratedEventsForEachPagesToList(syncJob, path, totalRecords,
+            generatedEventsForPages, i);
+        }
+        return CompositeFuture.all(generatedEventsForPages)
+          .map(syncJob);
+      });
+  }
+
+  protected abstract void addGeneratedEventsForEachPagesToList(SynchronizationJob syncJob,
+    String path, int totalRecords, List<Future> generatedEventsForPages, int pageNumber);
 
   protected Metadata mapMetadataFromJson(JsonObject jsonMetadata) {
     return new Metadata()

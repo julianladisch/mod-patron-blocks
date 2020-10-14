@@ -1,10 +1,8 @@
 package org.folio.service;
 
 import static io.vertx.core.Future.failedFuture;
-import static io.vertx.core.Future.succeededFuture;
 
 import java.math.BigDecimal;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -33,40 +31,30 @@ public class FeesFinesEventsGenerationService extends EventsGenerationService {
   }
 
   @Override
-  public Future<SynchronizationJob> generateEvents(SynchronizationJob syncJob, String path) {
-    return okapiClient.getMany(path, 0, 0)
-      .compose(response -> {
-        int totalRecords = response.getInteger("totalRecords");
-        int numberOfPages = calculateNumberOfPages(totalRecords);
+  protected void addGeneratedEventsForEachPagesToList(SynchronizationJob syncJob, String path,
+    int totalRecords, List<Future> generatedEventsForPages, int pageNumber) {
 
-        List<Future> generatedEventsForPages = new ArrayList<>();
-        for (int i = 0; i < numberOfPages; i++) {
-          int pageNumber = i;
-          Future<JsonObject> readPage = okapiClient.getMany(path, PAGE_LIMIT, i * PAGE_LIMIT)
-            .compose(jsonPage -> {
-              if (jsonPage == null || jsonPage.getJsonArray("accounts").size() == 0) {
-                String errorMessage = String.format(
-                  "Error in receiving page number %d of accounts: %s", pageNumber, path);
-                log.error(errorMessage);
-                return failedFuture(errorMessage);
-              }
-              return generateEventsByAccounts(mapJsonToAccounts(jsonPage))
-                .onComplete(result -> {
-                  if (result.succeeded()) {
-                    updateSyncJobWithProcessedAccounts(syncJob,
-                      syncJob.getNumberOfProcessedFeesFines() + jsonPage.getJsonArray("accounts").size(),
-                      totalRecords);
-                  } else {
-                    updateSyncJobWithError(syncJob, result.cause().getLocalizedMessage());
-                  }
-                })
-                .map(jsonPage);
-            });
-          generatedEventsForPages.add(readPage);
+    Future<JsonObject> readPage = okapiClient.getMany(path, PAGE_LIMIT, pageNumber * PAGE_LIMIT)
+      .compose(jsonPage -> {
+        if (jsonPage == null || jsonPage.getJsonArray("accounts").size() == 0) {
+          String errorMessage = String.format(
+            "Error in receiving page number %d of accounts: %s", pageNumber, path);
+          log.error(errorMessage);
+          return failedFuture(errorMessage);
         }
-        return CompositeFuture.all(generatedEventsForPages)
-          .map(syncJob);
+        return generateEventsByAccounts(mapJsonToAccounts(jsonPage))
+          .onComplete(result -> {
+            if (result.succeeded()) {
+              updateSyncJobWithProcessedAccounts(syncJob,
+                syncJob.getNumberOfProcessedFeesFines() + jsonPage.getJsonArray("accounts").size(),
+                totalRecords);
+            } else {
+              updateSyncJobWithError(syncJob, result.cause().getLocalizedMessage());
+            }
+          })
+          .map(jsonPage);
       });
+    generatedEventsForPages.add(readPage);
   }
 
   private Future<Void> generateEventsByAccounts(List<Account> records) {
