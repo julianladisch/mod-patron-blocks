@@ -38,13 +38,17 @@ public abstract class EventHandler<E extends Event> {
     userSummaryService = new UserSummaryService(postgresClient);
   }
 
+  public Future<String> handle(E event) {
+    return handle(event, false);
+  }
+
   /**
    * Handle an event.
    *
    * @param event  the event to handle
    * @return ID of a UserSummary affected by the processed event
    */
-  public abstract Future<String> handle(E event);
+  public abstract Future<String> handle(E event, boolean skipUserSummaryRebuilding);
 
   protected void logResult(AsyncResult<String> result, E event) {
     String eventType = EventType.getNameByEvent(event);

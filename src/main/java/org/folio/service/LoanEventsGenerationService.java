@@ -128,7 +128,7 @@ public class LoanEventsGenerationService extends EventsGenerationService {
       return claimedReturnedEventHandler.handle(new ItemClaimedReturnedEvent()
         .withLoanId(loan.getId())
         .withUserId(loan.getUserId())
-        .withMetadata(loan.getMetadata()));
+        .withMetadata(loan.getMetadata()), true);
     }
     return succeededFuture(null);
   }

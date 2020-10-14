@@ -23,10 +23,12 @@ public class FeeFineBalanceChangedEventHandler extends EventHandler<FeeFineBalan
   }
 
   @Override
-  public Future<String> handle(FeeFineBalanceChangedEvent event) {
+  public Future<String> handle(FeeFineBalanceChangedEvent event, boolean skipUserSummaryRebuilding) {
     return eventService.save(event)
       .compose(eventId -> getUserSummary(event))
-      .compose(summary -> userSummaryService.rebuild(summary.getUserId()))
+      .compose(summary -> skipUserSummaryRebuilding
+        ? Future.succeededFuture()
+        : userSummaryService.rebuild(summary.getUserId()))
       .onComplete(result -> logResult(result, event));
   }
 

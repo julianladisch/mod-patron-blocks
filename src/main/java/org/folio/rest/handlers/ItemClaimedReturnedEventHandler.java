@@ -19,9 +19,11 @@ public class ItemClaimedReturnedEventHandler extends EventHandler<ItemClaimedRet
   }
 
   @Override
-  public Future<String> handle(ItemClaimedReturnedEvent event) {
+  public Future<String> handle(ItemClaimedReturnedEvent event, boolean skipUserSummaryRebuilding) {
     return eventService.save(event)
-      .compose(eventId -> userSummaryService.rebuild(event.getUserId()))
+      .compose(eventId -> skipUserSummaryRebuilding
+        ? Future.succeededFuture()
+        : userSummaryService.rebuild(event.getUserId()))
       .onComplete(result -> logResult(result, event));
   }
 }

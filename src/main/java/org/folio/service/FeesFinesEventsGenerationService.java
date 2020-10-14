@@ -83,7 +83,7 @@ public class FeesFinesEventsGenerationService extends EventsGenerationService {
       .withFeeFineId(account.getFeeFineId())
       .withUserId(account.getUserId())
       .withLoanId(account.getLoanId())
-      .withMetadata(account.getMetadata()))
+      .withMetadata(account.getMetadata()), true)
       .onComplete(ar -> {
         log.info("Finished generateFeeFineBalanceChangedEvent for account " + account.getId());
       });
