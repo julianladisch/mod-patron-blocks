@@ -24,7 +24,7 @@ import io.vertx.core.Vertx;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
 
-public class SynchronizationRequestService {
+public class SynchronizationJobService {
 
   private static final Logger log = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
   private static final String FULL_SCOPE = "full";
@@ -36,7 +36,7 @@ public class SynchronizationRequestService {
   private final EventService eventService;
   private final String tenantId;
 
-  public SynchronizationRequestService(Map<String, String> okapiHeaders, Vertx vertx) {
+  public SynchronizationJobService(Map<String, String> okapiHeaders, Vertx vertx) {
     this.tenantId = TenantTool.tenantId(okapiHeaders);
     PostgresClient postgresClient = PostgresClient.getInstance(vertx, tenantId);
     this.syncRepository = new SynchronizationJobRepository(postgresClient);
@@ -146,14 +146,7 @@ public class SynchronizationRequestService {
     syncJob.getErrors().add(errorMessage);
     syncJob.setStatus(FAILED.getValue());
     log.error("Synchronization job failed " + errorMessage);
-    syncRepository.update(syncJob, syncJob.getId())
-    .onComplete(r -> {
-      if (r.failed()) {
-        log.error("updateJobAsFailed failed");
-      } else {
-        log.info("updateJobAsFailed success");
-      }
-    });
+    syncRepository.update(syncJob, syncJob.getId());
   }
 
   public SynchronizationJob updateStatusOfJob(SynchronizationJob syncJob,
@@ -161,14 +154,7 @@ public class SynchronizationRequestService {
 
     syncJob.setStatus(syncStatus.getValue());
     log.info("Status of synchronization job has been updated: " + syncStatus.getValue());
-    syncRepository.update(syncJob, syncJob.getId())
-      .onComplete(r -> {
-        if (r.failed()) {
-          log.error("updateStatusOfJob failed");
-        } else {
-          log.info("updateStatusOfJob success");
-        }
-      });
+    syncRepository.update(syncJob, syncJob.getId());
     return syncJob;
   }
 }

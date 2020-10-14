@@ -171,7 +171,7 @@ public class SynchronizationAPITests extends TestBase {
   }
 
   @Test
-  public void feeFineBalanceEventShouldBeCreatedAfterSynchronization() {
+  public void feeFineBalanceChangedEventShouldBeCreatedAfterSynchronization() {
     stubLoansWithEmptyResponse();
     stubAccounts();
     String syncJobId = createOpenSynchronizationJobFull();

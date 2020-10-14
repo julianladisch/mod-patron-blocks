@@ -36,13 +36,13 @@ public abstract class EventsGenerationService {
   public Future<SynchronizationJob> generateEvents(SynchronizationJob syncJob, String path) {
     return okapiClient.getMany(path, 0, 0)
       .compose(response -> {
-        log.info("generateEvents()");
+        log.info("Start generating events");
         int totalRecords = response.getInteger("totalRecords");
         int numberOfPages = calculateNumberOfPages(totalRecords);
 
         List<Future> generatedEventsForPages = new ArrayList<>();
         for (int i = 0; i < numberOfPages; i++) {
-          log.info("generateEvents: " + i);
+          log.info("Generate events for page number: " + i);
           addGeneratedEventsForEachPagesToList(syncJob, path, totalRecords,
             generatedEventsForPages, i);
         }
@@ -70,17 +70,10 @@ public abstract class EventsGenerationService {
   }
 
   protected void updateSyncJobWithError(SynchronizationJob syncJob, String localizedMessage) {
-    log.error("updateSyncJobWithError");
+    log.info("update SyncJob with error: " + localizedMessage);
     List<String> errors = syncJob.getErrors();
     errors.add(localizedMessage);
-    syncRepository.update(syncJob.withErrors(errors), syncJob.getId())
-    .onComplete(r -> {
-      if (r.failed()) {
-        log.error("updateSyncJobWithError failed");
-      } else {
-        log.info("updateSyncJobWithError success");
-      }
-    });
+    syncRepository.update(syncJob.withErrors(errors), syncJob.getId());
   }
 
   protected int calculateNumberOfPages(int totalRecords) {

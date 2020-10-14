@@ -56,16 +56,15 @@ public class LoanEventsGenerationService extends EventsGenerationService {
           log.error(errorMessage);
           return failedFuture(errorMessage);
         }
-        log.info("addGeneratedEventsForEachPagesToList: " + getClass().getSimpleName());
         return generateEventsByLoans(mapJsonToLoans(jsonPage))
           .onComplete(result -> {
             if (result.succeeded()) {
-              log.info("success addGeneratedEventsForEachPagesToList: " + getClass().getSimpleName());
+              log.info("Success adding to generatedEventsForEachPagesToList for loans");
               updateSyncJobWithProcessedLoans(syncJob,
                 syncJob.getNumberOfProcessedLoans() + jsonPage.getJsonArray("loans").size(),
                 totalRecords);
             } else {
-              log.info("failure addGeneratedEventsForEachPagesToList: " + getClass().getSimpleName());
+              log.error("Failure adding to generatedEventsForEachPagesToList for loans");
               updateSyncJobWithError(syncJob, result.cause().getLocalizedMessage());
             }
           })
@@ -93,16 +92,6 @@ public class LoanEventsGenerationService extends EventsGenerationService {
   }
 
   private Future<Void> generateEventsByLoans(List<Loan> loans) {
-//    Future<Void> aggregateFuture = succeededFuture();
-//
-//    for (Loan loan : loans) {
-//      Future<Void> generateEvents = generateEvent(loan);
-//      aggregateFuture.compose(r -> generateEvents);
-//      aggregateFuture = generateEvents;
-//    }
-//
-//    return aggregateFuture;
-
     return loans.stream()
       .map(this::generateEvent)
       .reduce(Future.succeededFuture(), (a, b) -> a.compose(r -> b));
@@ -115,12 +104,11 @@ public class LoanEventsGenerationService extends EventsGenerationService {
       .withUserId(loan.getUserId())
       .withDueDate(loan.getDueDate())
       .withMetadata(loan.getMetadata()), true)
-      .onComplete(ar -> {
-        log.info("Finished generateEvent for loan " + loan.getId());
-      })
       .compose(v -> generateClaimedReturnedEvent(loan))
       .compose(v -> generateDeclaredLostEvent(loan))
-      .compose(v -> generateDueDateChangedEvent(loan));
+      .compose(v -> generateDueDateChangedEvent(loan))
+      .onComplete(r -> log.info("Finished generateEvent for loan: "
+        + loan.getId()));
   }
 
   private Future<String> generateClaimedReturnedEvent(Loan loan) {
@@ -164,9 +152,9 @@ public class LoanEventsGenerationService extends EventsGenerationService {
     syncRepository.update(updatedSyncJob, syncJob.getId())
       .onComplete(r -> {
         if (r.failed()) {
-          log.error("updateSyncJobWithProcessedAccounts failed");
+          log.error("updateSyncJobWithProcessedLoans failed");
         } else {
-          log.info("updateSyncJobWithProcessedAccounts success");
+          log.info("updateSyncJobWithProcessedLoans success");
         }
       });
   }

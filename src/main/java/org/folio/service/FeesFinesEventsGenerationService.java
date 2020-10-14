@@ -42,16 +42,15 @@ public class FeesFinesEventsGenerationService extends EventsGenerationService {
           log.error(errorMessage);
           return failedFuture(errorMessage);
         }
-        log.info("addGeneratedEventsForEachPagesToList: " + getClass().getSimpleName());
         return generateEventsByAccounts(mapJsonToAccounts(jsonPage))
           .onComplete(result -> {
             if (result.succeeded()) {
-              log.info("success addGeneratedEventsForEachPagesToList: " + getClass().getSimpleName());
+              log.info("Success adding to generatedEventsForEachPagesToList for loans");
               updateSyncJobWithProcessedAccounts(syncJob,
                 syncJob.getNumberOfProcessedFeesFines() + jsonPage.getJsonArray("accounts").size(),
                 totalRecords);
             } else {
-              log.error("failure addGeneratedEventsForEachPagesToList: " + getClass().getSimpleName());
+              log.error("Failure adding to generatedEventsForEachPagesToList for loans");
               updateSyncJobWithError(syncJob, result.cause().getLocalizedMessage());
             }
           })
@@ -61,16 +60,6 @@ public class FeesFinesEventsGenerationService extends EventsGenerationService {
   }
 
   private Future<String> generateEventsByAccounts(List<Account> records) {
-//    Future<Void> aggregateFuture = succeededFuture();
-//
-//    for (Account account : records) {
-//      Future<Void> generateEvents = generateFeeFineBalanceChangedEvent(account);
-//      aggregateFuture.compose(r -> generateEvents);
-//      aggregateFuture = generateEvents;
-//    }
-//
-//    return aggregateFuture;
-
     return records.stream()
       .map(this::generateFeeFineBalanceChangedEvent)
       .reduce(Future.succeededFuture(), (a, b) -> a.compose(r -> b));
@@ -84,10 +73,9 @@ public class FeesFinesEventsGenerationService extends EventsGenerationService {
       .withUserId(account.getUserId())
       .withLoanId(account.getLoanId())
       .withMetadata(account.getMetadata()), true)
-      .onComplete(ar -> {
-        log.info("Finished generateFeeFineBalanceChangedEvent for account " + account.getId());
-      });
-  }
+      .onComplete(r -> log.info("Finished generateFeeFineBalanceChangedEvent for account: "
+        + account.getId()));
+    }
 
   private List<Account> mapJsonToAccounts(JsonObject loansJson) {
     return loansJson.getJsonArray("accounts").stream()

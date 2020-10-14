@@ -14,7 +14,7 @@ import org.folio.exception.UserIdNotFoundException;
 import org.folio.rest.jaxrs.model.SynchronizationJob;
 import org.folio.rest.jaxrs.resource.AutomatedPatronBlocks;
 import org.folio.service.PatronBlocksService;
-import org.folio.service.SynchronizationRequestService;
+import org.folio.service.SynchronizationJobService;
 
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Context;
@@ -51,7 +51,7 @@ public class AutomatedPatronBlocksAPI implements AutomatedPatronBlocks {
     Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler,
     Context vertxContext) {
 
-    new SynchronizationRequestService(okapiHeaders, vertxContext.owner())
+    new SynchronizationJobService(okapiHeaders, vertxContext.owner())
       .createSynchronizationJob(request)
       .onSuccess(response -> asyncResultHandler.handle(succeededFuture(
         PostAutomatedPatronBlocksSynchronizationJobResponse
@@ -75,7 +75,7 @@ public class AutomatedPatronBlocksAPI implements AutomatedPatronBlocks {
     Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler,
     Context vertxContext) {
 
-    new SynchronizationRequestService(okapiHeaders, vertxContext.owner())
+    new SynchronizationJobService(okapiHeaders, vertxContext.owner())
       .getSynchronizationJob(syncRequestId)
       .onSuccess(response ->
           asyncResultHandler.handle(succeededFuture(
@@ -102,7 +102,7 @@ public class AutomatedPatronBlocksAPI implements AutomatedPatronBlocks {
       PostAutomatedPatronBlocksSynchronizationStartResponse.respond202()));
 
     vertxContext.owner().executeBlocking(promise ->
-      new SynchronizationRequestService(okapiHeaders, vertxContext.owner())
+      new SynchronizationJobService(okapiHeaders, vertxContext.owner())
         .runSynchronization()
         .onComplete(v -> promise.complete()),
       response -> {
