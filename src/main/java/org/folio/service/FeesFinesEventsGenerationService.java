@@ -21,6 +21,7 @@ import io.vertx.core.json.JsonObject;
 
 public class FeesFinesEventsGenerationService extends EventsGenerationService {
   private final EventHandler<FeeFineBalanceChangedEvent> feeFineBalanceChangedEventHandler;
+  private static final int FEES_FINES_LIMIT = 1000;
 
   public FeesFinesEventsGenerationService(Map<String, String> okapiHeaders, Vertx vertx,
     SynchronizationJobRepository syncRepository) {
@@ -67,7 +68,7 @@ public class FeesFinesEventsGenerationService extends EventsGenerationService {
   }
 
   private Future<Map<String, String>> fetchFeeFineTypes() {
-    return okapiClient.getMany("/feefines", 1000, 0)
+    return okapiClient.getMany("/feefines", FEES_FINES_LIMIT, 0)
       .map(feeFines -> {
         Map<String, String> feeFineTypes = new HashedMap<>();
         feeFines.getJsonArray("feefines").stream()
