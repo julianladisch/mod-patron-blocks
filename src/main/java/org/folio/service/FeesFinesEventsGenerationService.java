@@ -1,13 +1,13 @@
 package org.folio.service;
 
 import static io.vertx.core.Future.failedFuture;
-import static io.vertx.core.Future.succeededFuture;
 
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import org.apache.commons.collections4.map.HashedMap;
 import org.folio.repository.SynchronizationJobRepository;
 import org.folio.rest.handlers.EventHandler;
 import org.folio.rest.handlers.FeeFineBalanceChangedEventHandler;
@@ -60,16 +60,31 @@ public class FeesFinesEventsGenerationService extends EventsGenerationService {
   }
 
   private Future<String> generateEventsByAccounts(List<Account> records) {
-    return records.stream()
-      .map(this::generateFeeFineBalanceChangedEvent)
-      .reduce(Future.succeededFuture(), (a, b) -> a.compose(r -> b));
+    return fetchFeeFineTypes()
+      .compose(feeFineTypes -> records.stream()
+        .map(account -> generateFeeFineBalanceChangedEvent(account, feeFineTypes))
+        .reduce(Future.succeededFuture(), (a, b) -> a.compose(r -> b)));
   }
 
-  private Future<String> generateFeeFineBalanceChangedEvent(Account account) {
+  private Future<Map<String, String>> fetchFeeFineTypes() {
+    return okapiClient.getMany("/feefines", 1000, 0)
+      .map(feeFines -> {
+        Map<String, String> feeFineTypes = new HashedMap<>();
+        feeFines.getJsonArray("feefines").stream()
+          .filter(obj -> obj instanceof JsonObject)
+          .map(JsonObject.class::cast)
+          .forEach(feeFine -> feeFineTypes.put(feeFine.getString("feeFineType"),
+            feeFine.getString("id")));
+        return feeFineTypes;
+      });
+  }
+
+  private Future<String> generateFeeFineBalanceChangedEvent(Account account, Map<String, String> eventTypes) {
     log.info("Start generateFeeFineBalanceChangedEvent for account " + account.getId());
     return feeFineBalanceChangedEventHandler.handle(new FeeFineBalanceChangedEvent()
       .withBalance(BigDecimal.valueOf(account.getRemaining()))
       .withFeeFineId(account.getFeeFineId())
+      .withFeeFineTypeId(eventTypes.get(account.getFeeFineType()))
       .withUserId(account.getUserId())
       .withLoanId(account.getLoanId())
       .withMetadata(account.getMetadata()), true)
