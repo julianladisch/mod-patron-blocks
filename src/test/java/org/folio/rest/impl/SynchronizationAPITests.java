@@ -174,6 +174,7 @@ public class SynchronizationAPITests extends TestBase {
   public void feeFineBalanceChangedEventShouldBeCreatedAfterSynchronization() {
     stubLoansWithEmptyResponse();
     stubAccounts();
+    stubFeeFines();
     String syncJobId = createOpenSynchronizationJobFull();
 
     runSynchronization();
@@ -313,6 +314,14 @@ public class SynchronizationAPITests extends TestBase {
         .withBody(makeAccountsResponseBody())));
   }
 
+  private static void stubFeeFines() {
+    wireMock.stubFor(get(urlPathMatching("/feefines"))
+      .atPriority(5)
+      .willReturn(aResponse()
+        .withStatus(200)
+        .withBody(makeFeeFinesResponseBody())));
+  }
+
   private static void stubAccountsWithEmptyResponse() {
     wireMock.stubFor(get(urlPathMatching("/accounts"))
       .atPriority(5)
@@ -353,6 +362,19 @@ public class SynchronizationAPITests extends TestBase {
     return new JsonObject()
       .put("accounts", new JsonArray()
         .add(account))
+      .put("totalRecords", 1)
+      .encodePrettily();
+  }
+
+  private static String makeFeeFinesResponseBody() {
+    JsonObject feeFine = new JsonObject()
+      .put("id", randomId())
+      .put("feeFineType", "Type1")
+      .put("automatic", false);
+
+    return new JsonObject()
+      .put("feefines", new JsonArray()
+        .add(feeFine))
       .put("totalRecords", 1)
       .encodePrettily();
   }
