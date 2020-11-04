@@ -17,6 +17,7 @@ import static org.joda.time.LocalDateTime.now;
 import static org.junit.Assert.assertThat;
 
 import java.util.Date;
+import java.util.List;
 
 import org.awaitility.Awaitility;
 import org.folio.domain.SynchronizationStatus;
@@ -64,6 +65,7 @@ public class SynchronizationAPITests extends TestBase {
     postgresClient, LOAN_DUE_DATE_CHANGED_EVENT_TABLE_NAME, LoanDueDateChangedEvent.class);
   private EventRepository<FeeFineBalanceChangedEvent> feeFineBalanceChangedEventRepository = new EventRepository<>(
     postgresClient, FEE_FINE_BALANCE_CHANGED_EVENT_TABLE_NAME, FeeFineBalanceChangedEvent.class);
+  private static final String FEE_FINE_TYPE_ID = randomId();
 
   private final SynchronizationJobRepository synchronizationJobRepository =
     new SynchronizationJobRepository(postgresClient);
@@ -183,6 +185,9 @@ public class SynchronizationAPITests extends TestBase {
       .atMost(5, SECONDS)
       .until(() -> waitFor(
         feeFineBalanceChangedEventRepository.getByUserId(USER_ID)).size(), is(1));
+    List<FeeFineBalanceChangedEvent> feeFineBalanceChangedEvents = waitFor(
+      feeFineBalanceChangedEventRepository.getByUserId(USER_ID));
+    assertThat(feeFineBalanceChangedEvents.get(0).getFeeFineTypeId(), is(FEE_FINE_TYPE_ID));
 
     Awaitility.await()
       .atMost(30, SECONDS)
@@ -368,7 +373,7 @@ public class SynchronizationAPITests extends TestBase {
 
   private static String makeFeeFinesResponseBody() {
     JsonObject feeFine = new JsonObject()
-      .put("id", randomId())
+      .put("id", FEE_FINE_TYPE_ID)
       .put("feeFineType", "Type1")
       .put("automatic", false);
 
