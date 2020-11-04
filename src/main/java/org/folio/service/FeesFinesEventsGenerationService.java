@@ -7,8 +7,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-import org.apache.commons.collections4.map.HashedMap;
 import org.folio.repository.SynchronizationJobRepository;
+import org.folio.rest.client.FeesFinesOkapiClient;
 import org.folio.rest.handlers.EventHandler;
 import org.folio.rest.handlers.FeeFineBalanceChangedEventHandler;
 import org.folio.rest.jaxrs.model.Account;
@@ -21,7 +21,7 @@ import io.vertx.core.json.JsonObject;
 
 public class FeesFinesEventsGenerationService extends EventsGenerationService {
   private final EventHandler<FeeFineBalanceChangedEvent> feeFineBalanceChangedEventHandler;
-  private static final int FEES_FINES_LIMIT = 1000;
+  private final FeesFinesOkapiClient feeFineOkapiClient;
 
   public FeesFinesEventsGenerationService(Map<String, String> okapiHeaders, Vertx vertx,
     SynchronizationJobRepository syncRepository) {
@@ -29,6 +29,7 @@ public class FeesFinesEventsGenerationService extends EventsGenerationService {
     super(okapiHeaders, vertx, syncRepository);
     this.feeFineBalanceChangedEventHandler = new FeeFineBalanceChangedEventHandler(
       okapiHeaders, vertx);
+    this.feeFineOkapiClient = new FeesFinesOkapiClient(vertx, okapiHeaders);
   }
 
   @Override
@@ -61,23 +62,10 @@ public class FeesFinesEventsGenerationService extends EventsGenerationService {
   }
 
   private Future<String> generateEventsByAccounts(List<Account> records) {
-    return fetchFeeFineTypes()
+    return feeFineOkapiClient.fetchFeeFineTypes()
       .compose(feeFineTypes -> records.stream()
         .map(account -> generateFeeFineBalanceChangedEvent(account, feeFineTypes))
         .reduce(Future.succeededFuture(), (a, b) -> a.compose(r -> b)));
-  }
-
-  private Future<Map<String, String>> fetchFeeFineTypes() {
-    return okapiClient.getMany("/feefines", FEES_FINES_LIMIT, 0)
-      .map(feeFines -> {
-        Map<String, String> feeFineTypes = new HashedMap<>();
-        feeFines.getJsonArray("feefines").stream()
-          .filter(obj -> obj instanceof JsonObject)
-          .map(JsonObject.class::cast)
-          .forEach(feeFine -> feeFineTypes.put(feeFine.getString("feeFineType"),
-            feeFine.getString("id")));
-        return feeFineTypes;
-      });
   }
 
   private Future<String> generateFeeFineBalanceChangedEvent(Account account, Map<String, String> eventTypes) {
