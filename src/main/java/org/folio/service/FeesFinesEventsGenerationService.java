@@ -67,16 +67,17 @@ public class FeesFinesEventsGenerationService extends EventsGenerationService {
       .map(feeFineTypes -> feeFineTypes.stream()
         .collect(Collectors.toMap(Feefine::getFeeFineType, Feefine::getId)))
       .compose(feeFineTypes -> records.stream()
-        .map(account -> generateFeeFineBalanceChangedEvent(account, feeFineTypes))
+        .map(account -> generateFeeFineBalanceChangedEvent(account,
+          feeFineTypes.get(account.getFeeFineType())))
         .reduce(Future.succeededFuture(), (a, b) -> a.compose(r -> b)));
   }
 
-  private Future<String> generateFeeFineBalanceChangedEvent(Account account, Map<String, String> eventTypes) {
+  private Future<String> generateFeeFineBalanceChangedEvent(Account account, String feeFineTypeId) {
     log.info("Start generateFeeFineBalanceChangedEvent for account " + account.getId());
     return feeFineBalanceChangedEventHandler.handle(new FeeFineBalanceChangedEvent()
       .withBalance(BigDecimal.valueOf(account.getRemaining()))
       .withFeeFineId(account.getFeeFineId())
-      .withFeeFineTypeId(eventTypes.get(account.getFeeFineType()))
+      .withFeeFineTypeId(feeFineTypeId)
       .withUserId(account.getUserId())
       .withLoanId(account.getLoanId())
       .withMetadata(account.getMetadata()), true)
