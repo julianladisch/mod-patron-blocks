@@ -2,6 +2,7 @@ package org.folio.rest.impl;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
+import static com.github.tomakehurst.wiremock.client.WireMock.notFound;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlPathMatching;
 import static java.lang.String.format;
 import static java.util.concurrent.TimeUnit.SECONDS;
@@ -196,6 +197,18 @@ public class SynchronizationAPITests extends TestBase {
   }
 
   @Test
+  public void feeFineBalanceChangedEventShouldNotBeCreatedIfFeesFinesNotFound() {
+    stubLoansWithEmptyResponse();
+    stubAccounts();
+    stubFeeFinesWith404();
+    createOpenSynchronizationJobFull();
+
+    runSynchronization();
+
+    assertThat(waitFor(feeFineBalanceChangedEventRepository.getByUserId(USER_ID)).size(), is(0));
+  }
+
+  @Test
   public void shouldNotCreateAnyEvents() {
     stubLoansWithEmptyResponse();
     stubAccountsWithEmptyResponse();
@@ -325,6 +338,12 @@ public class SynchronizationAPITests extends TestBase {
       .willReturn(aResponse()
         .withStatus(200)
         .withBody(makeFeeFinesResponseBody())));
+  }
+
+  private static void stubFeeFinesWith404() {
+    wireMock.stubFor(get(urlPathMatching("/feefines"))
+      .atPriority(5)
+      .willReturn(notFound().withStatus(404)));
   }
 
   private static void stubAccountsWithEmptyResponse() {
