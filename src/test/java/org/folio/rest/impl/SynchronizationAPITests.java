@@ -380,7 +380,7 @@ public class SynchronizationAPITests extends TestBase {
       .put("userId", USER_ID)
       .put("loanId", randomId())
       .put("feeFineId", randomId())
-      .put("feeFineType", "Type1")
+      .put("feeFineType", "Type2")
       .put("remaining", 1.0);
 
     return new JsonObject()
@@ -391,16 +391,20 @@ public class SynchronizationAPITests extends TestBase {
   }
 
   private static String makeFeeFinesResponseBody() {
-    JsonObject feeFine = new JsonObject()
-      .put("id", FEE_FINE_TYPE_ID)
-      .put("feeFineType", "Type1")
-      .put("automatic", false);
-
     return new JsonObject()
       .put("feefines", new JsonArray()
-        .add(feeFine))
-      .put("totalRecords", 1)
+        .add(generateFeeFine(randomId(), "Type1"))
+        .add(generateFeeFine(FEE_FINE_TYPE_ID, "Type2"))
+        .add(generateFeeFine(randomId(), "Type3")))
+      .put("totalRecords", 3)
       .encodePrettily();
+  }
+
+  private static JsonObject generateFeeFine(String id, String type) {
+    return new JsonObject()
+      .put("id", id)
+      .put("feeFineType", type)
+      .put("automatic", true);
   }
 
   private static String makeEmptyResponseBody(String entityName) {
