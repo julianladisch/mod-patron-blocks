@@ -3,7 +3,7 @@ package org.folio.rest.client;
 import java.util.List;
 import java.util.Map;
 
-import org.folio.rest.jaxrs.model.FeeFineCollection;
+import org.folio.rest.jaxrs.model.FeeFineTypeCollection;
 import org.folio.rest.jaxrs.model.Feefine;
 
 import io.vertx.core.Future;
@@ -16,7 +16,7 @@ public class FeesFinesClient extends OkapiClient {
   }
 
   public Future<List<Feefine>> fetchFeeFineTypes() {
-    return fetchAll("/feefines", FeeFineCollection.class)
-      .map(FeeFineCollection::getFeefines);
+    return fetchAll("/feefines", FeeFineTypeCollection.class)
+      .map(FeeFineTypeCollection::getFeefines);
   }
 }
