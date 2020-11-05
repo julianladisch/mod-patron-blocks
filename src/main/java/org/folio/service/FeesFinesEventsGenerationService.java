@@ -8,11 +8,12 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 import org.folio.repository.SynchronizationJobRepository;
-import org.folio.rest.client.FeesFinesOkapiClient;
+import org.folio.rest.client.FeesFinesClient;
 import org.folio.rest.handlers.EventHandler;
 import org.folio.rest.handlers.FeeFineBalanceChangedEventHandler;
 import org.folio.rest.jaxrs.model.Account;
 import org.folio.rest.jaxrs.model.FeeFineBalanceChangedEvent;
+import org.folio.rest.jaxrs.model.Feefine;
 import org.folio.rest.jaxrs.model.SynchronizationJob;
 
 import io.vertx.core.Future;
@@ -21,7 +22,7 @@ import io.vertx.core.json.JsonObject;
 
 public class FeesFinesEventsGenerationService extends EventsGenerationService {
   private final EventHandler<FeeFineBalanceChangedEvent> feeFineBalanceChangedEventHandler;
-  private final FeesFinesOkapiClient feeFineOkapiClient;
+  private final FeesFinesClient feeFineOkapiClient;
 
   public FeesFinesEventsGenerationService(Map<String, String> okapiHeaders, Vertx vertx,
     SynchronizationJobRepository syncRepository) {
@@ -29,7 +30,7 @@ public class FeesFinesEventsGenerationService extends EventsGenerationService {
     super(okapiHeaders, vertx, syncRepository);
     this.feeFineBalanceChangedEventHandler = new FeeFineBalanceChangedEventHandler(
       okapiHeaders, vertx);
-    this.feeFineOkapiClient = new FeesFinesOkapiClient(vertx, okapiHeaders);
+    this.feeFineOkapiClient = new FeesFinesClient(vertx, okapiHeaders);
   }
 
   @Override
@@ -63,6 +64,8 @@ public class FeesFinesEventsGenerationService extends EventsGenerationService {
 
   private Future<String> generateEventsByAccounts(List<Account> records) {
     return feeFineOkapiClient.fetchFeeFineTypes()
+      .map(feeFineTypes -> feeFineTypes.stream()
+        .collect(Collectors.toMap(Feefine::getFeeFineType, Feefine::getId)))
       .compose(feeFineTypes -> records.stream()
         .map(account -> generateFeeFineBalanceChangedEvent(account, feeFineTypes))
         .reduce(Future.succeededFuture(), (a, b) -> a.compose(r -> b)));
