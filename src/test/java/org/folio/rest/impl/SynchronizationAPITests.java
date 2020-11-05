@@ -2,6 +2,7 @@ package org.folio.rest.impl;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
+import static com.github.tomakehurst.wiremock.client.WireMock.notFound;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlPathMatching;
 import static java.lang.String.format;
 import static java.util.concurrent.TimeUnit.SECONDS;
@@ -17,6 +18,7 @@ import static org.joda.time.LocalDateTime.now;
 import static org.junit.Assert.assertThat;
 
 import java.util.Date;
+import java.util.List;
 
 import org.awaitility.Awaitility;
 import org.folio.domain.SynchronizationStatus;
@@ -64,6 +66,7 @@ public class SynchronizationAPITests extends TestBase {
     postgresClient, LOAN_DUE_DATE_CHANGED_EVENT_TABLE_NAME, LoanDueDateChangedEvent.class);
   private EventRepository<FeeFineBalanceChangedEvent> feeFineBalanceChangedEventRepository = new EventRepository<>(
     postgresClient, FEE_FINE_BALANCE_CHANGED_EVENT_TABLE_NAME, FeeFineBalanceChangedEvent.class);
+  private static final String FEE_FINE_TYPE_ID = randomId();
 
   private final SynchronizationJobRepository synchronizationJobRepository =
     new SynchronizationJobRepository(postgresClient);
@@ -174,6 +177,7 @@ public class SynchronizationAPITests extends TestBase {
   public void feeFineBalanceChangedEventShouldBeCreatedAfterSynchronization() {
     stubLoansWithEmptyResponse();
     stubAccounts();
+    stubFeeFines();
     String syncJobId = createOpenSynchronizationJobFull();
 
     runSynchronization();
@@ -182,11 +186,26 @@ public class SynchronizationAPITests extends TestBase {
       .atMost(5, SECONDS)
       .until(() -> waitFor(
         feeFineBalanceChangedEventRepository.getByUserId(USER_ID)).size(), is(1));
+    List<FeeFineBalanceChangedEvent> feeFineBalanceChangedEvents = waitFor(
+      feeFineBalanceChangedEventRepository.getByUserId(USER_ID));
+    assertThat(feeFineBalanceChangedEvents.get(0).getFeeFineTypeId(), is(FEE_FINE_TYPE_ID));
 
     Awaitility.await()
       .atMost(30, SECONDS)
       .until(() -> waitFor(synchronizationJobRepository.get(syncJobId))
         .orElse(null), is(synchronizationJobMatcher(DONE_STATUS, 0, 1, 0, 1)));
+  }
+
+  @Test
+  public void feeFineBalanceChangedEventShouldNotBeCreatedIfFeesFinesNotFound() {
+    stubLoansWithEmptyResponse();
+    stubAccounts();
+    stubFeeFinesWith404();
+    createOpenSynchronizationJobFull();
+
+    runSynchronization();
+
+    assertThat(waitFor(feeFineBalanceChangedEventRepository.getByUserId(USER_ID)).size(), is(0));
   }
 
   @Test
@@ -313,6 +332,20 @@ public class SynchronizationAPITests extends TestBase {
         .withBody(makeAccountsResponseBody())));
   }
 
+  private static void stubFeeFines() {
+    wireMock.stubFor(get(urlPathMatching("/feefines"))
+      .atPriority(5)
+      .willReturn(aResponse()
+        .withStatus(200)
+        .withBody(makeFeeFinesResponseBody())));
+  }
+
+  private static void stubFeeFinesWith404() {
+    wireMock.stubFor(get(urlPathMatching("/feefines"))
+      .atPriority(5)
+      .willReturn(notFound().withStatus(404)));
+  }
+
   private static void stubAccountsWithEmptyResponse() {
     wireMock.stubFor(get(urlPathMatching("/accounts"))
       .atPriority(5)
@@ -347,7 +380,7 @@ public class SynchronizationAPITests extends TestBase {
       .put("userId", USER_ID)
       .put("loanId", randomId())
       .put("feeFineId", randomId())
-      .put("feeFineType", "Type1")
+      .put("feeFineType", "Type2")
       .put("remaining", 1.0);
 
     return new JsonObject()
@@ -355,6 +388,23 @@ public class SynchronizationAPITests extends TestBase {
         .add(account))
       .put("totalRecords", 1)
       .encodePrettily();
+  }
+
+  private static String makeFeeFinesResponseBody() {
+    return new JsonObject()
+      .put("feefines", new JsonArray()
+        .add(generateFeeFine(randomId(), "Type1"))
+        .add(generateFeeFine(FEE_FINE_TYPE_ID, "Type2"))
+        .add(generateFeeFine(randomId(), "Type3")))
+      .put("totalRecords", 3)
+      .encodePrettily();
+  }
+
+  private static JsonObject generateFeeFine(String id, String type) {
+    return new JsonObject()
+      .put("id", id)
+      .put("feeFineType", type)
+      .put("automatic", true);
   }
 
   private static String makeEmptyResponseBody(String entityName) {
