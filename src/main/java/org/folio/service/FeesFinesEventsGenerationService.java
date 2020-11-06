@@ -76,7 +76,7 @@ public class FeesFinesEventsGenerationService extends EventsGenerationService {
     log.info("Start generateFeeFineBalanceChangedEvent for account " + account.getId());
     return feeFineBalanceChangedEventHandler.handle(new FeeFineBalanceChangedEvent()
       .withBalance(BigDecimal.valueOf(account.getRemaining()))
-      .withFeeFineId(account.getFeeFineId())
+      .withFeeFineId(account.getId())
       .withFeeFineTypeId(feeFineTypeId)
       .withUserId(account.getUserId())
       .withLoanId(account.getLoanId())

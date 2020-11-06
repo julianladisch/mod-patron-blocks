@@ -67,6 +67,7 @@ public class SynchronizationAPITests extends TestBase {
   private EventRepository<FeeFineBalanceChangedEvent> feeFineBalanceChangedEventRepository = new EventRepository<>(
     postgresClient, FEE_FINE_BALANCE_CHANGED_EVENT_TABLE_NAME, FeeFineBalanceChangedEvent.class);
   private static final String FEE_FINE_TYPE_ID = randomId();
+  private static final String ACCOUNT_ID = randomId();
 
   private final SynchronizationJobRepository synchronizationJobRepository =
     new SynchronizationJobRepository(postgresClient);
@@ -186,9 +187,13 @@ public class SynchronizationAPITests extends TestBase {
       .atMost(5, SECONDS)
       .until(() -> waitFor(
         feeFineBalanceChangedEventRepository.getByUserId(USER_ID)).size(), is(1));
+
     List<FeeFineBalanceChangedEvent> feeFineBalanceChangedEvents = waitFor(
       feeFineBalanceChangedEventRepository.getByUserId(USER_ID));
-    assertThat(feeFineBalanceChangedEvents.get(0).getFeeFineTypeId(), is(FEE_FINE_TYPE_ID));
+    FeeFineBalanceChangedEvent generatedEvent = feeFineBalanceChangedEvents.get(0);
+
+    assertThat(generatedEvent.getFeeFineTypeId(), is(FEE_FINE_TYPE_ID));
+    assertThat(generatedEvent.getFeeFineId(), is(ACCOUNT_ID));
 
     Awaitility.await()
       .atMost(30, SECONDS)
@@ -376,7 +381,7 @@ public class SynchronizationAPITests extends TestBase {
   private static String makeAccountsResponseBody() {
 
     JsonObject account = new JsonObject()
-      .put("id", randomId())
+      .put("id", ACCOUNT_ID)
       .put("userId", USER_ID)
       .put("loanId", randomId())
       .put("feeFineId", randomId())
