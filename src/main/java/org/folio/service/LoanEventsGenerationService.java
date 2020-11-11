@@ -29,6 +29,7 @@ public class LoanEventsGenerationService extends EventsGenerationService {
 
   private static final String DECLARED_LOST_STATUS = "Declared lost";
   private static final String CLAIMED_RETURNED_STATUS = "Claimed returned";
+  private static final String LOANS = "loans";
   private final EventHandler<ItemCheckedOutEvent> checkedOutEventHandler;
   private final EventHandler<ItemDeclaredLostEvent> declaredLostEventHandler;
   private final EventHandler<ItemClaimedReturnedEvent> claimedReturnedEventHandler;
@@ -50,31 +51,25 @@ public class LoanEventsGenerationService extends EventsGenerationService {
 
     Future<JsonObject> readPage = okapiClient.getMany(path, PAGE_LIMIT, pageNumber * PAGE_LIMIT)
       .compose(jsonPage -> {
-        if (jsonPage == null || jsonPage.getJsonArray("loans").size() == 0) {
+        if (jsonPage == null || jsonPage.getJsonArray(LOANS).size() == 0) {
           String errorMessage = String.format(
             "Error in receiving page number %d of loans: %s", pageNumber, path);
           log.error(errorMessage);
           return failedFuture(errorMessage);
         }
         return generateEventsByLoans(mapJsonToLoans(jsonPage))
-          .onComplete(result -> {
-            if (result.succeeded()) {
-              log.info("Success adding to generatedEventsForEachPagesToList for loans");
-              updateSyncJobWithProcessedLoans(syncJob,
-                syncJob.getNumberOfProcessedLoans() + jsonPage.getJsonArray("loans").size(),
-                totalRecords);
-            } else {
-              log.error("Failure adding to generatedEventsForEachPagesToList for loans");
-              updateSyncJobWithError(syncJob, result.cause().getLocalizedMessage());
-            }
-          })
+          .onComplete(r -> logEventsGenerationResult(r, LOANS))
+          .compose(r -> updateSyncJobWithProcessedLoans(syncJob,
+            syncJob.getNumberOfProcessedLoans() + jsonPage.getJsonArray(LOANS).size(),
+            totalRecords))
+          .recover(t -> updateSyncJobWithError(syncJob, t.getLocalizedMessage()))
           .map(jsonPage);
       });
     generatedEventsForPages.add(readPage);
   }
 
   private List<Loan> mapJsonToLoans(JsonObject loansJson) {
-    return loansJson.getJsonArray("loans").stream()
+    return loansJson.getJsonArray(LOANS).stream()
       .filter(obj -> obj instanceof JsonObject)
       .map(JsonObject.class::cast)
       .map(this::mapToLoan)
@@ -143,19 +138,12 @@ public class LoanEventsGenerationService extends EventsGenerationService {
     return succeededFuture(null);
   }
 
-  private void updateSyncJobWithProcessedLoans(SynchronizationJob syncJob, int processed,
-    int total) {
+  private Future<SynchronizationJob> updateSyncJobWithProcessedLoans(SynchronizationJob syncJob,
+    int processed, int total) {
 
-    SynchronizationJob updatedSyncJob = syncJob
-      .withNumberOfProcessedLoans(processed)
+    syncJob.withNumberOfProcessedLoans(processed)
       .withTotalNumberOfLoans(total);
-    syncRepository.update(updatedSyncJob, syncJob.getId())
-      .onComplete(r -> {
-        if (r.failed()) {
-          log.error("updateSyncJobWithProcessedLoans failed");
-        } else {
-          log.info("updateSyncJobWithProcessedLoans success");
-        }
-      });
+
+    return syncRepository.update(syncJob);
   }
 }

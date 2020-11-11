@@ -1,5 +1,7 @@
 package org.folio.service;
 
+import static java.lang.String.format;
+
 import java.lang.invoke.MethodHandles;
 import java.util.ArrayList;
 import java.util.Date;
@@ -12,6 +14,7 @@ import org.folio.rest.jaxrs.model.Metadata;
 import org.folio.rest.jaxrs.model.SynchronizationJob;
 import org.joda.time.DateTime;
 
+import io.vertx.core.AsyncResult;
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
@@ -69,11 +72,22 @@ public abstract class EventsGenerationService {
     return DateTime.parse(representation.getString(fieldName)).toDate();
   }
 
-  protected void updateSyncJobWithError(SynchronizationJob syncJob, String localizedMessage) {
+  protected Future<SynchronizationJob> updateSyncJobWithError(SynchronizationJob syncJob,
+    String localizedMessage) {
+
     log.info("update SyncJob with error: " + localizedMessage);
-    List<String> errors = syncJob.getErrors();
-    errors.add(localizedMessage);
-    syncRepository.update(syncJob.withErrors(errors), syncJob.getId());
+    syncJob.getErrors().add(localizedMessage);
+
+    return syncRepository.update(syncJob);
+  }
+
+  protected void logEventsGenerationResult(AsyncResult<?> result, String entityName) {
+    if (result.failed()) {
+      log.error(format("Failed to generate events for a page of %s: %s", entityName,
+        result.cause().getMessage()));
+    } else {
+      log.info("Successfully generated events for a page of " + entityName);
+    }
   }
 
   protected int calculateNumberOfPages(int totalRecords) {

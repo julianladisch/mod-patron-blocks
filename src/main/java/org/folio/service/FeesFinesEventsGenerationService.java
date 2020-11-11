@@ -21,6 +21,7 @@ import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
 
 public class FeesFinesEventsGenerationService extends EventsGenerationService {
+  public static final String ACCOUNTS = "accounts";
   private final EventHandler<FeeFineBalanceChangedEvent> feeFineBalanceChangedEventHandler;
   private final FeesFinesClient feeFineOkapiClient;
 
@@ -39,24 +40,18 @@ public class FeesFinesEventsGenerationService extends EventsGenerationService {
 
     Future<JsonObject> readPage = okapiClient.getMany(path, PAGE_LIMIT, pageNumber * PAGE_LIMIT)
       .compose(jsonPage -> {
-        if (jsonPage == null || jsonPage.getJsonArray("accounts").size() == 0) {
+        if (jsonPage == null || jsonPage.getJsonArray(ACCOUNTS).size() == 0) {
           String errorMessage = String.format(
             "Error in receiving page number %d of accounts: %s", pageNumber, path);
           log.error(errorMessage);
           return failedFuture(errorMessage);
         }
         return generateEventsByAccounts(mapJsonToAccounts(jsonPage))
-          .onComplete(result -> {
-            if (result.succeeded()) {
-              log.info("Success adding to generatedEventsForEachPagesToList for loans");
-              updateSyncJobWithProcessedAccounts(syncJob,
-                syncJob.getNumberOfProcessedFeesFines() + jsonPage.getJsonArray("accounts").size(),
-                totalRecords);
-            } else {
-              log.error("Failure adding to generatedEventsForEachPagesToList for loans");
-              updateSyncJobWithError(syncJob, result.cause().getLocalizedMessage());
-            }
-          })
+          .onComplete(r -> logEventsGenerationResult(r, ACCOUNTS))
+          .compose(r -> updateSyncJobWithProcessedAccounts(syncJob,
+            syncJob.getNumberOfProcessedFeesFines() + jsonPage.getJsonArray(ACCOUNTS).size(),
+            totalRecords))
+          .recover(t -> updateSyncJobWithError(syncJob, t.getLocalizedMessage()))
           .map(jsonPage);
       });
     generatedEventsForPages.add(readPage);
@@ -86,7 +81,7 @@ public class FeesFinesEventsGenerationService extends EventsGenerationService {
     }
 
   private List<Account> mapJsonToAccounts(JsonObject loansJson) {
-    return loansJson.getJsonArray("accounts").stream()
+    return loansJson.getJsonArray(ACCOUNTS).stream()
       .filter(obj -> obj instanceof JsonObject)
       .map(JsonObject.class::cast)
       .map(this::mapToAccount)
@@ -104,19 +99,12 @@ public class FeesFinesEventsGenerationService extends EventsGenerationService {
       .withMetadata(mapMetadataFromJson(representation.getJsonObject("metadata")));
   }
 
-  private void updateSyncJobWithProcessedAccounts(SynchronizationJob syncJob, int processed,
-    int total) {
+  private Future<SynchronizationJob> updateSyncJobWithProcessedAccounts(SynchronizationJob syncJob,
+    int processed, int total) {
 
-    SynchronizationJob updatedSyncJob = syncJob
-      .withNumberOfProcessedFeesFines(processed)
+    syncJob.withNumberOfProcessedFeesFines(processed)
       .withTotalNumberOfFeesFines(total);
-    syncRepository.update(updatedSyncJob, syncJob.getId())
-    .onComplete(r -> {
-      if (r.failed()) {
-        log.error("updateSyncJobWithProcessedAccounts failed");
-      } else {
-        log.info("updateSyncJobWithProcessedAccounts success");
-      }
-    });
+
+    return syncRepository.update(syncJob);
   }
 }
