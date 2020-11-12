@@ -106,4 +106,29 @@ public class OkapiClient {
         return succeededFuture(response.bodyAsJsonObject());
     });
   }
+
+  protected <T> Future<T> fetchAll(String path, Class<T> responseType) {
+    Promise<HttpResponse<Buffer>> promise = Promise.promise();
+    getAbs(path).send(promise);
+
+    return promise.future().compose(response -> {
+      int responseStatus = response.statusCode();
+      if (responseStatus != 200) {
+        String errorMessage = String.format("Failed to fetch %s. Response: %d %s",
+          responseType.getName(), responseStatus, response.bodyAsString());
+        log.error(errorMessage);
+        return failedFuture(new EntityNotFoundException(errorMessage));
+      } else {
+        try {
+          T fetchedObject = objectMapper.readValue(response.bodyAsString(), responseType);
+          log.info("Fetched from {}. Response body: \n{}", path, response.bodyAsString());
+          return succeededFuture(fetchedObject);
+        } catch (JsonProcessingException e) {
+          log.error("Failed to parse response from {}. Response body: \n{}", path,
+            response.bodyAsString());
+          return failedFuture(e);
+        }
+      }
+    });
+  }
 }

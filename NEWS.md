@@ -1,3 +1,9 @@
+## 1.1.1 2020-11-12
+* Fix missing `feefineTypeId` in events created by synchronization (MODPATBLK-62)
+* Upgrade to RMB 31.1.5 and Vert.x 3.9.4 (MODPATBLK-63)
+* Fix incorrect synchronization of FEE_FINE_BALANCE_CHANGED events (MODPATBLK-65) 
+* Fix synchronization job status update upon finish (MODPATBLK-66)
+
 ## 1.1.0 2020-10-14
 * Automated patron blocks data synchronization (MODPATBLK-41)
 * Fix memory leak (MODPATBLK-43)
