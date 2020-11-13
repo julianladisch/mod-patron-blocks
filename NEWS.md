@@ -1,3 +1,7 @@
+## 1.1.2 2020-11-13
+
+* Update mod-pubsub-client version to 1.3.3 (MODPATBLK-67)
+
 ## 1.1.1 2020-11-12
 * Fix missing `feefineTypeId` in events created by synchronization (MODPATBLK-62)
 * Upgrade to RMB 31.1.5 and Vert.x 3.9.4 (MODPATBLK-63)
