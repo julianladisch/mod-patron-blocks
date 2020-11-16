@@ -45,15 +45,20 @@ import io.vertx.ext.unit.junit.VertxUnitRunner;
 
 @RunWith(VertxUnitRunner.class)
 public class SynchronizationAPITests extends TestBase {
-  private static final String USER_ID = randomId();
   private static final String SYNCHRONIZATION_JOBS_TABLE_NAME = "synchronization_jobs";
   private static final String ITEM_CHECKED_OUT_EVENT_TABLE_NAME = "item_checked_out_event";
   private static final String ITEM_DECLARED_LOST_EVENT_TABLE_NAME = "item_declared_lost_event";
   private static final String ITEM_CLAIMED_RETURNED_EVENT_TABLE_NAME = "item_claimed_returned_event";
   private static final String LOAN_DUE_DATE_CHANGED_EVENT_TABLE_NAME = "loan_due_date_changed_event";
   private static final String FEE_FINE_BALANCE_CHANGED_EVENT_TABLE_NAME = "fee_fine_balance_changed_event";
-  private static final String DONE_STATUS = "done";
-  private static final String FAILED_STATUS = "failed";
+
+  private static final String USER_ID = randomId();
+  private static final String ACCOUNT_ID = randomId();
+  private static final String FEE_FINE_TYPE_ID = randomId();
+  private static final String FEE_FINE_TYPE = "Overdue fine";
+  private static final String JOB_STATUS_DONE = "done";
+  private static final String JOB_STATUS_FAILED = "failed";
+
   private EventRepository<ItemCheckedOutEvent> checkOutEventRepository = new EventRepository<>(
     postgresClient, ITEM_CHECKED_OUT_EVENT_TABLE_NAME, ItemCheckedOutEvent.class);
   private EventRepository<ItemClaimedReturnedEvent> itemClaimedReturnedEventRepository =
@@ -66,8 +71,6 @@ public class SynchronizationAPITests extends TestBase {
     postgresClient, LOAN_DUE_DATE_CHANGED_EVENT_TABLE_NAME, LoanDueDateChangedEvent.class);
   private EventRepository<FeeFineBalanceChangedEvent> feeFineBalanceChangedEventRepository = new EventRepository<>(
     postgresClient, FEE_FINE_BALANCE_CHANGED_EVENT_TABLE_NAME, FeeFineBalanceChangedEvent.class);
-  private static final String FEE_FINE_TYPE_ID = randomId();
-  private static final String ACCOUNT_ID = randomId();
 
   private final SynchronizationJobRepository synchronizationJobRepository =
     new SynchronizationJobRepository(postgresClient);
@@ -178,7 +181,6 @@ public class SynchronizationAPITests extends TestBase {
   public void feeFineBalanceChangedEventShouldBeCreatedAfterSynchronization() {
     stubLoansWithEmptyResponse();
     stubAccounts();
-    stubFeeFines();
     String syncJobId = createOpenSynchronizationJobFull();
 
     runSynchronization();
@@ -196,9 +198,9 @@ public class SynchronizationAPITests extends TestBase {
     assertThat(generatedEvent.getFeeFineId(), is(ACCOUNT_ID));
 
     Awaitility.await()
-      .atMost(30, SECONDS)
+      .atMost(5, SECONDS)
       .until(() -> waitFor(synchronizationJobRepository.get(syncJobId))
-        .orElse(null), is(synchronizationJobMatcher(DONE_STATUS, 0, 1, 0, 1)));
+        .orElse(null), is(synchronizationJobMatcher(JOB_STATUS_DONE, 0, 1, 0, 1)));
   }
 
   @Test
@@ -270,7 +272,7 @@ public class SynchronizationAPITests extends TestBase {
     Awaitility.await()
       .atMost(30, SECONDS)
       .until(() -> waitFor(synchronizationJobRepository.get(syncJobId))
-        .orElse(null), is(synchronizationJobMatcher(FAILED_STATUS, 0, 0, 0, 0)));
+        .orElse(null), is(synchronizationJobMatcher(JOB_STATUS_FAILED, 0, 0, 0, 0)));
   }
 
   protected void runSynchronization() {
@@ -283,7 +285,7 @@ public class SynchronizationAPITests extends TestBase {
     Awaitility.await()
       .atMost(30, SECONDS)
       .until(() -> waitFor(synchronizationJobRepository.get(syncJobId))
-        .orElse(null), is(synchronizationJobMatcher(DONE_STATUS, 1, 0, 1, 0)));
+        .orElse(null), is(synchronizationJobMatcher(JOB_STATUS_DONE, 1, 0, 1, 0)));
   }
 
   private String createOpenSynchronizationJobFull() {
@@ -337,14 +339,6 @@ public class SynchronizationAPITests extends TestBase {
         .withBody(makeAccountsResponseBody())));
   }
 
-  private static void stubFeeFines() {
-    wireMock.stubFor(get(urlPathMatching("/feefines"))
-      .atPriority(5)
-      .willReturn(aResponse()
-        .withStatus(200)
-        .withBody(makeFeeFinesResponseBody())));
-  }
-
   private static void stubFeeFinesWith404() {
     wireMock.stubFor(get(urlPathMatching("/feefines"))
       .atPriority(5)
@@ -379,13 +373,12 @@ public class SynchronizationAPITests extends TestBase {
   }
 
   private static String makeAccountsResponseBody() {
-
     JsonObject account = new JsonObject()
       .put("id", ACCOUNT_ID)
       .put("userId", USER_ID)
       .put("loanId", randomId())
-      .put("feeFineId", randomId())
-      .put("feeFineType", "Type2")
+      .put("feeFineId", FEE_FINE_TYPE_ID)
+      .put("feeFineType", FEE_FINE_TYPE)
       .put("remaining", 1.0);
 
     return new JsonObject()
@@ -395,25 +388,7 @@ public class SynchronizationAPITests extends TestBase {
       .encodePrettily();
   }
 
-  private static String makeFeeFinesResponseBody() {
-    return new JsonObject()
-      .put("feefines", new JsonArray()
-        .add(generateFeeFine(randomId(), "Type1"))
-        .add(generateFeeFine(FEE_FINE_TYPE_ID, "Type2"))
-        .add(generateFeeFine(randomId(), "Type3")))
-      .put("totalRecords", 3)
-      .encodePrettily();
-  }
-
-  private static JsonObject generateFeeFine(String id, String type) {
-    return new JsonObject()
-      .put("id", id)
-      .put("feeFineType", type)
-      .put("automatic", true);
-  }
-
   private static String makeEmptyResponseBody(String entityName) {
-
     return new JsonObject()
       .put(entityName, new JsonArray())
       .put("totalRecords", 0)
