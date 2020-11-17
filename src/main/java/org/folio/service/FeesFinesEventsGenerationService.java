@@ -8,12 +8,10 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 import org.folio.repository.SynchronizationJobRepository;
-import org.folio.rest.client.FeesFinesClient;
 import org.folio.rest.handlers.EventHandler;
 import org.folio.rest.handlers.FeeFineBalanceChangedEventHandler;
 import org.folio.rest.jaxrs.model.Account;
 import org.folio.rest.jaxrs.model.FeeFineBalanceChangedEvent;
-import org.folio.rest.jaxrs.model.Feefine;
 import org.folio.rest.jaxrs.model.SynchronizationJob;
 
 import io.vertx.core.Future;
@@ -23,7 +21,6 @@ import io.vertx.core.json.JsonObject;
 public class FeesFinesEventsGenerationService extends EventsGenerationService {
   public static final String ACCOUNTS = "accounts";
   private final EventHandler<FeeFineBalanceChangedEvent> feeFineBalanceChangedEventHandler;
-  private final FeesFinesClient feeFineOkapiClient;
 
   public FeesFinesEventsGenerationService(Map<String, String> okapiHeaders, Vertx vertx,
     SynchronizationJobRepository syncRepository) {
@@ -31,7 +28,6 @@ public class FeesFinesEventsGenerationService extends EventsGenerationService {
     super(okapiHeaders, vertx, syncRepository);
     this.feeFineBalanceChangedEventHandler = new FeeFineBalanceChangedEventHandler(
       okapiHeaders, vertx);
-    this.feeFineOkapiClient = new FeesFinesClient(vertx, okapiHeaders);
   }
 
   @Override
@@ -58,21 +54,17 @@ public class FeesFinesEventsGenerationService extends EventsGenerationService {
   }
 
   private Future<String> generateEventsByAccounts(List<Account> records) {
-    return feeFineOkapiClient.fetchFeeFineTypes()
-      .map(feeFineTypes -> feeFineTypes.stream()
-        .collect(Collectors.toMap(Feefine::getFeeFineType, Feefine::getId)))
-      .compose(feeFineTypes -> records.stream()
-        .map(account -> generateFeeFineBalanceChangedEvent(account,
-          feeFineTypes.get(account.getFeeFineType())))
-        .reduce(Future.succeededFuture(), (a, b) -> a.compose(r -> b)));
+    return records.stream()
+      .map(this::generateFeeFineBalanceChangedEvent)
+      .reduce(Future.succeededFuture(), (a, b) -> a.compose(r -> b));
   }
 
-  private Future<String> generateFeeFineBalanceChangedEvent(Account account, String feeFineTypeId) {
+  private Future<String> generateFeeFineBalanceChangedEvent(Account account) {
     log.info("Start generateFeeFineBalanceChangedEvent for account " + account.getId());
     return feeFineBalanceChangedEventHandler.handle(new FeeFineBalanceChangedEvent()
       .withBalance(BigDecimal.valueOf(account.getRemaining()))
       .withFeeFineId(account.getId())
-      .withFeeFineTypeId(feeFineTypeId)
+      .withFeeFineTypeId(account.getFeeFineId())
       .withUserId(account.getUserId())
       .withLoanId(account.getLoanId())
       .withMetadata(account.getMetadata()), true)
