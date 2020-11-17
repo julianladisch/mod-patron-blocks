@@ -1,5 +1,7 @@
-## 1.1.2 2020-11-13
+## 1.1.3 2020-11-17
+* Fix generation of FEE_FINE_BALANCE_CHANGED events by synchronization (MODPATBLK-69)
 
+## 1.1.2 2020-11-13
 * Update mod-pubsub-client version to 1.3.3 (MODPATBLK-67)
 
 ## 1.1.1 2020-11-12
