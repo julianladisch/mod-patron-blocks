@@ -5,6 +5,8 @@ import static io.vertx.core.Future.succeededFuture;
 import static org.folio.domain.SynchronizationStatus.DONE;
 import static org.folio.domain.SynchronizationStatus.FAILED;
 import static org.folio.domain.SynchronizationStatus.IN_PROGRESS;
+import static org.folio.rest.jaxrs.model.SynchronizationJob.Scope.FULL;
+import static org.folio.rest.jaxrs.model.SynchronizationJob.Scope.USER;
 
 import java.lang.invoke.MethodHandles;
 import java.util.List;
@@ -27,8 +29,6 @@ import io.vertx.core.logging.LoggerFactory;
 public class SynchronizationJobService {
 
   private static final Logger log = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
-  private static final String FULL_SCOPE = "full";
-  private static final String USER_SCOPE = "user";
 
   private final SynchronizationJobRepository syncRepository;
   private final LoanEventsGenerationService loanEventsGenerationService;
@@ -48,7 +48,7 @@ public class SynchronizationJobService {
   }
 
   public Future<SynchronizationJob> createSynchronizationJob(SynchronizationJob request) {
-    if (SynchronizationJob.Scope.USER == request.getScope() && request.getUserId() == null) {
+    if (USER == request.getScope() && request.getUserId() == null) {
       return failedFuture(new UserIdNotFoundException(
         "UserId is required for synchronization job with scope: USER"));
     }
@@ -102,37 +102,18 @@ public class SynchronizationJobService {
   private Future<SynchronizationJob> doSynchronization(SynchronizationJob synchronizationJob) {
     return updateJobStatus(synchronizationJob, IN_PROGRESS)
       .compose(syncJob -> cleanExistingEvents(syncJob, tenantId))
-      .compose(this::createEventsByLoans)
-      .compose(this::createEventsByFeesFines)
+      .compose(loanEventsGenerationService::generateEvents)
+      .compose(feesFinesEventsGenerationService::generateEvents)
       .compose(job -> updateJobStatus(job, DONE))
       .recover(t -> updateJobAsFailed(synchronizationJob, t.getLocalizedMessage()));
-  }
-
-  private Future<SynchronizationJob> createEventsByLoans(SynchronizationJob syncJob) {
-     String path = USER_SCOPE.equalsIgnoreCase(syncJob.getScope().value())
-       ? String.format("/loan-storage/loans?query=userId=%s and status.name=Open", syncJob.getUserId())
-       : "/loan-storage/loans?query=status.name=open";
-
-     return loanEventsGenerationService.generateEvents(syncJob, path);
-  }
-
-  private Future<SynchronizationJob> createEventsByFeesFines(SynchronizationJob syncJob) {
-    String path = USER_SCOPE.equalsIgnoreCase(syncJob.getScope().value())
-      ? String.format("/accounts?query=userId=%s and status.name=Open", syncJob.getUserId())
-      : "/accounts?query=status.name=open";
-
-    return feesFinesEventsGenerationService.generateEvents(syncJob, path);
   }
 
   private Future<SynchronizationJob> cleanExistingEvents(SynchronizationJob syncJob,
     String tenantId) {
 
-    String scope = syncJob.getScope().value();
-    if (FULL_SCOPE.equalsIgnoreCase(scope)) {
-      return eventService.removeAllEvents(tenantId)
-        .map(syncJob);
-    }
-    return eventService.removeAllEventsForUser(tenantId, syncJob.getUserId())
+    return (syncJob.getScope() == FULL
+      ? eventService.removeAllEvents(tenantId)
+      : eventService.removeAllEventsForUser(tenantId, syncJob.getUserId()))
       .map(syncJob);
   }
 
