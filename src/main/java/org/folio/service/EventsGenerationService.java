@@ -4,7 +4,9 @@ import static io.vertx.core.Future.succeededFuture;
 import static org.folio.rest.jaxrs.model.SynchronizationJob.Scope.USER;
 
 import java.lang.invoke.MethodHandles;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicReference;
 
 import org.folio.repository.SynchronizationJobRepository;
 import org.folio.rest.client.BulkDownloadClient;
@@ -44,12 +46,15 @@ public abstract class EventsGenerationService<T> {
       ? originalQuery + String.format(FILTER_BY_ID_QUERY_TEMPLATE, lastFetchedId)
       : originalQuery;
 
+    AtomicReference<List<T>> currentPage = new AtomicReference<>(new ArrayList<>());
+
     return bulkDownloadClient.fetchPage(query, PAGE_SIZE)
-      .compose(fetchedPage -> generateEventsForPage(fetchedPage)
-        .onComplete(this::logEventsGenerationResult)
-        .compose(page -> updateStats(job, page))
-        .recover(error -> handleError(job, error))
-        .compose(syncJob -> fetchNextPage(syncJob, fetchedPage, originalQuery)));
+      .onSuccess(currentPage::set)
+      .compose(this::generateEventsForPage)
+      .onComplete(this::logEventsGenerationResult)
+      .compose(page -> updateStats(job, page))
+      .recover(error -> handleError(job, error))
+      .compose(syncJob -> fetchNextPage(syncJob, currentPage.get(), originalQuery));
   }
 
   private Future<List<T>> generateEventsForPage(List<T> page) {
