@@ -1,96 +1,105 @@
 package org.folio.service;
 
-import static java.lang.String.format;
+import static io.vertx.core.Future.succeededFuture;
+import static org.folio.rest.jaxrs.model.SynchronizationJob.Scope.USER;
 
 import java.lang.invoke.MethodHandles;
-import java.util.ArrayList;
-import java.util.Date;
 import java.util.List;
-import java.util.Map;
 
 import org.folio.repository.SynchronizationJobRepository;
-import org.folio.rest.client.OkapiClient;
-import org.folio.rest.jaxrs.model.Metadata;
+import org.folio.rest.client.BulkDownloadClient;
 import org.folio.rest.jaxrs.model.SynchronizationJob;
-import org.joda.time.DateTime;
+import org.folio.util.UuidHelper;
 
 import io.vertx.core.AsyncResult;
-import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
-import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
 
-public abstract class EventsGenerationService {
-
+public abstract class EventsGenerationService<T> {
   protected static final Logger log = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
-  protected static final int PAGE_LIMIT = 50;
-  protected final SynchronizationJobRepository syncRepository;
-  protected final OkapiClient okapiClient;
 
-  protected EventsGenerationService(Map<String, String> okapiHeaders, Vertx vertx,
+  private static final int PAGE_SIZE = 100;
+  private static final String FILTER_BY_ID_QUERY_TEMPLATE = " and id > %s";
+
+  protected final SynchronizationJobRepository syncRepository;
+  private final BulkDownloadClient<T> bulkDownloadClient;
+
+  protected EventsGenerationService(BulkDownloadClient<T> bulkDownloadClient,
     SynchronizationJobRepository syncRepository) {
 
-    this.okapiClient = new OkapiClient(vertx, okapiHeaders);
     this.syncRepository = syncRepository;
+    this.bulkDownloadClient = bulkDownloadClient;
   }
 
-  public Future<SynchronizationJob> generateEvents(SynchronizationJob syncJob, String path) {
-    return okapiClient.getMany(path, 0, 0)
-      .compose(response -> {
-        log.info("Start generating events");
-        int totalRecords = response.getInteger("totalRecords");
-        int numberOfPages = calculateNumberOfPages(totalRecords);
-
-        List<Future> generatedEventsForPages = new ArrayList<>();
-        for (int i = 0; i < numberOfPages; i++) {
-          log.info("Generate events for page number: " + i);
-          addGeneratedEventsForEachPagesToList(syncJob, path, totalRecords,
-            generatedEventsForPages, i);
-        }
-        return generatedEventsForPages.isEmpty()
-          ? Future.succeededFuture(syncJob)
-          : CompositeFuture.all(generatedEventsForPages).map(syncJob);
-      });
+  public Future<SynchronizationJob> generateEvents(SynchronizationJob job) {
+    return generateEventsRecursively(job, buildQuery(job), null);
   }
 
-  protected abstract void addGeneratedEventsForEachPagesToList(SynchronizationJob syncJob,
-    String path, int totalRecords, List<Future> generatedEventsForPages, int pageNumber);
+  private Future<SynchronizationJob> generateEventsRecursively(SynchronizationJob job,
+    String originalQuery, String lastFetchedId) {
 
-  protected Metadata mapMetadataFromJson(JsonObject jsonMetadata) {
-    return new Metadata()
-      .withCreatedDate(getDateFromJson(jsonMetadata, "createdDate"))
-      .withUpdatedDate(getDateFromJson(jsonMetadata, "updatedDate"));
+    String query = lastFetchedId != null
+      ? originalQuery + String.format(FILTER_BY_ID_QUERY_TEMPLATE, lastFetchedId)
+      : originalQuery;
+
+    return bulkDownloadClient.fetchPage(query, PAGE_SIZE)
+      .compose(fetchedPage -> generateEventsForPage(fetchedPage)
+        .onComplete(this::logEventsGenerationResult)
+        .compose(page -> updateStats(job, page))
+        .recover(error -> handleError(job, error))
+        .compose(syncJob -> fetchNextPage(syncJob, fetchedPage, originalQuery)));
   }
 
-  protected Date getDateFromJson(JsonObject representation, String fieldName) {
-    if (representation == null || representation.getString(fieldName) == null) {
-      return null;
+  private Future<List<T>> generateEventsForPage(List<T> page) {
+    return page.stream()
+      .map(this::generateEvents)
+      .reduce(succeededFuture(), (prev, next) -> prev.compose(r -> next))
+      .map(page);
+  }
+
+  private Future<SynchronizationJob> fetchNextPage(SynchronizationJob job, List<T> lastPage,
+    String query) {
+
+    if (lastPage.size() < PAGE_SIZE) {
+      log.info("{} finished processing last page", getClass().getSimpleName());
+      return succeededFuture(job);
     }
 
-    return DateTime.parse(representation.getString(fieldName)).toDate();
+    T lastElement = lastPage.get(lastPage.size() - 1);
+    String lastElementId = JsonObject.mapFrom(lastElement).getString("id");
+    UuidHelper.validateUUID(lastElementId, true);
+
+    return generateEventsRecursively(job, query, lastElementId);
   }
 
-  protected Future<SynchronizationJob> updateSyncJobWithError(SynchronizationJob syncJob,
-    String localizedMessage) {
-
-    log.info("update SyncJob with error: " + localizedMessage);
-    syncJob.getErrors().add(localizedMessage);
-
+  private Future<SynchronizationJob> handleError(SynchronizationJob syncJob, Throwable error) {
+    syncJob.getErrors().add(error.getLocalizedMessage());
     return syncRepository.update(syncJob);
   }
 
-  protected void logEventsGenerationResult(AsyncResult<?> result, String entityName) {
+  private void logEventsGenerationResult(AsyncResult<List<T>> result) {
+    String className = getClass().getSimpleName();
+
     if (result.failed()) {
-      log.error(format("Failed to generate events for a page of %s: %s", entityName,
-        result.cause().getMessage()));
+      log.error("{} failed to generate events: {}", className, result.cause().getMessage());
     } else {
-      log.info("Successfully generated events for a page of " + entityName);
+      log.info("{} successfully generated events for {} entities", className, result.result().size());
     }
   }
 
-  protected int calculateNumberOfPages(int totalRecords) {
-    return (int) Math.ceil((totalRecords / (double) PAGE_LIMIT));
+  private static String buildQuery(SynchronizationJob job) {
+    StringBuilder query = new StringBuilder("status.name==Open");
+    if (job.getScope() == USER) {
+      query.append(" and userId==").append(job.getUserId());
+    }
+
+    return query.toString();
   }
+
+  protected abstract Future<T> generateEvents(T entity);
+
+  protected abstract Future<SynchronizationJob> updateStats(SynchronizationJob job,
+    List<T> entities);
 }
