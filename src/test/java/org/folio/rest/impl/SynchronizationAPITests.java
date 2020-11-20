@@ -248,7 +248,10 @@ public class SynchronizationAPITests extends TestBase {
 
     runSynchronization();
 
-    checkThatStatusIsFailed(syncJobId);
+    Awaitility.await()
+      .atMost(5, SECONDS)
+      .until(() -> waitFor(synchronizationJobRepository.get(syncJobId))
+        .orElse(null), is(synchronizationJobMatcher(JOB_STATUS_DONE, 0, 0, 0, 0)));
   }
 
   @Test
@@ -258,7 +261,10 @@ public class SynchronizationAPITests extends TestBase {
 
     runSynchronization();
 
-    checkThatStatusIsFailed(syncJobId);
+    Awaitility.await()
+      .atMost(5, SECONDS)
+      .until(() -> waitFor(synchronizationJobRepository.get(syncJobId))
+        .orElse(null), is(synchronizationJobMatcher(JOB_STATUS_DONE, 0, 0, 0, 0)));
   }
 
   @Test
