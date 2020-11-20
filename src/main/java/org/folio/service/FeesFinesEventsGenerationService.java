@@ -48,8 +48,8 @@ public class FeesFinesEventsGenerationService extends EventsGenerationService<Ac
   }
 
   @Override
-  protected Future<SynchronizationJob> updateStats(SynchronizationJob job, List<Account> entities) {
-    int processedFeesFinesCount = job.getNumberOfProcessedFeesFines() + entities.size();
+  protected Future<SynchronizationJob> updateStats(SynchronizationJob job, List<Account> accounts) {
+    int processedFeesFinesCount = job.getNumberOfProcessedFeesFines() + accounts.size();
     return syncRepository.update(job.withNumberOfProcessedFeesFines(processedFeesFinesCount));
   }
 
