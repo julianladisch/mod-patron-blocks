@@ -47,10 +47,10 @@ public class BulkDownloadClient<T> extends OkapiClient {
     String encodedFullQuery = StringUtil.urlEncode(fullQuery);
     String fullPath = String.format(PATH_TEMPLATE, path, pageSize, encodedFullQuery);
 
+    log.info("Attempting to fetch a page of {} {}...", pageSize, arrayName);
+
     Promise<HttpResponse<Buffer>> promise = Promise.promise();
     getAbs(fullPath).send(promise);
-
-    log.info("Attempting to fetch a page of {} {}...", pageSize, arrayName);
 
     return promise.future().compose(response -> {
       int responseStatus = response.statusCode();
