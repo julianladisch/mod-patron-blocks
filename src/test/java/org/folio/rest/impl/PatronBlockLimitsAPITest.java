@@ -1,6 +1,8 @@
 package org.folio.rest.impl;
 
-import static org.apache.http.HttpStatus.*;
+import static org.apache.http.HttpStatus.SC_CREATED;
+import static org.apache.http.HttpStatus.SC_UNPROCESSABLE_ENTITY;
+import static org.apache.http.HttpStatus.SC_NO_CONTENT;
 import static org.folio.test.util.TestUtil.readFile;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.CoreMatchers.is;
@@ -101,7 +103,7 @@ public class PatronBlockLimitsAPITest extends TestBase {
       .as(PatronBlockLimit.class);
 
     String message = getErrorMessage(actualLimit);
-    assertThat(message, is("Must be blank or a number from 0.0 to 9999.99"));
+    assertThat(message, is("Must be blank or a number from 0.00 to 9999.99"));
   }
 
   @Test
