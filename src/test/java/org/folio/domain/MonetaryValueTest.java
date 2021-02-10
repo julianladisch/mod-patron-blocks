@@ -7,7 +7,9 @@ import org.junit.runner.RunWith;
 
 import java.math.BigDecimal;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertEquals;
 
 @RunWith(JUnitParamsRunner.class)
 public class MonetaryValueTest {
@@ -107,4 +109,35 @@ public class MonetaryValueTest {
     assertEquals(expectedResult, new MonetaryValue(source).toString());
   }
 
+  @Test
+  @Parameters({"0", "0.0", "0.00", "0.01", "0.1"})
+  public void shouldBeGreaterThanIncomingValue(String value) {
+    MonetaryValue monetaryValue = new MonetaryValue(0.5);
+    assertTrue(monetaryValue.isGreaterThan(new MonetaryValue(value)));
+  }
+
+  @Test
+  @Parameters({"0", "0.0", "0.00", "0.01", "0.1"})
+  public void shouldBeGreaterOrEqualsThanIncomingValue(String value) {
+    MonetaryValue monetaryValue = new MonetaryValue(0.1);
+    assertTrue(monetaryValue.isGreaterThanOrEquals(new MonetaryValue(value)));
+  }
+
+  @Test
+  public void shouldCorrectlySubtractOneValueFromAnother() {
+    MonetaryValue subtractResult = new MonetaryValue(0.05).subtract(new MonetaryValue(0.01));
+    assertEquals(new MonetaryValue(0.04), subtractResult);
+  }
+
+  @Test
+  public void shouldCorrectlyAddOneValueToAnother() {
+    MonetaryValue addResult = new MonetaryValue(0.05).add(new MonetaryValue(0.01));
+    assertEquals(new MonetaryValue(0.06), addResult);
+  }
+
+  @Test
+  public void shouldReturnTheMinValueBetweenTwoMonetaryValues() {
+    MonetaryValue minResult = new MonetaryValue(0.05).min(new MonetaryValue(0.04));
+    assertEquals(new MonetaryValue(0.04), minResult);
+  }
 }

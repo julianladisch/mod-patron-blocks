@@ -3,6 +3,7 @@ package org.folio.domain;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.Currency;
+import java.util.Objects;
 
 import static java.math.BigDecimal.ZERO;
 import static java.util.Objects.requireNonNull;
@@ -98,4 +99,20 @@ public class MonetaryValue {
   public String toString() {
     return amount.toString();
   }
+
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) return true;
+    if (o == null || getClass() != o.getClass()) return false;
+    MonetaryValue that = (MonetaryValue) o;
+
+    return Objects.equals(amount, that.amount)
+      && Objects.equals(currency, that.currency);
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(amount, currency);
+  }
+
 }

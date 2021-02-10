@@ -6,7 +6,7 @@ import static org.apache.http.HttpStatus.SC_NO_CONTENT;
 import static org.folio.test.util.TestUtil.readFile;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.CoreMatchers.is;
-import static org.hamcrest.Matchers.*;
+import static org.hamcrest.CoreMatchers.nullValue;
 import static org.junit.Assert.assertThat;
 
 import java.io.IOException;
