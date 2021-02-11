@@ -2,9 +2,11 @@ package org.folio.rest.impl;
 
 import static org.apache.http.HttpStatus.SC_CREATED;
 import static org.apache.http.HttpStatus.SC_UNPROCESSABLE_ENTITY;
+import static org.apache.http.HttpStatus.SC_NO_CONTENT;
 import static org.folio.test.util.TestUtil.readFile;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.CoreMatchers.nullValue;
 import static org.junit.Assert.assertThat;
 
 import java.io.IOException;
@@ -78,18 +80,16 @@ public class PatronBlockLimitsAPITest extends TestBase {
   }
 
   @Test
-  public void cannotCreatePatronBlockLimitWithInvalidDoubleLimit()
+  public void shouldCreatePatronBlockLimitWithZeroValue()
     throws IOException, URISyntaxException {
 
     String patronBlockLimit = readFile(PATRON_BLOCK_LIMITS
-      + "/limit_max_outstanding_feefine_balance_invalid_limit.json");
+      + "/limit_max_outstanding_feefine_balance_zero_value_limit.json");
     PatronBlockLimit actualLimit = postWithStatus(PATRON_BLOCK_LIMITS_URL,
-      patronBlockLimit, SC_UNPROCESSABLE_ENTITY, USER_ID)
+      patronBlockLimit, SC_CREATED, USER_ID)
       .as(PatronBlockLimit.class);
 
-    String message = getErrorMessage(actualLimit);
-    assertThat(message, is("A maximum balance of 0 will result in all patrons in this group " +
-      "being blocked; to skip this limit, leave value set to blank"));
+    assertThat(actualLimit.getAdditionalProperties().get("errors"), nullValue());
   }
 
   @Test
@@ -103,7 +103,7 @@ public class PatronBlockLimitsAPITest extends TestBase {
       .as(PatronBlockLimit.class);
 
     String message = getErrorMessage(actualLimit);
-    assertThat(message, is("Must be blank or a number from 0.01 to 9999.99"));
+    assertThat(message, is("Must be blank or a number from 0.00 to 9999.99"));
   }
 
   @Test
@@ -122,18 +122,13 @@ public class PatronBlockLimitsAPITest extends TestBase {
   }
 
   @Test
-  public void cannotUpdatePatronBlockLimitWithInvalidLimit() throws IOException, URISyntaxException {
+  public void shouldUpdatePatronBlockLimitWithZeroValue() throws IOException, URISyntaxException {
     postAllLimits();
     String patronBlockLimit = readFile(PATRON_BLOCK_LIMITS
-      + "/limit_max_outstanding_feefine_balance_invalid_limit.json");
+      + "/limit_max_outstanding_feefine_balance_zero_value_limit.json");
 
-    PatronBlockLimit response = putWithStatus(PATRON_BLOCK_LIMITS_URL
-      + LIMIT_MAX_OUTSTANDING_FEEFINE_BALANCE_ID, patronBlockLimit, SC_UNPROCESSABLE_ENTITY, USER_ID)
-      .as(PatronBlockLimit.class);
-
-    String message = getErrorMessage(response);
-    assertThat(message, is("A maximum balance of 0 will result in all patrons in this group " +
-      "being blocked; to skip this limit, leave value set to blank"));
+    putWithStatus(PATRON_BLOCK_LIMITS_URL + LIMIT_MAX_OUTSTANDING_FEEFINE_BALANCE_ID,
+      patronBlockLimit, SC_NO_CONTENT, USER_ID);
   }
 
   private void postAllLimits() throws IOException, URISyntaxException {
