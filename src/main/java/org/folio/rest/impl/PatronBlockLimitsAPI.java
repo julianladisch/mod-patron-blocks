@@ -115,7 +115,8 @@ public class PatronBlockLimitsAPI implements PatronBlockLimits {
       return null;
     }
     return createValidationErrorMessage(VALUE_FIELD, limit.toString(),
-      "Must be blank or a number from " + new MonetaryValue(MIN_DOUBLE_LIMIT) + " to " + MAX_DOUBLE_LIMIT);
+      "Must be blank or a number from " + new MonetaryValue(MIN_DOUBLE_LIMIT) + " to "
+        + new MonetaryValue(MAX_DOUBLE_LIMIT));
   }
 
   private Errors validateRangeForIntegerValueType(Double limit) {
