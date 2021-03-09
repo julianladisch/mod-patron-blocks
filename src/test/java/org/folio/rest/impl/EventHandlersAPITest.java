@@ -33,6 +33,7 @@ import org.folio.rest.jaxrs.model.ItemClaimedReturnedEvent;
 import org.folio.rest.jaxrs.model.ItemDeclaredLostEvent;
 import org.folio.rest.jaxrs.model.LoanDueDateChangedEvent;
 import org.folio.rest.jaxrs.model.UserSummary;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -76,8 +77,8 @@ public class EventHandlersAPITest extends TestBase {
   private final UserSummaryRepository userSummaryRepository =
     new UserSummaryRepository(postgresClient);
 
-  @Before
-  public void beforeEach() {
+  @After
+  public void afterEach() {
     super.resetMocks();
     deleteAllFromTable(USER_SUMMARY_TABLE_NAME);
   }
