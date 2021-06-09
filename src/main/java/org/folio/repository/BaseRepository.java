@@ -11,7 +11,7 @@ import org.folio.rest.persist.Criteria.Offset;
 import org.folio.rest.persist.PostgresClient;
 import org.folio.rest.persist.cql.CQLWrapper;
 import org.folio.rest.persist.interfaces.Results;
-import org.folio.rest.tools.PomReader;
+import org.folio.rest.tools.utils.ModuleName;
 
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
@@ -91,7 +91,7 @@ public class BaseRepository<T> {
   public Future<Void> removeAll(String tenantId) {
     Promise<Void> promise = Promise.promise();
     String deleteAllQuery = String.format("DELETE FROM %s_%s.%s", tenantId,
-      PomReader.INSTANCE.getModuleName(), tableName);
+      ModuleName.getModuleName(), tableName);
     pgClient.execute(deleteAllQuery, reply -> {
       if (reply.failed()) {
         promise.future().failed();
