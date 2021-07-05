@@ -94,6 +94,7 @@
     {
       "tableName": "user_summary",
       "withMetadata": true,
+      "withOptimisticLocking": "failOnConflict",
       "uniqueIndex": [
         {
           "fieldName": "userId",

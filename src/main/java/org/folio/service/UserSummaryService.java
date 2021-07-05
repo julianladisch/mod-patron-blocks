@@ -6,6 +6,7 @@ import static java.lang.String.format;
 import static org.folio.domain.EventType.ITEM_CHECKED_IN;
 import static org.folio.domain.EventType.ITEM_CHECKED_OUT;
 
+import java.lang.reflect.Type;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -13,6 +14,7 @@ import java.util.Comparator;
 import java.util.Date;
 import java.util.List;
 import java.util.Optional;
+import java.util.function.Function;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
@@ -40,6 +42,8 @@ import io.vertx.core.Future;
 import lombok.AllArgsConstructor;
 import lombok.NoArgsConstructor;
 import lombok.With;
+import org.folio.util.CustomCompositeFuture;
+import org.testcontainers.shaded.com.google.common.collect.Lists;
 
 public class UserSummaryService {
   private static final Logger log = LogManager.getLogger(UserSummaryService.class);
@@ -76,7 +80,7 @@ public class UserSummaryService {
       .compose(this::handleEventsInChronologicalOrder);
   }
 
-  private Future<RebuildContext> loadEventsToContext(RebuildContext ctx) {
+  public Future<RebuildContext> loadEventsToContext(RebuildContext ctx) {
     if (ctx.userSummary == null || ctx.userSummary.getUserId() == null) {
       ctx.logFailedValidationError("loadEventsToContext");
       return failedFuture(FAILED_TO_REBUILD_USER_SUMMARY_ERROR_MESSAGE);
@@ -84,31 +88,17 @@ public class UserSummaryService {
 
     String userId = ctx.userSummary.getUserId();
 
-    return succeededFuture(userId)
-      .compose(eventService::getItemCheckedOutEvents)
-      .map(ctx.events::addAll)
-      .map(userId)
-      .compose(eventService::getItemCheckedInEvents)
-      .map(ctx.events::addAll)
-      .map(userId)
-      .compose(eventService::getItemClaimedReturnedEvents)
-      .map(ctx.events::addAll)
-      .map(userId)
-      .compose(eventService::getItemDeclaredLostEvents)
-      .map(ctx.events::addAll)
-      .map(userId)
-      .compose(eventService::getItemAgedToLostEvents)
-      .map(ctx.events::addAll)
-      .map(userId)
-      .compose(eventService::getLoanDueDateChangedEvents)
-      .map(ctx.events::addAll)
-      .map(userId)
-      .compose(eventService::getFeeFineBalanceChangedEvents)
-      .map(ctx.events::addAll)
-      .map(ctx);
+    return CustomCompositeFuture.all(List.of(
+      eventService.getItemCheckedOutEvents(userId).map(ctx.events::addAll),
+      eventService.getItemCheckedInEvents(userId).map(ctx.events::addAll),
+      eventService.getItemClaimedReturnedEvents(userId).map(ctx.events::addAll),
+      eventService.getItemDeclaredLostEvents(userId).map(ctx.events::addAll),
+      eventService.getLoanDueDateChangedEvents(userId).map(ctx.events::addAll),
+      eventService.getFeeFineBalanceChangedEvents(userId).map(ctx.events::addAll))
+    ).map(ctx);
   }
 
-  private Future<RebuildContext> cleanUpUserSummary(RebuildContext ctx) {
+  public Future<RebuildContext> cleanUpUserSummary(RebuildContext ctx) {
     if (ctx.userSummary == null) {
       ctx.logFailedValidationError("cleanUpUserSummary");
       return failedFuture(FAILED_TO_REBUILD_USER_SUMMARY_ERROR_MESSAGE);
@@ -120,7 +110,7 @@ public class UserSummaryService {
     return succeededFuture(ctx);
   }
 
-  private Future<String> handleEventsInChronologicalOrder(RebuildContext ctx) {
+  public Future<String> handleEventsInChronologicalOrder(RebuildContext ctx) {
     if (ctx.userSummary == null || ctx.userSummary.getUserId() == null) {
       ctx.logFailedValidationError("loadEventsToContext");
       return failedFuture(FAILED_TO_REBUILD_USER_SUMMARY_ERROR_MESSAGE);
@@ -136,15 +126,14 @@ public class UserSummaryService {
 
     if (isNotEmpty(ctx.userSummary)) {
       return userSummaryRepository.upsert(ctx.userSummary, ctx.userSummary.getId());
-    }
-    else {
+    } else {
       return userSummaryRepository.delete(ctx.userSummary.getId())
         .map(ctx.userSummary.getId())
         .otherwise(ctx.userSummary.getId());
     }
   }
 
-  private void handleEvent(RebuildContext ctx, Event event) {
+  public void handleEvent(RebuildContext ctx, Event event) {
     if (ctx.userSummary == null || event == null || EventType.getByEvent(event) == null ||
       event.getMetadata() == null) {
 
@@ -154,8 +143,8 @@ public class UserSummaryService {
 
     EventType eventType = EventType.getByEvent(event);
 
-    log.info(format("Processing event %s:%s (created at %s)", eventType.name(), event.getId(),
-      event.getMetadata().getCreatedDate()));
+   /*log.info(format("Processing event %s:%s (created at %s)", eventType.name(), event.getId(),
+      event.getMetadata().getCreatedDate()));*/
 
     switch (eventType) {
       case ITEM_CHECKED_OUT:
@@ -191,8 +180,7 @@ public class UserSummaryService {
       openLoans.add(new OpenLoan()
         .withLoanId(event.getLoanId())
         .withDueDate(event.getDueDate()));
-    }
-    else {
+    } else {
       log.error("Event {}:{} is ignored. Open loan {} already exists",
         ITEM_CHECKED_OUT.name(), event.getId(), event.getLoanId());
     }
@@ -275,7 +263,7 @@ public class UserSummaryService {
       .findFirst()
       .orElseGet(() -> {
         OpenFeeFine newFeeFine = new OpenFeeFine()
-          .withFeeFineId( event.getFeeFineId())
+          .withFeeFineId(event.getFeeFineId())
           .withFeeFineTypeId(event.getFeeFineTypeId())
           .withBalance(event.getBalance());
         openFeesFines.add(newFeeFine);
@@ -296,7 +284,7 @@ public class UserSummaryService {
   }
 
   private void removeLoanIfLastLostItemFeeWasClosed(UserSummary userSummary,
-    FeeFineBalanceChangedEvent event) {
+                                                    FeeFineBalanceChangedEvent event) {
 
     if (!isLostItemFeeId(event.getFeeFineTypeId())) {
       return;
@@ -326,7 +314,7 @@ public class UserSummaryService {
     if (userSummary != null && userSummary.getOpenLoans() != null &&
       userSummary.getOpenFeesFines() != null) {
 
-        return userSummary.getOpenLoans().isEmpty() && userSummary.getOpenFeesFines().isEmpty();
+      return userSummary.getOpenLoans().isEmpty() && userSummary.getOpenFeesFines().isEmpty();
     }
 
     return true;

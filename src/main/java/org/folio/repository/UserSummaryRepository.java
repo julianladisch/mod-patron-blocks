@@ -5,9 +5,11 @@ import static org.folio.util.UuidHelper.randomId;
 
 import java.util.Optional;
 
+import io.vertx.core.Promise;
 import org.folio.rest.jaxrs.model.UserSummary;
 import org.folio.rest.persist.Criteria.Criteria;
 import org.folio.rest.persist.Criteria.Criterion;
+import org.folio.rest.persist.PgExceptionUtil;
 import org.folio.rest.persist.PostgresClient;
 
 import io.vertx.core.Future;
@@ -24,8 +26,15 @@ public class UserSummaryRepository extends BaseRepository<UserSummary> {
   }
 
   public Future<String> upsert(UserSummary entity) {
+    /*pgClient.upsert(tableName, entity.getId(), entity, reply -> {
+      if (reply.failed() && PgExceptionUtil.isVersionConflict(reply.cause())) {
+
+        this.upsert(entity);
+      }
+    });*/
     return super.upsert(entity, entity.getId());
   }
+
 
   public Future<String> save(UserSummary entity) {
     return super.save(entity, entity.getId());
