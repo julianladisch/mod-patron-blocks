@@ -13,10 +13,6 @@
       "type": "string",
       "$ref": "raml-util/schemas/uuid.schema"
     },
-    "_version": {
-      "type": "integer",
-      "description": "Record version for optimistic locking"
-    },
     "openLoans": {
       "description": "User's open loans",
       "type": "array",

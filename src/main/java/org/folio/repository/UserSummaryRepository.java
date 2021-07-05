@@ -26,12 +26,6 @@ public class UserSummaryRepository extends BaseRepository<UserSummary> {
   }
 
   public Future<String> upsert(UserSummary entity) {
-    /*pgClient.upsert(tableName, entity.getId(), entity, reply -> {
-      if (reply.failed() && PgExceptionUtil.isVersionConflict(reply.cause())) {
-
-        this.upsert(entity);
-      }
-    });*/
     return super.upsert(entity, entity.getId());
   }
 

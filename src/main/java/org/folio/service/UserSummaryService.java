@@ -1,21 +1,9 @@
 package org.folio.service;
 
-import static io.vertx.core.Future.failedFuture;
-import static io.vertx.core.Future.succeededFuture;
-import static java.lang.String.format;
-import static org.folio.domain.EventType.ITEM_CHECKED_IN;
-import static org.folio.domain.EventType.ITEM_CHECKED_OUT;
-
-import java.lang.reflect.Type;
-import java.math.BigDecimal;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Comparator;
-import java.util.Date;
-import java.util.List;
-import java.util.Optional;
-import java.util.function.Function;
-
+import io.vertx.core.Future;
+import lombok.AllArgsConstructor;
+import lombok.NoArgsConstructor;
+import lombok.With;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -37,13 +25,21 @@ import org.folio.rest.jaxrs.model.OpenLoan;
 import org.folio.rest.jaxrs.model.UserSummary;
 import org.folio.rest.persist.PostgresClient;
 import org.folio.util.AsyncProcessingContext;
-
-import io.vertx.core.Future;
-import lombok.AllArgsConstructor;
-import lombok.NoArgsConstructor;
-import lombok.With;
 import org.folio.util.CustomCompositeFuture;
-import org.testcontainers.shaded.com.google.common.collect.Lists;
+
+import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Comparator;
+import java.util.Date;
+import java.util.List;
+import java.util.Optional;
+
+import static io.vertx.core.Future.failedFuture;
+import static io.vertx.core.Future.succeededFuture;
+import static java.lang.String.format;
+import static org.folio.domain.EventType.ITEM_CHECKED_IN;
+import static org.folio.domain.EventType.ITEM_CHECKED_OUT;
 
 public class UserSummaryService {
   private static final Logger log = LogManager.getLogger(UserSummaryService.class);
