@@ -76,7 +76,7 @@ public class UserSummaryService {
       .compose(this::handleEventsInChronologicalOrder);
   }
 
-  public Future<RebuildContext> loadEventsToContext(RebuildContext ctx) {
+  private Future<RebuildContext> loadEventsToContext(RebuildContext ctx) {
     if (ctx.userSummary == null || ctx.userSummary.getUserId() == null) {
       ctx.logFailedValidationError("loadEventsToContext");
       return failedFuture(FAILED_TO_REBUILD_USER_SUMMARY_ERROR_MESSAGE);
@@ -94,7 +94,7 @@ public class UserSummaryService {
     ).map(ctx);
   }
 
-  public Future<RebuildContext> cleanUpUserSummary(RebuildContext ctx) {
+  private Future<RebuildContext> cleanUpUserSummary(RebuildContext ctx) {
     if (ctx.userSummary == null) {
       ctx.logFailedValidationError("cleanUpUserSummary");
       return failedFuture(FAILED_TO_REBUILD_USER_SUMMARY_ERROR_MESSAGE);
@@ -106,7 +106,7 @@ public class UserSummaryService {
     return succeededFuture(ctx);
   }
 
-  public Future<String> handleEventsInChronologicalOrder(RebuildContext ctx) {
+  private Future<String> handleEventsInChronologicalOrder(RebuildContext ctx) {
     if (ctx.userSummary == null || ctx.userSummary.getUserId() == null) {
       ctx.logFailedValidationError("loadEventsToContext");
       return failedFuture(FAILED_TO_REBUILD_USER_SUMMARY_ERROR_MESSAGE);
@@ -129,7 +129,7 @@ public class UserSummaryService {
     }
   }
 
-  public void handleEvent(RebuildContext ctx, Event event) {
+  private void handleEvent(RebuildContext ctx, Event event) {
     if (ctx.userSummary == null || event == null || EventType.getByEvent(event) == null ||
       event.getMetadata() == null) {
 
@@ -138,9 +138,6 @@ public class UserSummaryService {
     }
 
     EventType eventType = EventType.getByEvent(event);
-
-   /*log.info(format("Processing event %s:%s (created at %s)", eventType.name(), event.getId(),
-      event.getMetadata().getCreatedDate()));*/
 
     switch (eventType) {
       case ITEM_CHECKED_OUT:
