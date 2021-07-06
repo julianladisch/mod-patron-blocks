@@ -90,7 +90,8 @@ public class UserSummaryService {
       eventService.getItemClaimedReturnedEvents(userId).map(ctx.events::addAll),
       eventService.getItemDeclaredLostEvents(userId).map(ctx.events::addAll),
       eventService.getLoanDueDateChangedEvents(userId).map(ctx.events::addAll),
-      eventService.getFeeFineBalanceChangedEvents(userId).map(ctx.events::addAll))
+      eventService.getFeeFineBalanceChangedEvents(userId).map(ctx.events::addAll),
+      eventService.getItemAgedToLostEvents(userId).map(ctx.events::addAll))
     ).map(ctx);
   }
 
