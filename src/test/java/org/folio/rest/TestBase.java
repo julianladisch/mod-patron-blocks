@@ -136,7 +136,7 @@ public class TestBase {
     });
   }
 
-  /*@AfterClass
+  @AfterClass
   public static void afterAll(final TestContext context) {
     deleteTenant(tenantClient);
     Async async = context.async();
@@ -144,7 +144,7 @@ public class TestBase {
       PostgresClient.stopPostgresTester();
       async.complete();
     }));
-  }*/
+  }
 
   static void deleteTenant(TenantClient tenantClient) {
     CompletableFuture<Void> future = new CompletableFuture<>();

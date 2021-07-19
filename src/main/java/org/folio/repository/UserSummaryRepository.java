@@ -45,20 +45,9 @@ public class UserSummaryRepository extends BaseRepository<UserSummary> {
       .onFailure(throwable -> {
         OptimisticLockingErrorHandlingContext ctx = new OptimisticLockingErrorHandlingContext();
         ctx.optimisticLockingErrors.add(throwable);
-        processOptimisticLockingError(ctx, entity);
-      });
-  }
-
-  private Future<Boolean> handleOptimisticLockingError(Future<Boolean> operationResult, UserSummary userSummary
-                                                       //,
-                                                       //   BiFunction<UserSummary, String
-                                                       //                                                       , Future<Boolean>> functionToRepeat
-  ) {
-    return operationResult
-      .onFailure(throwable -> {
-        OptimisticLockingErrorHandlingContext ctx = new OptimisticLockingErrorHandlingContext();
-        ctx.optimisticLockingErrors.add(throwable);
-        processOptimisticLockingError(ctx, userSummary);
+        findByUserIdOrBuildNew(entity.getUserId()).onSuccess(userSummary -> {
+          processOptimisticLockingError(ctx, userSummary);
+        });
       });
   }
 
@@ -97,36 +86,37 @@ public class UserSummaryRepository extends BaseRepository<UserSummary> {
       .withUserId(userId);
   }
 
-  private Future<Boolean> processOptimisticLockingError(OptimisticLockingErrorHandlingContext ctx, UserSummary userSummary
-                                                        //, BiFunction<UserSummary, String, Future<? extends Object>> functionToRepeat
-  ) {
-    Throwable throwable = ctx.optimisticLockingErrors.get(ctx.getOptimisticLockingErrors().size() - 1);
+  private Future<Boolean> processOptimisticLockingError(OptimisticLockingErrorHandlingContext ctx,
+    UserSummary userSummary) {
+    Throwable throwable = ctx.optimisticLockingErrors.get(
+      ctx.getOptimisticLockingErrors().size() - 1);
     log.error(throwable);
     if (PgExceptionUtil.isVersionConflict(throwable) &&
-      //ctx.attemptCounter.get() > 10
-      ((System.nanoTime() - ctx.attemptStarted) < 1000000000000000011L)
+      ctx.attemptCounter.get() < 10
+      //((System.nanoTime() - ctx.attemptStarted) < 1000000000000000011L)
     ) {
       return super.update(userSummary, userSummary.getId())
         .onFailure(error -> {
-          System.out.println(ctx.attemptCounter.incrementAndGet());
+          ctx.attemptCounter.incrementAndGet();
           ctx.optimisticLockingErrors.add(error);
-          processOptimisticLockingError(ctx, userSummary);
+          findByUserIdOrBuildNew(userSummary.getUserId()).onSuccess(
+            userSummary1 -> processOptimisticLockingError(ctx, userSummary1));
         });
     }
-    return succeededFuture(false);
-  }
-
-  private static class OptimisticLockingErrorHandlingContext {
-    private final long attemptStarted;
-    private final AtomicInteger attemptCounter = new AtomicInteger(1);
-    private final List<Throwable> optimisticLockingErrors = new ArrayList<>();
-
-    public OptimisticLockingErrorHandlingContext() {
-      this.attemptStarted = System.nanoTime();
+      return succeededFuture(false);
     }
 
-    public List<Throwable> getOptimisticLockingErrors() {
-      return optimisticLockingErrors;
+    private static class OptimisticLockingErrorHandlingContext {
+      private final long attemptStarted;
+      private final AtomicInteger attemptCounter = new AtomicInteger(1);
+      private final List<Throwable> optimisticLockingErrors = new ArrayList<>();
+
+      public OptimisticLockingErrorHandlingContext() {
+        this.attemptStarted = System.nanoTime();
+      }
+
+      public List<Throwable> getOptimisticLockingErrors() {
+        return optimisticLockingErrors;
+      }
     }
   }
-}

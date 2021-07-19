@@ -1,17 +1,9 @@
 package org.folio.repository;
 
-import static java.math.BigDecimal.TEN;
-import static java.util.Arrays.asList;
-import static java.util.Collections.singletonList;
-import static org.folio.repository.UserSummaryRepository.USER_SUMMARY_TABLE_NAME;
-import static org.rnorth.visibleassertions.VisibleAssertions.assertFalse;
-import static org.rnorth.visibleassertions.VisibleAssertions.assertThrows;
-
-import java.util.Collections;
-import java.util.Date;
-import java.util.List;
-import java.util.Optional;
-
+import io.vertx.core.Future;
+import io.vertx.ext.unit.TestContext;
+import io.vertx.ext.unit.junit.VertxUnitRunner;
+import io.vertx.pgclient.PgException;
 import org.folio.okapi.common.GenericCompositeFuture;
 import org.folio.rest.TestBase;
 import org.folio.rest.jaxrs.model.OpenFeeFine;
@@ -21,10 +13,15 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
-import io.vertx.core.Future;
-import io.vertx.ext.unit.TestContext;
-import io.vertx.ext.unit.junit.VertxUnitRunner;
-import io.vertx.pgclient.PgException;
+import java.util.Collections;
+import java.util.Date;
+import java.util.List;
+import java.util.Optional;
+
+import static java.math.BigDecimal.TEN;
+import static java.util.Arrays.asList;
+import static java.util.Collections.singletonList;
+import static org.folio.repository.UserSummaryRepository.USER_SUMMARY_TABLE_NAME;
 
 @RunWith(VertxUnitRunner.class)
 public class UserSummaryRepositoryTest extends TestBase {
