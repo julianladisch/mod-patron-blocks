@@ -3,9 +3,14 @@ package org.folio.repository;
 import static io.vertx.core.Future.succeededFuture;
 import static org.folio.util.UuidHelper.randomId;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.BiFunction;
 
-import io.vertx.core.Promise;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.folio.rest.jaxrs.model.UserSummary;
 import org.folio.rest.persist.Criteria.Criteria;
 import org.folio.rest.persist.Criteria.Criterion;
@@ -21,6 +26,8 @@ public class UserSummaryRepository extends BaseRepository<UserSummary> {
   private static final String FIND_SUMMARY_BY_FEE_FINE_ID_QUERY_TEMPLATE =
     "openFeesFines == \"*\\\"feeFineId\\\": \\\"%s\\\"*\"";
 
+  private static final Logger log = LogManager.getLogger(UserSummaryRepository.class);
+
   public UserSummaryRepository(PostgresClient pgClient) {
     super(pgClient, USER_SUMMARY_TABLE_NAME, UserSummary.class);
   }
@@ -29,13 +36,30 @@ public class UserSummaryRepository extends BaseRepository<UserSummary> {
     return super.upsert(entity, entity.getId());
   }
 
-
   public Future<String> save(UserSummary entity) {
     return super.save(entity, entity.getId());
   }
 
   public Future<Boolean> update(UserSummary entity) {
-    return super.update(entity, entity.getId());
+    return super.update(entity, entity.getId())
+      .onFailure(throwable -> {
+        OptimisticLockingErrorHandlingContext ctx = new OptimisticLockingErrorHandlingContext();
+        ctx.optimisticLockingErrors.add(throwable);
+        processOptimisticLockingError(ctx, entity);
+      });
+  }
+
+  private Future<Boolean> handleOptimisticLockingError(Future<Boolean> operationResult, UserSummary userSummary
+                                                       //,
+                                                       //   BiFunction<UserSummary, String
+                                                       //                                                       , Future<Boolean>> functionToRepeat
+  ) {
+    return operationResult
+      .onFailure(throwable -> {
+        OptimisticLockingErrorHandlingContext ctx = new OptimisticLockingErrorHandlingContext();
+        ctx.optimisticLockingErrors.add(throwable);
+        processOptimisticLockingError(ctx, userSummary);
+      });
   }
 
   public Future<UserSummary> findByUserIdOrBuildNew(String userId) {
@@ -71,5 +95,38 @@ public class UserSummaryRepository extends BaseRepository<UserSummary> {
     return new UserSummary()
       .withId(randomId())
       .withUserId(userId);
+  }
+
+  private Future<Boolean> processOptimisticLockingError(OptimisticLockingErrorHandlingContext ctx, UserSummary userSummary
+                                                        //, BiFunction<UserSummary, String, Future<? extends Object>> functionToRepeat
+  ) {
+    Throwable throwable = ctx.optimisticLockingErrors.get(ctx.getOptimisticLockingErrors().size() - 1);
+    log.error(throwable);
+    if (PgExceptionUtil.isVersionConflict(throwable) &&
+      //ctx.attemptCounter.get() > 10
+      ((System.nanoTime() - ctx.attemptStarted) < 1000000000000000011L)
+    ) {
+      return super.update(userSummary, userSummary.getId())
+        .onFailure(error -> {
+          System.out.println(ctx.attemptCounter.incrementAndGet());
+          ctx.optimisticLockingErrors.add(error);
+          processOptimisticLockingError(ctx, userSummary);
+        });
+    }
+    return succeededFuture(false);
+  }
+
+  private static class OptimisticLockingErrorHandlingContext {
+    private final long attemptStarted;
+    private final AtomicInteger attemptCounter = new AtomicInteger(1);
+    private final List<Throwable> optimisticLockingErrors = new ArrayList<>();
+
+    public OptimisticLockingErrorHandlingContext() {
+      this.attemptStarted = System.nanoTime();
+    }
+
+    public List<Throwable> getOptimisticLockingErrors() {
+      return optimisticLockingErrors;
+    }
   }
 }

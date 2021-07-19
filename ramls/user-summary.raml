@@ -32,6 +32,11 @@ traits:
         body:
           text/plain:
             example: "UserSummary for user ID 2a424823-588a-45ee-9441-a6384b6614b1 not found"
+      409:
+       description: "Conflict"
+       body:
+          text/plain:
+            example: "Optimistic locking version has changed"
       500:
         description: "Internal server error, e.g. due to misconfiguration"
         body:
