@@ -49,19 +49,6 @@ public class UserSummaryRepository extends BaseRepository<UserSummary> {
       });
   }
 
-  private Future<Boolean> handleOptimisticLockingError(Future<Boolean> operationResult, UserSummary userSummary
-                                                       //,
-                                                       //   BiFunction<UserSummary, String
-                                                       //                                                       , Future<Boolean>> functionToRepeat
-  ) {
-    return operationResult
-      .onFailure(throwable -> {
-        OptimisticLockingErrorHandlingContext ctx = new OptimisticLockingErrorHandlingContext();
-        ctx.optimisticLockingErrors.add(throwable);
-        processOptimisticLockingError(ctx, userSummary);
-      });
-  }
-
   public Future<UserSummary> findByUserIdOrBuildNew(String userId) {
     return getByUserId(userId)
       .map(summary -> summary.orElseGet(() -> buildEmptyUserSummary(userId)));
