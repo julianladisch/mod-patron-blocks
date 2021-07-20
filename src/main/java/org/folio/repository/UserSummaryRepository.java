@@ -45,7 +45,9 @@ public class UserSummaryRepository extends BaseRepository<UserSummary> {
       .onFailure(throwable -> {
         OptimisticLockingErrorHandlingContext ctx = new OptimisticLockingErrorHandlingContext();
         ctx.optimisticLockingErrors.add(throwable);
-        processOptimisticLockingError(ctx, entity);
+        findByUserIdOrBuildNew(entity.getUserId()).onSuccess(userSummary ->
+          processOptimisticLockingError(ctx, userSummary)
+        );
       });
   }
 
@@ -84,10 +86,11 @@ public class UserSummaryRepository extends BaseRepository<UserSummary> {
       .withUserId(userId);
   }
 
-  private Future<Boolean> processOptimisticLockingError(OptimisticLockingErrorHandlingContext ctx, UserSummary userSummary
-                                                        //, BiFunction<UserSummary, String, Future<? extends Object>> functionToRepeat
+  private Future<Boolean> processOptimisticLockingError(OptimisticLockingErrorHandlingContext ctx,
+    UserSummary userSummary
   ) {
-    Throwable throwable = ctx.optimisticLockingErrors.get(ctx.getOptimisticLockingErrors().size() - 1);
+    Throwable throwable = ctx.optimisticLockingErrors.get(
+      ctx.getOptimisticLockingErrors().size() - 1);
     log.error(throwable);
     if (PgExceptionUtil.isVersionConflict(throwable) &&
       //ctx.attemptCounter.get() > 10
@@ -97,7 +100,9 @@ public class UserSummaryRepository extends BaseRepository<UserSummary> {
         .onFailure(error -> {
           System.out.println(ctx.attemptCounter.incrementAndGet());
           ctx.optimisticLockingErrors.add(error);
-          processOptimisticLockingError(ctx, userSummary);
+          findByUserIdOrBuildNew(userSummary.getUserId()).onSuccess(userSummary1 ->
+            processOptimisticLockingError(ctx, userSummary1)
+          );
         });
     }
     return succeededFuture(false);
