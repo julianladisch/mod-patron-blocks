@@ -104,7 +104,7 @@ public class PatronBlockLimitsAPITest extends TestBase {
       .as(PatronBlockLimit.class);
 
     String message = getErrorMessage(actualLimit);
-    assertThat(message, is("Must be blank or a number from 0.00 to 9999.99"));
+    assertThat(message, is("Must be blank or a number from 0.00 to 999999.99"));
   }
 
   @Test
