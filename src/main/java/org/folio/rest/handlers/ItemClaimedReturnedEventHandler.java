@@ -17,13 +17,4 @@ public class ItemClaimedReturnedEventHandler extends EventHandler<ItemClaimedRet
   public ItemClaimedReturnedEventHandler(PostgresClient postgresClient) {
     super(postgresClient);
   }
-
-  @Override
-  public Future<String> handle(ItemClaimedReturnedEvent event, boolean skipUserSummaryRebuilding) {
-    return eventService.save(event)
-      .compose(eventId -> skipUserSummaryRebuilding
-        ? Future.succeededFuture()
-        : userSummaryService.rebuild(event.getUserId()))
-      .onComplete(result -> logResult(result, event));
-  }
 }

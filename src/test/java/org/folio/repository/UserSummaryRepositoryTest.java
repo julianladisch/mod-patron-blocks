@@ -4,10 +4,7 @@ import static java.math.BigDecimal.TEN;
 import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
 import static org.folio.repository.UserSummaryRepository.USER_SUMMARY_TABLE_NAME;
-import static org.rnorth.visibleassertions.VisibleAssertions.assertFalse;
-import static org.rnorth.visibleassertions.VisibleAssertions.assertThrows;
 
-import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 import java.util.Optional;
@@ -135,35 +132,6 @@ public class UserSummaryRepositoryTest extends TestBase {
 
       context.assertTrue(userSummary.isPresent());
       assertSummariesAreEqual(userSummary1, userSummary.get(), context);
-    });
-  }
-
-  @Test
-  public void shouldThrowExceptionIfOptimisticLockingErrorOccurs(TestContext context) {
-    String userSummaryId = randomId();
-
-    waitFor(repository.save(
-      createUserSummary(userSummaryId, randomId())));
-
-    waitFor(repository.get(userSummaryId)).ifPresent(updatedUserSummary -> {
-      updatedUserSummary.withOpenFeesFines(singletonList(
-        new OpenFeeFine()
-          .withBalance(TEN)
-          .withFeeFineId(randomId())
-          .withFeeFineTypeId(randomId())
-          .withLoanId(randomId())));
-
-      waitFor(repository.update(updatedUserSummary));
-      Optional<UserSummary> userSummary = waitFor(repository.get(userSummaryId));
-
-      userSummary.ifPresent(userSummary2 -> {
-          userSummary2.setVersion(1);
-          userSummary2.setOpenLoans(Collections.EMPTY_LIST);
-
-          repository.update(userSummary2)
-            .onComplete(result -> context.assertFalse(result.result()));
-        }
-      );
     });
   }
 

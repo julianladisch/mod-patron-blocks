@@ -3,18 +3,13 @@ package org.folio.repository;
 import static io.vertx.core.Future.succeededFuture;
 import static org.folio.util.UuidHelper.randomId;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Optional;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.BiFunction;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.rest.jaxrs.model.UserSummary;
 import org.folio.rest.persist.Criteria.Criteria;
 import org.folio.rest.persist.Criteria.Criterion;
-import org.folio.rest.persist.PgExceptionUtil;
 import org.folio.rest.persist.PostgresClient;
 
 import io.vertx.core.Future;
@@ -41,14 +36,7 @@ public class UserSummaryRepository extends BaseRepository<UserSummary> {
   }
 
   public Future<Boolean> update(UserSummary entity) {
-    return super.update(entity, entity.getId())
-      .onFailure(throwable -> {
-        OptimisticLockingErrorHandlingContext ctx = new OptimisticLockingErrorHandlingContext();
-        ctx.optimisticLockingErrors.add(throwable);
-        findByUserIdOrBuildNew(entity.getUserId()).onSuccess(userSummary ->
-          processOptimisticLockingError(ctx, userSummary)
-        );
-      });
+    return super.update(entity, entity.getId());
   }
 
   public Future<UserSummary> findByUserIdOrBuildNew(String userId) {
@@ -86,39 +74,4 @@ public class UserSummaryRepository extends BaseRepository<UserSummary> {
       .withUserId(userId);
   }
 
-  private Future<Boolean> processOptimisticLockingError(OptimisticLockingErrorHandlingContext ctx,
-    UserSummary userSummary
-  ) {
-    Throwable throwable = ctx.optimisticLockingErrors.get(
-      ctx.getOptimisticLockingErrors().size() - 1);
-    log.error(throwable);
-    if (PgExceptionUtil.isVersionConflict(throwable) &&
-      //ctx.attemptCounter.get() > 10
-      ((System.nanoTime() - ctx.attemptStarted) < 1000000000000000011L)
-    ) {
-      return super.update(userSummary, userSummary.getId())
-        .onFailure(error -> {
-          System.out.println(ctx.attemptCounter.incrementAndGet());
-          ctx.optimisticLockingErrors.add(error);
-          findByUserIdOrBuildNew(userSummary.getUserId()).onSuccess(userSummary1 ->
-            processOptimisticLockingError(ctx, userSummary1)
-          );
-        });
-    }
-    return succeededFuture(false);
-  }
-
-  private static class OptimisticLockingErrorHandlingContext {
-    private final long attemptStarted;
-    private final AtomicInteger attemptCounter = new AtomicInteger(1);
-    private final List<Throwable> optimisticLockingErrors = new ArrayList<>();
-
-    public OptimisticLockingErrorHandlingContext() {
-      this.attemptStarted = System.nanoTime();
-    }
-
-    public List<Throwable> getOptimisticLockingErrors() {
-      return optimisticLockingErrors;
-    }
-  }
 }

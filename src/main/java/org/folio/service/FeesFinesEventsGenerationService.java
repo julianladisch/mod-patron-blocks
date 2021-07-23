@@ -40,7 +40,7 @@ public class FeesFinesEventsGenerationService extends EventsGenerationService<Ac
       .withLoanId(account.getLoanId())
       .withMetadata(account.getMetadata());
 
-    return feeFineBalanceChangedEventHandler.handle(event, true)
+    return feeFineBalanceChangedEventHandler.handle(event)
       .onSuccess(r -> log.info("Successfully generated events for account {}", accountId))
       .onFailure(t -> log.error("Failed to generate events for account {}: {}", accountId,
         t.getLocalizedMessage()))

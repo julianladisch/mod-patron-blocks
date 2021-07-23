@@ -1,7 +1,10 @@
 package org.folio.service;
 
 import java.util.List;
+import java.util.function.Function;
 
+import org.folio.domain.Event;
+import org.folio.domain.EventType;
 import org.folio.okapi.common.GenericCompositeFuture;
 import org.folio.repository.EventRepository;
 import org.folio.rest.jaxrs.model.FeeFineBalanceChangedEvent;
@@ -57,6 +60,38 @@ public class EventService {
       FEE_FINE_BALANCE_CHANGED_EVENT_TABLE_NAME, FeeFineBalanceChangedEvent.class);
   }
 
+  public Future<String> save(Event event) {
+    EventType eventType = EventType.getByEvent(event);
+
+    Future<String> save;
+    switch (eventType) {
+    case ITEM_CHECKED_OUT:
+      save = save((ItemCheckedOutEvent) event);
+      break;
+    case ITEM_CHECKED_IN:
+      save = save((ItemCheckedInEvent) event);
+      break;
+    case ITEM_CLAIMED_RETURNED:
+      save = save((ItemClaimedReturnedEvent) event);
+      break;
+    case ITEM_DECLARED_LOST:
+      save = save((ItemDeclaredLostEvent) event);
+      break;
+    case ITEM_AGED_TO_LOST:
+      save = save((ItemAgedToLostEvent) event);
+      break;
+    case LOAN_DUE_DATE_CHANGED:
+      save = save((LoanDueDateChangedEvent) event);
+      break;
+    case FEE_FINE_BALANCE_CHANGED:
+      save = save((FeeFineBalanceChangedEvent) event);
+      break;
+    default:
+      throw new IllegalStateException("Unexpected value: " + eventType);
+    }
+    return save;
+  }
+
   public Future<String> save(ItemCheckedOutEvent event) {
     return itemCheckedOutEventRepository.save(event, UuidHelper.randomId());
   }
@@ -100,6 +135,7 @@ public class EventService {
   public Future<List<ItemDeclaredLostEvent>> getItemDeclaredLostEvents(String userId) {
     return itemDeclaredLostEventRepository.getByUserId(userId);
   }
+
   public Future<List<ItemAgedToLostEvent>> getItemAgedToLostEvents(String userId) {
     return itemAgedToLostEventEventRepository.getByUserId(userId);
   }
@@ -123,12 +159,13 @@ public class EventService {
   }
 
   public Future<Void> removeAllEventsForUser(String tenantId, String userId) {
-    return GenericCompositeFuture.all(List.of(itemCheckedOutEventRepository.removeByUserId(tenantId, userId),
-      itemCheckedInEventRepository.removeByUserId(tenantId, userId),
-      itemClaimedReturnedEventRepository.removeByUserId(tenantId, userId),
-      itemDeclaredLostEventRepository.removeByUserId(tenantId, userId),
-      loanDueDateChangedEventRepository.removeByUserId(tenantId, userId),
-      feeFineBalanceChangedEventRepository.removeByUserId(tenantId, userId))
+    return GenericCompositeFuture.all(
+      List.of(itemCheckedOutEventRepository.removeByUserId(tenantId, userId),
+        itemCheckedInEventRepository.removeByUserId(tenantId, userId),
+        itemClaimedReturnedEventRepository.removeByUserId(tenantId, userId),
+        itemDeclaredLostEventRepository.removeByUserId(tenantId, userId),
+        loanDueDateChangedEventRepository.removeByUserId(tenantId, userId),
+        feeFineBalanceChangedEventRepository.removeByUserId(tenantId, userId))
     ).mapEmpty();
   }
 }

@@ -3,11 +3,15 @@ package org.folio.rest.handlers;
 import static java.lang.String.format;
 
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
 
+import org.folio.domain.Event;
 import org.folio.exception.EntityNotFoundException;
 import org.folio.rest.jaxrs.model.FeeFineBalanceChangedEvent;
 import org.folio.rest.jaxrs.model.UserSummary;
+import org.folio.rest.persist.PgExceptionUtil;
 import org.folio.rest.persist.PostgresClient;
+import org.folio.service.UserSummaryService;
 
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
@@ -23,12 +27,10 @@ public class FeeFineBalanceChangedEventHandler extends EventHandler<FeeFineBalan
   }
 
   @Override
-  public Future<String> handle(FeeFineBalanceChangedEvent event, boolean skipUserSummaryRebuilding) {
+  public Future<String> handle(FeeFineBalanceChangedEvent event) {
     return eventService.save(event)
       .compose(eventId -> getUserSummary(event))
-      .compose(summary -> skipUserSummaryRebuilding
-        ? Future.succeededFuture()
-        : userSummaryService.rebuild(summary.getUserId()))
+      .compose(userSummary -> userSummaryService.processEvent(userSummary, event))
       .onComplete(result -> logResult(result, event));
   }
 

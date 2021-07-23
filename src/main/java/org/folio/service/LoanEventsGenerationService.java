@@ -5,6 +5,7 @@ import static org.apache.commons.lang3.BooleanUtils.isTrue;
 
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.folio.repository.SynchronizationJobRepository;
 import org.folio.rest.client.BulkDownloadClient;
@@ -66,7 +67,7 @@ public class LoanEventsGenerationService extends EventsGenerationService<Loan> {
       .withLoanId(loan.getId())
       .withUserId(loan.getUserId())
       .withDueDate(loan.getDueDate())
-      .withMetadata(loan.getMetadata()), true);
+      .withMetadata(loan.getMetadata()));
   }
 
   private Future<String> generateClaimedReturnedEvent(Loan loan) {
@@ -74,7 +75,7 @@ public class LoanEventsGenerationService extends EventsGenerationService<Loan> {
       return claimedReturnedEventHandler.handle(new ItemClaimedReturnedEvent()
         .withLoanId(loan.getId())
         .withUserId(loan.getUserId())
-        .withMetadata(loan.getMetadata()), true);
+        .withMetadata(loan.getMetadata()));
     }
     return succeededFuture(null);
   }
@@ -84,7 +85,7 @@ public class LoanEventsGenerationService extends EventsGenerationService<Loan> {
       return declaredLostEventHandler.handle(new ItemDeclaredLostEvent()
           .withLoanId(loan.getId())
           .withUserId(loan.getUserId())
-          .withMetadata(loan.getMetadata()), true);
+          .withMetadata(loan.getMetadata()));
     }
     return succeededFuture(null);
   }
@@ -96,7 +97,7 @@ public class LoanEventsGenerationService extends EventsGenerationService<Loan> {
           .withUserId(loan.getUserId())
           .withDueDate(loan.getDueDate())
           .withDueDateChangedByRecall(loan.getDueDateChangedByRecall())
-          .withMetadata(loan.getMetadata()), true);
+          .withMetadata(loan.getMetadata()));
     }
     return succeededFuture(null);
   }

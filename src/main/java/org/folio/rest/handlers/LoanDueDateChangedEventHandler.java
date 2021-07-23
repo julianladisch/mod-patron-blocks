@@ -18,12 +18,12 @@ public class LoanDueDateChangedEventHandler extends EventHandler<LoanDueDateChan
     super(postgresClient);
   }
 
-  @Override
-  public Future<String> handle(LoanDueDateChangedEvent event, boolean skipUserSummaryRebuilding) {
+  /*@Override
+  public Future<String> handle(LoanDueDateChangedEvent event) {
     return eventService.save(event)
       .compose(eventId -> skipUserSummaryRebuilding
         ? Future.succeededFuture()
         : userSummaryService.rebuild(event.getUserId()))
       .onComplete(result -> logResult(result, event));
-  }
+  }*/
 }

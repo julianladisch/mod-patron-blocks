@@ -1,9 +1,21 @@
 package org.folio.service;
 
-import io.vertx.core.Future;
-import lombok.AllArgsConstructor;
-import lombok.NoArgsConstructor;
-import lombok.With;
+import static io.vertx.core.Future.failedFuture;
+import static io.vertx.core.Future.succeededFuture;
+import static java.lang.String.format;
+import static org.folio.domain.EventType.ITEM_CHECKED_IN;
+import static org.folio.domain.EventType.ITEM_CHECKED_OUT;
+
+import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Comparator;
+import java.util.Date;
+import java.util.List;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.concurrent.atomic.AtomicInteger;
+
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -23,23 +35,16 @@ import org.folio.rest.jaxrs.model.Metadata;
 import org.folio.rest.jaxrs.model.OpenFeeFine;
 import org.folio.rest.jaxrs.model.OpenLoan;
 import org.folio.rest.jaxrs.model.UserSummary;
+import org.folio.rest.persist.PgExceptionUtil;
 import org.folio.rest.persist.PostgresClient;
 import org.folio.util.AsyncProcessingContext;
 import org.folio.util.CustomCompositeFuture;
 
-import java.math.BigDecimal;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Comparator;
-import java.util.Date;
-import java.util.List;
-import java.util.Optional;
-
-import static io.vertx.core.Future.failedFuture;
-import static io.vertx.core.Future.succeededFuture;
-import static java.lang.String.format;
-import static org.folio.domain.EventType.ITEM_CHECKED_IN;
-import static org.folio.domain.EventType.ITEM_CHECKED_OUT;
+import io.vertx.core.Future;
+import lombok.AllArgsConstructor;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+import lombok.With;
 
 public class UserSummaryService {
   private static final Logger log = LogManager.getLogger(UserSummaryService.class);
@@ -60,8 +65,7 @@ public class UserSummaryService {
   }
 
   public Future<UserSummary> getByUserId(String userId) {
-    return this.rebuild(userId)
-      .compose(userSummaryId -> userSummaryRepository.getByUserId(userId))
+    return userSummaryRepository.getByUserId(userId)
       .map(optionalUserSummary -> optionalUserSummary.orElseThrow(() ->
         new EntityNotFoundInDbException(format("User summary for user ID %s not found", userId))));
   }
@@ -74,6 +78,41 @@ public class UserSummaryService {
       .compose(this::loadEventsToContext)
       .compose(this::cleanUpUserSummary)
       .compose(this::handleEventsInChronologicalOrder);
+  }
+
+  private Future<String> addEvent(UserSummary userSummary, Event event) {
+    RebuildContext rebuildContext = new RebuildContext().withUserSummary(userSummary);
+    handleEvent(rebuildContext, event);
+
+    if (isNotEmpty(rebuildContext.userSummary)) {
+      return userSummaryRepository.upsert(rebuildContext.userSummary);
+    } else {
+      return userSummaryRepository.delete(
+        Objects.requireNonNull(rebuildContext.userSummary).getId())
+        .map(rebuildContext.userSummary.getId())
+        .otherwise(rebuildContext.userSummary.getId());
+    }
+  }
+
+  private Future<String> processEvent(UpdateRetryContext ctx, Event event) {
+    return addEvent(ctx.userSummary, event)
+      .recover(throwable -> {
+        log.error(throwable);
+        if (PgExceptionUtil.isVersionConflict(throwable) &&
+          ctx.shouldRetryUpdate()
+        ) {
+          return userSummaryRepository.findByUserIdOrBuildNew(ctx.userSummary.getUserId())
+            .compose(userSummary1 -> {
+              ctx.setUserSummary(userSummary1);
+              return processEvent(ctx, event);
+            });
+        }
+        return Future.failedFuture(throwable);
+      });
+  }
+
+  public Future<String> processEvent(UserSummary userSummary, Event event) {
+    return processEvent(new UpdateRetryContext(userSummary), event);
   }
 
   private Future<RebuildContext> loadEventsToContext(RebuildContext ctx) {
@@ -122,7 +161,7 @@ public class UserSummaryService {
       .forEachOrdered(event -> handleEvent(ctx, event));
 
     if (isNotEmpty(ctx.userSummary)) {
-      return userSummaryRepository.upsert(ctx.userSummary, ctx.userSummary.getId());
+      return userSummaryRepository.upsert(ctx.userSummary);
     } else {
       return userSummaryRepository.delete(ctx.userSummary.getId())
         .map(ctx.userSummary.getId())
@@ -141,27 +180,27 @@ public class UserSummaryService {
     EventType eventType = EventType.getByEvent(event);
 
     switch (eventType) {
-      case ITEM_CHECKED_OUT:
-        updateUserSummary(ctx.userSummary, (ItemCheckedOutEvent) event);
-        break;
-      case ITEM_CHECKED_IN:
-        updateUserSummary(ctx.userSummary, (ItemCheckedInEvent) event);
-        break;
-      case ITEM_CLAIMED_RETURNED:
-        updateUserSummary(ctx.userSummary, (ItemClaimedReturnedEvent) event);
-        break;
-      case ITEM_DECLARED_LOST:
-        updateUserSummary(ctx.userSummary, (ItemDeclaredLostEvent) event);
-        break;
-      case ITEM_AGED_TO_LOST:
-        updateUserSummary(ctx.userSummary, (ItemAgedToLostEvent) event);
-        break;
-      case LOAN_DUE_DATE_CHANGED:
-        updateUserSummary(ctx.userSummary, (LoanDueDateChangedEvent) event);
-        break;
-      case FEE_FINE_BALANCE_CHANGED:
-        updateUserSummary(ctx.userSummary, (FeeFineBalanceChangedEvent) event);
-        break;
+    case ITEM_CHECKED_OUT:
+      updateUserSummary(ctx.userSummary, (ItemCheckedOutEvent) event);
+      break;
+    case ITEM_CHECKED_IN:
+      updateUserSummary(ctx.userSummary, (ItemCheckedInEvent) event);
+      break;
+    case ITEM_CLAIMED_RETURNED:
+      updateUserSummary(ctx.userSummary, (ItemClaimedReturnedEvent) event);
+      break;
+    case ITEM_DECLARED_LOST:
+      updateUserSummary(ctx.userSummary, (ItemDeclaredLostEvent) event);
+      break;
+    case ITEM_AGED_TO_LOST:
+      updateUserSummary(ctx.userSummary, (ItemAgedToLostEvent) event);
+      break;
+    case LOAN_DUE_DATE_CHANGED:
+      updateUserSummary(ctx.userSummary, (LoanDueDateChangedEvent) event);
+      break;
+    case FEE_FINE_BALANCE_CHANGED:
+      updateUserSummary(ctx.userSummary, (FeeFineBalanceChangedEvent) event);
+      break;
     }
   }
 
@@ -278,7 +317,7 @@ public class UserSummaryService {
   }
 
   private void removeLoanIfLastLostItemFeeWasClosed(UserSummary userSummary,
-                                                    FeeFineBalanceChangedEvent event) {
+    FeeFineBalanceChangedEvent event) {
 
     if (!isLostItemFeeId(event.getFeeFineTypeId())) {
       return;
@@ -328,6 +367,35 @@ public class UserSummaryService {
     @Override
     protected String getName() {
       return "user-summary-rebuild-context";
+    }
+  }
+
+  public static class UpdateRetryContext {
+    @Setter
+    private UserSummary userSummary;
+
+    private final long attemptStarted;
+    private final AtomicInteger attemptCounter = new AtomicInteger(1);
+
+    public UpdateRetryContext() {
+      this.attemptStarted = System.nanoTime();
+    }
+
+    public UpdateRetryContext(UserSummary userSummary) {
+      this.attemptStarted = System.nanoTime();
+      this.userSummary = userSummary;
+    }
+
+    boolean shouldRetryUpdate() {
+      return !outOfAttempts();
+    }
+
+    private boolean outOfAttempts() {
+      return attemptCounter.get() > 10;
+    }
+
+    private boolean outOfTime() {
+      return (System.nanoTime() - this.attemptStarted) > 1000000000000000011L;
     }
   }
 }

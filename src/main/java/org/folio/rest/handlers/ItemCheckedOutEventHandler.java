@@ -17,13 +17,4 @@ public class ItemCheckedOutEventHandler extends EventHandler<ItemCheckedOutEvent
   public ItemCheckedOutEventHandler(PostgresClient postgresClient) {
     super(postgresClient);
   }
-
-  @Override
-  public Future<String> handle(ItemCheckedOutEvent event, boolean skipUserSummaryRebuilding) {
-    return eventService.save(event)
-      .compose(eventId -> skipUserSummaryRebuilding
-        ? Future.succeededFuture()
-        : userSummaryService.rebuild(event.getUserId()))
-      .onComplete(result -> logResult(result, event));
-  }
 }

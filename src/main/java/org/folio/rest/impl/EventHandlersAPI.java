@@ -1,6 +1,5 @@
 package org.folio.rest.impl;
 
-
 import java.util.Map;
 
 import javax.ws.rs.core.Response;
@@ -45,7 +44,10 @@ public class EventHandlersAPI implements AutomatedPatronBlocksHandlers {
     logEventReceived(event);
 
     new FeeFineBalanceChangedEventHandler(okapiHeaders, vertxContext.owner())
-      .handle(event);
+      .handle(event)
+      .onFailure(throwable ->
+        PostAutomatedPatronBlocksHandlersFeeFineBalanceChangedResponse.respond500WithTextPlain(
+          throwable.getCause()));
   }
 
   @Override

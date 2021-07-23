@@ -1,14 +1,20 @@
 package org.folio.rest.handlers;
 
+import static java.lang.String.format;
 import static org.folio.util.PostgresUtils.getPostgresClient;
 
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.domain.Event;
 import org.folio.domain.EventType;
+import org.folio.exception.EntityNotFoundException;
 import org.folio.repository.UserSummaryRepository;
+import org.folio.rest.jaxrs.model.AgedToLostDelayedBilling;
+import org.folio.rest.jaxrs.model.UserSummary;
+import org.folio.rest.persist.PgExceptionUtil;
 import org.folio.rest.persist.PostgresClient;
 import org.folio.service.EventService;
 import org.folio.service.UserSummaryService;
@@ -37,19 +43,24 @@ public abstract class EventHandler<E extends Event> {
     userSummaryService = new UserSummaryService(postgresClient);
   }
 
-  public Future<String> handle(E event) {
-    return handle(event, false);
-  }
-
   /**
    * Handle an event.
    *
-   * @param event  the event to handle
+   * @param event the event to handle
    * @return ID of a UserSummary affected by the processed event
    */
-  public abstract Future<String> handle(E event, boolean skipUserSummaryRebuilding);
+  public Future<String> handle(E event) {
+    return eventService.save(event)
+      .compose(eventId -> getUserSummary(event))
+      .compose(userSummary -> userSummaryService.processEvent(userSummary, event))
+      .onComplete(result -> logResult(result, event));
+  }
 
-  protected void logResult(AsyncResult<String> result, E event) {
+  private Future<UserSummary> getUserSummary(Event event) {
+    return userSummaryRepository.findByUserIdOrBuildNew(event.getUserId());
+  }
+
+  protected void logResult(AsyncResult<String> result, Event event) {
     String eventType = EventType.getNameByEvent(event);
     if (result.failed()) {
       String eventJson = Json.encodePrettily(event);

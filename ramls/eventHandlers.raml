@@ -39,6 +39,11 @@ resourceTypes:
           body:
             application/json:
               type: errors
+        409:
+           description: "Conflict"
+           body:
+            text/plain:
+                      example: "Optimistic locking version has changed"
         500:
           description: "Internal server error"
           body:
