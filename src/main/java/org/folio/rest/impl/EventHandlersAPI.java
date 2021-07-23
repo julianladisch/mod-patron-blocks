@@ -1,5 +1,7 @@
 package org.folio.rest.impl;
 
+import static io.vertx.core.Future.succeededFuture;
+
 import java.util.Map;
 
 import javax.ws.rs.core.Response;
@@ -38,17 +40,10 @@ public class EventHandlersAPI implements AutomatedPatronBlocksHandlers {
     FeeFineBalanceChangedEvent event, Map<String, String> okapiHeaders,
     Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
 
-    asyncResultHandler.handle(Future.succeededFuture(
-      PostAutomatedPatronBlocksHandlersFeeFineBalanceChangedResponse.respond204()));
-
     logEventReceived(event);
 
-    new FeeFineBalanceChangedEventHandler(okapiHeaders, vertxContext.owner())
-      .handle(event)
-      .onFailure(throwable ->
-
-        PostAutomatedPatronBlocksHandlersFeeFineBalanceChangedResponse.respond409WithTextPlain(
-          throwable.getCause()));
+    handleOperationResult(new FeeFineBalanceChangedEventHandler(okapiHeaders, vertxContext.owner())
+      .handle(event));
   }
 
   @Override
@@ -56,12 +51,12 @@ public class EventHandlersAPI implements AutomatedPatronBlocksHandlers {
     Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler,
     Context vertxContext) {
 
-    asyncResultHandler.handle(Future.succeededFuture(
+    asyncResultHandler.handle(succeededFuture(
       PostAutomatedPatronBlocksHandlersItemCheckedOutResponse.respond204()));
 
     logEventReceived(event);
 
-    new ItemCheckedOutEventHandler(okapiHeaders, vertxContext.owner()).handle(event);
+    handleOperationResult(new ItemCheckedOutEventHandler(okapiHeaders, vertxContext.owner()).handle(event));
   }
 
   @Override
@@ -69,13 +64,13 @@ public class EventHandlersAPI implements AutomatedPatronBlocksHandlers {
     Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler,
     Context vertxContext) {
 
-    asyncResultHandler.handle(Future.succeededFuture(
+    asyncResultHandler.handle(succeededFuture(
       PostAutomatedPatronBlocksHandlersItemCheckedInResponse.respond204()));
 
     logEventReceived(event);
 
-    new ItemCheckedInEventHandler(okapiHeaders, vertxContext.owner())
-      .handle(event);
+    handleOperationResult(new ItemCheckedInEventHandler(okapiHeaders, vertxContext.owner())
+      .handle(event));
   }
 
   @Override
@@ -83,12 +78,12 @@ public class EventHandlersAPI implements AutomatedPatronBlocksHandlers {
     Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler,
     Context vertxContext) {
 
-    asyncResultHandler.handle(Future.succeededFuture(
+    asyncResultHandler.handle(succeededFuture(
       PostAutomatedPatronBlocksHandlersItemDeclaredLostResponse.respond204()));
 
     logEventReceived(event);
 
-    new ItemDeclaredLostEventHandler(okapiHeaders, vertxContext.owner()).handle(event);
+    handleOperationResult(new ItemDeclaredLostEventHandler(okapiHeaders, vertxContext.owner()).handle(event));
   }
 
   @Override
@@ -96,12 +91,12 @@ public class EventHandlersAPI implements AutomatedPatronBlocksHandlers {
     Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler,
     Context vertxContext) {
 
-    asyncResultHandler.handle(Future.succeededFuture(
+    asyncResultHandler.handle(succeededFuture(
       PostAutomatedPatronBlocksHandlersItemAgedToLostResponse.respond204()));
 
     logEventReceived(event);
 
-    new ItemAgedToLostEventHandler(okapiHeaders, vertxContext.owner()).handle(event);
+    handleOperationResult(new ItemAgedToLostEventHandler(okapiHeaders, vertxContext.owner()).handle(event));
   }
 
   @Override
@@ -109,13 +104,13 @@ public class EventHandlersAPI implements AutomatedPatronBlocksHandlers {
     ItemClaimedReturnedEvent event, Map<String, String> okapiHeaders,
     Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
 
-    asyncResultHandler.handle(Future.succeededFuture(
+    asyncResultHandler.handle(succeededFuture(
       PostAutomatedPatronBlocksHandlersItemClaimedReturnedResponse.respond204()));
 
     logEventReceived(event);
 
-    new ItemClaimedReturnedEventHandler(okapiHeaders, vertxContext.owner())
-      .handle(event);
+    handleOperationResult(new ItemClaimedReturnedEventHandler(okapiHeaders, vertxContext.owner())
+      .handle(event));
   }
 
   @Override
@@ -123,19 +118,23 @@ public class EventHandlersAPI implements AutomatedPatronBlocksHandlers {
     Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler,
     Context vertxContext) {
 
-    asyncResultHandler.handle(Future.succeededFuture(
+    asyncResultHandler.handle(succeededFuture(
       PostAutomatedPatronBlocksHandlersLoanDueDateChangedResponse.respond204()));
 
     logEventReceived(event);
 
-    new LoanDueDateChangedEventHandler(okapiHeaders, vertxContext.owner())
-      .handle(event);
+    handleOperationResult(new LoanDueDateChangedEventHandler(okapiHeaders, vertxContext.owner())
+      .handle(event));
   }
 
-  private void handleVersionConflict(Future<String> operation) {
-
+  private void handleOperationResult(Future<String> operation) {
+    operation.onFailure(throwable ->
+      PostAutomatedPatronBlocksHandlersFeeFineBalanceChangedResponse.respond409WithTextPlain(
+        throwable.getCause()))
+      .onSuccess(id ->
+        PostAutomatedPatronBlocksHandlersFeeFineBalanceChangedResponse.respond204());
   }
-  
+
   private static void logEventReceived(Event event) {
     log.info("Received {} event with payload:\n{}",
       EventType.getNameByEvent(event),

@@ -5,8 +5,6 @@ import static org.folio.util.UuidHelper.randomId;
 
 import java.util.Optional;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.folio.rest.jaxrs.model.UserSummary;
 import org.folio.rest.persist.Criteria.Criteria;
 import org.folio.rest.persist.Criteria.Criterion;
@@ -20,8 +18,6 @@ public class UserSummaryRepository extends BaseRepository<UserSummary> {
   private static final String OPERATION_EQUALS = "=";
   private static final String FIND_SUMMARY_BY_FEE_FINE_ID_QUERY_TEMPLATE =
     "openFeesFines == \"*\\\"feeFineId\\\": \\\"%s\\\"*\"";
-
-  private static final Logger log = LogManager.getLogger(UserSummaryRepository.class);
 
   public UserSummaryRepository(PostgresClient pgClient) {
     super(pgClient, USER_SUMMARY_TABLE_NAME, UserSummary.class);

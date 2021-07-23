@@ -31,12 +31,6 @@ public class UserSummaryServiceTest extends TestBase {
     deleteAllFromTable(USER_SUMMARY_TABLE_NAME);
   }
 
-  /*@AfterClass
-  public static void clearDB(){
-    super.resetMocks();
-    deleteAllFromTable(USER_SUMMARY_TABLE_NAME);
-  }*/
-
   @Test
   public void shouldAddEvent(TestContext context) {
     final String userId = randomId();
