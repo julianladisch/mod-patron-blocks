@@ -49,15 +49,12 @@ import lombok.With;
 public class UserSummaryService {
   private static final Logger log = LogManager.getLogger(UserSummaryService.class);
 
-  private static final String FAILED_TO_REBUILD_USER_SUMMARY_ERROR_MESSAGE =
-    "Failed to rebuild user summary";
   private static final List<String> LOST_ITEM_FEE_TYPE_IDS = Arrays.asList(
     FeeFineType.LOST_ITEM_FEE.getId(),
     FeeFineType.LOST_ITEM_PROCESSING_FEE.getId()
   );
 
   private final UserSummaryRepository userSummaryRepository;
-  private final EventService eventService;
 
   public UserSummaryService(PostgresClient postgresClient) {
     userSummaryRepository = new UserSummaryRepository(postgresClient);
@@ -68,16 +65,6 @@ public class UserSummaryService {
     return userSummaryRepository.getByUserId(userId)
       .map(optionalUserSummary -> optionalUserSummary.orElseThrow(() ->
         new EntityNotFoundInDbException(format("User summary for user ID %s not found", userId))));
-  }
-
-  public Future<String> rebuild(String userId) {
-    log.info(format("Rebuilding user summary for user ID %s", userId));
-
-    return userSummaryRepository.findByUserIdOrBuildNew(userId)
-      .map(userSummary -> new RebuildContext().withUserSummary(userSummary))
-      .compose(this::loadEventsToContext)
-      .compose(this::cleanUpUserSummary)
-      .compose(this::handleEventsInChronologicalOrder);
   }
 
   private Future<String> addEvent(UserSummary userSummary, Event event) {
@@ -113,60 +100,6 @@ public class UserSummaryService {
 
   public Future<String> processEvent(UserSummary userSummary, Event event) {
     return processEvent(new UpdateRetryContext(userSummary), event);
-  }
-
-  private Future<RebuildContext> loadEventsToContext(RebuildContext ctx) {
-    if (ctx.userSummary == null || ctx.userSummary.getUserId() == null) {
-      ctx.logFailedValidationError("loadEventsToContext");
-      return failedFuture(FAILED_TO_REBUILD_USER_SUMMARY_ERROR_MESSAGE);
-    }
-
-    String userId = ctx.userSummary.getUserId();
-
-    return CustomCompositeFuture.all(List.of(
-      eventService.getItemCheckedOutEvents(userId).map(ctx.events::addAll),
-      eventService.getItemCheckedInEvents(userId).map(ctx.events::addAll),
-      eventService.getItemClaimedReturnedEvents(userId).map(ctx.events::addAll),
-      eventService.getItemDeclaredLostEvents(userId).map(ctx.events::addAll),
-      eventService.getLoanDueDateChangedEvents(userId).map(ctx.events::addAll),
-      eventService.getFeeFineBalanceChangedEvents(userId).map(ctx.events::addAll),
-      eventService.getItemAgedToLostEvents(userId).map(ctx.events::addAll))
-    ).map(ctx);
-  }
-
-  private Future<RebuildContext> cleanUpUserSummary(RebuildContext ctx) {
-    if (ctx.userSummary == null) {
-      ctx.logFailedValidationError("cleanUpUserSummary");
-      return failedFuture(FAILED_TO_REBUILD_USER_SUMMARY_ERROR_MESSAGE);
-    }
-
-    ctx.userSummary.setOpenLoans(new ArrayList<>());
-    ctx.userSummary.setOpenFeesFines(new ArrayList<>());
-
-    return succeededFuture(ctx);
-  }
-
-  private Future<String> handleEventsInChronologicalOrder(RebuildContext ctx) {
-    if (ctx.userSummary == null || ctx.userSummary.getUserId() == null) {
-      ctx.logFailedValidationError("loadEventsToContext");
-      return failedFuture(FAILED_TO_REBUILD_USER_SUMMARY_ERROR_MESSAGE);
-    }
-
-    ctx.events.stream()
-      .sorted(Comparator.comparingLong(event -> Optional.of(event)
-        .map(Event::getMetadata)
-        .map(Metadata::getCreatedDate)
-        .map(Date::getTime)
-        .orElse(0L)))
-      .forEachOrdered(event -> handleEvent(ctx, event));
-
-    if (isNotEmpty(ctx.userSummary)) {
-      return userSummaryRepository.upsert(ctx.userSummary);
-    } else {
-      return userSummaryRepository.delete(ctx.userSummary.getId())
-        .map(ctx.userSummary.getId())
-        .otherwise(ctx.userSummary.getId());
-    }
   }
 
   private void handleEvent(RebuildContext ctx, Event event) {
@@ -376,10 +309,6 @@ public class UserSummaryService {
 
     private final long attemptStarted;
     private final AtomicInteger attemptCounter = new AtomicInteger(1);
-
-    public UpdateRetryContext() {
-      this.attemptStarted = System.nanoTime();
-    }
 
     public UpdateRetryContext(UserSummary userSummary) {
       this.attemptStarted = System.nanoTime();

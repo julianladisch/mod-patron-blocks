@@ -46,7 +46,8 @@ public class EventHandlersAPI implements AutomatedPatronBlocksHandlers {
     new FeeFineBalanceChangedEventHandler(okapiHeaders, vertxContext.owner())
       .handle(event)
       .onFailure(throwable ->
-        PostAutomatedPatronBlocksHandlersFeeFineBalanceChangedResponse.respond500WithTextPlain(
+
+        PostAutomatedPatronBlocksHandlersFeeFineBalanceChangedResponse.respond409WithTextPlain(
           throwable.getCause()));
   }
 
@@ -131,6 +132,10 @@ public class EventHandlersAPI implements AutomatedPatronBlocksHandlers {
       .handle(event);
   }
 
+  private void handleVersionConflict(Future<String> operation) {
+
+  }
+  
   private static void logEventReceived(Event event) {
     log.info("Received {} event with payload:\n{}",
       EventType.getNameByEvent(event),

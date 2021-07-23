@@ -5,7 +5,6 @@ import java.util.Map;
 import org.folio.rest.jaxrs.model.ItemDeclaredLostEvent;
 import org.folio.rest.persist.PostgresClient;
 
-import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 
 public class ItemDeclaredLostEventHandler extends EventHandler<ItemDeclaredLostEvent> {

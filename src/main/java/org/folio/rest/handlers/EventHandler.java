@@ -1,20 +1,15 @@
 package org.folio.rest.handlers;
 
-import static java.lang.String.format;
 import static org.folio.util.PostgresUtils.getPostgresClient;
 
 import java.util.Map;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.domain.Event;
 import org.folio.domain.EventType;
-import org.folio.exception.EntityNotFoundException;
 import org.folio.repository.UserSummaryRepository;
-import org.folio.rest.jaxrs.model.AgedToLostDelayedBilling;
 import org.folio.rest.jaxrs.model.UserSummary;
-import org.folio.rest.persist.PgExceptionUtil;
 import org.folio.rest.persist.PostgresClient;
 import org.folio.service.EventService;
 import org.folio.service.UserSummaryService;
