@@ -25,6 +25,7 @@ import org.folio.rest.jaxrs.model.ItemDeclaredLostEvent;
 import org.folio.rest.jaxrs.model.LoanDueDateChangedEvent;
 import org.folio.rest.jaxrs.resource.AutomatedPatronBlocksHandlers;
 import org.folio.rest.handlers.FeeFineBalanceChangedEventHandler;
+import org.folio.rest.persist.PgExceptionUtil;
 
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Context;
@@ -40,9 +41,6 @@ public class EventHandlersAPI implements AutomatedPatronBlocksHandlers {
     FeeFineBalanceChangedEvent event, Map<String, String> okapiHeaders,
     Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
 
-    asyncResultHandler.handle(succeededFuture(
-      PostAutomatedPatronBlocksHandlersItemCheckedOutResponse.respond204()));
-
     logEventReceived(event);
 
     handleOperationResult(
@@ -54,9 +52,6 @@ public class EventHandlersAPI implements AutomatedPatronBlocksHandlers {
   public void postAutomatedPatronBlocksHandlersItemCheckedOut(ItemCheckedOutEvent event,
     Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler,
     Context vertxContext) {
-
-    asyncResultHandler.handle(succeededFuture(
-      PostAutomatedPatronBlocksHandlersItemCheckedOutResponse.respond204()));
 
     logEventReceived(event);
 
@@ -70,9 +65,6 @@ public class EventHandlersAPI implements AutomatedPatronBlocksHandlers {
     Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler,
     Context vertxContext) {
 
-    asyncResultHandler.handle(succeededFuture(
-      PostAutomatedPatronBlocksHandlersItemCheckedInResponse.respond204()));
-
     logEventReceived(event);
 
     handleOperationResult(new ItemCheckedInEventHandler(okapiHeaders, vertxContext.owner())
@@ -83,9 +75,6 @@ public class EventHandlersAPI implements AutomatedPatronBlocksHandlers {
   public void postAutomatedPatronBlocksHandlersItemDeclaredLost(ItemDeclaredLostEvent event,
     Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler,
     Context vertxContext) {
-
-    asyncResultHandler.handle(succeededFuture(
-      PostAutomatedPatronBlocksHandlersItemDeclaredLostResponse.respond204()));
 
     logEventReceived(event);
 
@@ -98,9 +87,6 @@ public class EventHandlersAPI implements AutomatedPatronBlocksHandlers {
   public void postAutomatedPatronBlocksHandlersItemAgedToLost(ItemAgedToLostEvent event,
     Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler,
     Context vertxContext) {
-
-    asyncResultHandler.handle(succeededFuture(
-      PostAutomatedPatronBlocksHandlersItemAgedToLostResponse.respond204()));
 
     logEventReceived(event);
 
@@ -117,7 +103,7 @@ public class EventHandlersAPI implements AutomatedPatronBlocksHandlers {
     logEventReceived(event);
 
     handleOperationResult(new ItemClaimedReturnedEventHandler(okapiHeaders, vertxContext.owner())
-      .handle(event),asyncResultHandler);
+      .handle(event), asyncResultHandler);
   }
 
   @Override
@@ -133,10 +119,17 @@ public class EventHandlersAPI implements AutomatedPatronBlocksHandlers {
 
   private void handleOperationResult(Future<String> operation,
     Handler<AsyncResult<Response>> asyncResultHandler) {
-    operation.onFailure(throwable ->
-      asyncResultHandler.handle(succeededFuture(
-        PostAutomatedPatronBlocksHandlersFeeFineBalanceChangedResponse.respond409WithTextPlain(
-          throwable.getCause()))))
+    operation.onFailure(throwable -> {
+      if (PgExceptionUtil.isVersionConflict(throwable)) {
+        asyncResultHandler.handle(succeededFuture(
+          PostAutomatedPatronBlocksHandlersFeeFineBalanceChangedResponse.respond409WithTextPlain(
+            throwable.getCause())));
+      } else {
+        asyncResultHandler.handle(succeededFuture(
+          PostAutomatedPatronBlocksHandlersFeeFineBalanceChangedResponse.respond500WithTextPlain(
+            throwable.getCause())));
+      }
+    })
       .onSuccess(id ->
         asyncResultHandler.handle(succeededFuture(
           PostAutomatedPatronBlocksHandlersFeeFineBalanceChangedResponse.respond204())));
