@@ -40,10 +40,14 @@ public class EventHandlersAPI implements AutomatedPatronBlocksHandlers {
     FeeFineBalanceChangedEvent event, Map<String, String> okapiHeaders,
     Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
 
+    asyncResultHandler.handle(succeededFuture(
+      PostAutomatedPatronBlocksHandlersItemCheckedOutResponse.respond204()));
+
     logEventReceived(event);
 
-    handleOperationResult(new FeeFineBalanceChangedEventHandler(okapiHeaders, vertxContext.owner())
-      .handle(event));
+    handleOperationResult(
+      new FeeFineBalanceChangedEventHandler(okapiHeaders, vertxContext.owner())
+        .handle(event), asyncResultHandler);
   }
 
   @Override
@@ -56,7 +60,9 @@ public class EventHandlersAPI implements AutomatedPatronBlocksHandlers {
 
     logEventReceived(event);
 
-    handleOperationResult(new ItemCheckedOutEventHandler(okapiHeaders, vertxContext.owner()).handle(event));
+    handleOperationResult(
+      new ItemCheckedOutEventHandler(okapiHeaders, vertxContext.owner()).handle(event),
+      asyncResultHandler);
   }
 
   @Override
@@ -70,7 +76,7 @@ public class EventHandlersAPI implements AutomatedPatronBlocksHandlers {
     logEventReceived(event);
 
     handleOperationResult(new ItemCheckedInEventHandler(okapiHeaders, vertxContext.owner())
-      .handle(event));
+      .handle(event), asyncResultHandler);
   }
 
   @Override
@@ -83,7 +89,9 @@ public class EventHandlersAPI implements AutomatedPatronBlocksHandlers {
 
     logEventReceived(event);
 
-    handleOperationResult(new ItemDeclaredLostEventHandler(okapiHeaders, vertxContext.owner()).handle(event));
+    handleOperationResult(
+      new ItemDeclaredLostEventHandler(okapiHeaders, vertxContext.owner()).handle(event),
+      asyncResultHandler);
   }
 
   @Override
@@ -96,7 +104,9 @@ public class EventHandlersAPI implements AutomatedPatronBlocksHandlers {
 
     logEventReceived(event);
 
-    handleOperationResult(new ItemAgedToLostEventHandler(okapiHeaders, vertxContext.owner()).handle(event));
+    handleOperationResult(
+      new ItemAgedToLostEventHandler(okapiHeaders, vertxContext.owner()).handle(event),
+      asyncResultHandler);
   }
 
   @Override
@@ -104,13 +114,10 @@ public class EventHandlersAPI implements AutomatedPatronBlocksHandlers {
     ItemClaimedReturnedEvent event, Map<String, String> okapiHeaders,
     Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
 
-    asyncResultHandler.handle(succeededFuture(
-      PostAutomatedPatronBlocksHandlersItemClaimedReturnedResponse.respond204()));
-
     logEventReceived(event);
 
     handleOperationResult(new ItemClaimedReturnedEventHandler(okapiHeaders, vertxContext.owner())
-      .handle(event));
+      .handle(event),asyncResultHandler);
   }
 
   @Override
@@ -118,21 +125,21 @@ public class EventHandlersAPI implements AutomatedPatronBlocksHandlers {
     Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler,
     Context vertxContext) {
 
-    asyncResultHandler.handle(succeededFuture(
-      PostAutomatedPatronBlocksHandlersLoanDueDateChangedResponse.respond204()));
-
     logEventReceived(event);
 
     handleOperationResult(new LoanDueDateChangedEventHandler(okapiHeaders, vertxContext.owner())
-      .handle(event));
+      .handle(event), asyncResultHandler);
   }
 
-  private void handleOperationResult(Future<String> operation) {
+  private void handleOperationResult(Future<String> operation,
+    Handler<AsyncResult<Response>> asyncResultHandler) {
     operation.onFailure(throwable ->
-      PostAutomatedPatronBlocksHandlersFeeFineBalanceChangedResponse.respond409WithTextPlain(
-        throwable.getCause()))
+      asyncResultHandler.handle(succeededFuture(
+        PostAutomatedPatronBlocksHandlersFeeFineBalanceChangedResponse.respond409WithTextPlain(
+          throwable.getCause()))))
       .onSuccess(id ->
-        PostAutomatedPatronBlocksHandlersFeeFineBalanceChangedResponse.respond204());
+        asyncResultHandler.handle(succeededFuture(
+          PostAutomatedPatronBlocksHandlersFeeFineBalanceChangedResponse.respond204())));
   }
 
   private static void logEventReceived(Event event) {
