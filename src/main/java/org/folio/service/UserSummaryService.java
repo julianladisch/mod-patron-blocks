@@ -58,7 +58,6 @@ public class UserSummaryService {
 
   public UserSummaryService(PostgresClient postgresClient) {
     userSummaryRepository = new UserSummaryRepository(postgresClient);
-    eventService = new EventService(postgresClient);
   }
 
   public Future<UserSummary> getByUserId(String userId) {
