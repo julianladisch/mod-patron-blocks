@@ -1,7 +1,6 @@
 package org.folio.service;
 
 import java.util.List;
-import java.util.function.Function;
 
 import org.folio.domain.Event;
 import org.folio.domain.EventType;
@@ -63,33 +62,24 @@ public class EventService {
   public Future<String> save(Event event) {
     EventType eventType = EventType.getByEvent(event);
 
-    Future<String> save;
     switch (eventType) {
     case ITEM_CHECKED_OUT:
-      save = save((ItemCheckedOutEvent) event);
-      break;
+      return save((ItemCheckedOutEvent) event);
     case ITEM_CHECKED_IN:
-      save = save((ItemCheckedInEvent) event);
-      break;
+      return save((ItemCheckedInEvent) event);
     case ITEM_CLAIMED_RETURNED:
-      save = save((ItemClaimedReturnedEvent) event);
-      break;
+      return save((ItemClaimedReturnedEvent) event);
     case ITEM_DECLARED_LOST:
-      save = save((ItemDeclaredLostEvent) event);
-      break;
+      return save((ItemDeclaredLostEvent) event);
     case ITEM_AGED_TO_LOST:
-      save = save((ItemAgedToLostEvent) event);
-      break;
+      return save((ItemAgedToLostEvent) event);
     case LOAN_DUE_DATE_CHANGED:
-      save = save((LoanDueDateChangedEvent) event);
-      break;
+      return save((LoanDueDateChangedEvent) event);
     case FEE_FINE_BALANCE_CHANGED:
-      save = save((FeeFineBalanceChangedEvent) event);
-      break;
+      return save((FeeFineBalanceChangedEvent) event);
     default:
       throw new IllegalStateException("Unexpected value: " + eventType);
     }
-    return save;
   }
 
   public Future<String> save(ItemCheckedOutEvent event) {

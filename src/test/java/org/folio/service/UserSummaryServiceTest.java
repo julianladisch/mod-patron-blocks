@@ -9,7 +9,6 @@ import org.folio.repository.UserSummaryRepository;
 import org.folio.rest.TestBase;
 import org.folio.rest.jaxrs.model.FeeFineBalanceChangedEvent;
 import org.folio.rest.jaxrs.model.UserSummary;
-import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -72,7 +71,7 @@ public class UserSummaryServiceTest extends TestBase {
         userId, loanId, feeFineId, feeFineTypeId, balance);
       waitFor(userSummaryService.processEvent(userSummary, feeFineBalanceChangedEvent));
       waitFor(userSummaryRepository.get(summaryId)).ifPresent(userSummaryAfterFirstUpdate -> {
-        userSummaryAfterFirstUpdate.setVersion(1);
+        userSummaryAfterFirstUpdate.setVersion(null);
         feeFineBalanceChangedEvent.setBalance(BigDecimal.ZERO);
         waitFor(
           userSummaryService.processEvent(userSummaryAfterFirstUpdate, feeFineBalanceChangedEvent));

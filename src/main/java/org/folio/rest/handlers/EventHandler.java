@@ -38,24 +38,34 @@ public abstract class EventHandler<E extends Event> {
     userSummaryService = new UserSummaryService(postgresClient);
   }
 
+  public Future<String> handle(E event) {
+    return handle(event, true);
+  }
+
   /**
    * Handle an event.
    *
    * @param event the event to handle
    * @return ID of a UserSummary affected by the processed event
    */
-  public Future<String> handle(E event) {
+  public Future<String> handle(E event, boolean rebuildUserSummary) {
     return eventService.save(event)
-      .compose(eventId -> getUserSummary(event))
-      .compose(userSummary -> userSummaryService.processEvent(userSummary, event))
+      .compose(eventId -> rebuildUserSummary
+        ? userSummaryService.rebuild(event.getUserId())
+        : updateUserSummary(event))
       .onComplete(result -> logResult(result, event));
   }
 
-  private Future<UserSummary> getUserSummary(Event event) {
+  public Future<String> updateUserSummary(E event) {
+    return getUserSummary(event)
+      .compose(userSummary -> userSummaryService.processEvent(userSummary, event));
+  }
+
+  protected Future<UserSummary> getUserSummary(E event) {
     return userSummaryRepository.findByUserIdOrBuildNew(event.getUserId());
   }
 
-  protected void logResult(AsyncResult<String> result, Event event) {
+  protected void logResult(AsyncResult<String> result, E event) {
     String eventType = EventType.getNameByEvent(event);
     if (result.failed()) {
       String eventJson = Json.encodePrettily(event);

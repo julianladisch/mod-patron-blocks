@@ -69,5 +69,4 @@ public class UserSummaryRepository extends BaseRepository<UserSummary> {
       .withId(randomId())
       .withUserId(userId);
   }
-
 }

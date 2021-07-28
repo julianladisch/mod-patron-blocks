@@ -1,5 +1,7 @@
 package org.folio.service;
 
+import static io.vertx.core.Future.failedFuture;
+import static io.vertx.core.Future.succeededFuture;
 import static java.lang.String.format;
 import static org.folio.domain.EventType.ITEM_CHECKED_IN;
 import static org.folio.domain.EventType.ITEM_CHECKED_OUT;
@@ -7,6 +9,8 @@ import static org.folio.domain.EventType.ITEM_CHECKED_OUT;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Comparator;
+import java.util.Date;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -27,6 +31,7 @@ import org.folio.rest.jaxrs.model.ItemCheckedOutEvent;
 import org.folio.rest.jaxrs.model.ItemClaimedReturnedEvent;
 import org.folio.rest.jaxrs.model.ItemDeclaredLostEvent;
 import org.folio.rest.jaxrs.model.LoanDueDateChangedEvent;
+import org.folio.rest.jaxrs.model.Metadata;
 import org.folio.rest.jaxrs.model.OpenFeeFine;
 import org.folio.rest.jaxrs.model.OpenLoan;
 import org.folio.rest.jaxrs.model.UserSummary;
@@ -48,16 +53,44 @@ public class UserSummaryService {
     FeeFineType.LOST_ITEM_PROCESSING_FEE.getId()
   );
 
+  private static final String FAILED_TO_REBUILD_USER_SUMMARY_ERROR_MESSAGE =
+    "Failed to rebuild user summary";
+
   private final UserSummaryRepository userSummaryRepository;
 
   public UserSummaryService(PostgresClient postgresClient) {
     userSummaryRepository = new UserSummaryRepository(postgresClient);
+    eventService = new EventService(postgresClient);
   }
+
+  private final EventService eventService;
 
   public Future<UserSummary> getByUserId(String userId) {
     return userSummaryRepository.getByUserId(userId)
       .map(optionalUserSummary -> optionalUserSummary.orElseThrow(() ->
         new EntityNotFoundInDbException(format("User summary for user ID %s not found", userId))));
+  }
+
+  public Future<String> processEvent(UserSummary userSummary, Event event) {
+    return processEvent(new UpdateRetryContext(userSummary), event);
+  }
+
+  private Future<String> processEvent(UpdateRetryContext ctx, Event event) {
+    return addEvent(ctx.userSummary, event)
+      .recover(throwable -> {
+        log.error(throwable.getMessage());
+        if (PgExceptionUtil.isVersionConflict(throwable) &&
+          ctx.shouldRetryUpdate()
+        ) {
+          return userSummaryRepository.findByUserIdOrBuildNew(ctx.userSummary.getUserId())
+            .compose(userSummary1 -> {
+              ctx.attemptCounter.incrementAndGet();
+              ctx.setUserSummary(userSummary1);
+              return processEvent(ctx, event);
+            });
+        }
+        return Future.failedFuture(throwable);
+      });
   }
 
   private Future<String> addEvent(UserSummary userSummary, Event event) {
@@ -74,25 +107,81 @@ public class UserSummaryService {
     }
   }
 
-  private Future<String> processEvent(UpdateRetryContext ctx, Event event) {
-    return addEvent(ctx.userSummary, event)
-      .recover(throwable -> {
-        log.error(throwable);
-        if (PgExceptionUtil.isVersionConflict(throwable) &&
-          ctx.shouldRetryUpdate()
-        ) {
-          return userSummaryRepository.findByUserIdOrBuildNew(ctx.userSummary.getUserId())
-            .compose(userSummary1 -> {
-              ctx.setUserSummary(userSummary1);
-              return processEvent(ctx, event);
-            });
-        }
-        return Future.failedFuture(throwable);
-      });
+  public Future<String> rebuild(String userId) {
+    log.info(format("Rebuilding user summary for user ID %s", userId));
+
+    return userSummaryRepository.findByUserIdOrBuildNew(userId)
+      .map(userSummary -> new RebuildContext().withUserSummary(userSummary))
+      .compose(this::loadEventsToContext)
+      .compose(this::cleanUpUserSummary)
+      .compose(this::handleEventsInChronologicalOrder);
   }
 
-  public Future<String> processEvent(UserSummary userSummary, Event event) {
-    return processEvent(new UpdateRetryContext(userSummary), event);
+  private Future<RebuildContext> loadEventsToContext(RebuildContext ctx) {
+    if (ctx.userSummary == null || ctx.userSummary.getUserId() == null) {
+      ctx.logFailedValidationError("loadEventsToContext");
+      return failedFuture(FAILED_TO_REBUILD_USER_SUMMARY_ERROR_MESSAGE);
+    }
+
+    String userId = ctx.userSummary.getUserId();
+
+    return succeededFuture(userId)
+      .compose(eventService::getItemCheckedOutEvents)
+      .map(ctx.events::addAll)
+      .map(userId)
+      .compose(eventService::getItemCheckedInEvents)
+      .map(ctx.events::addAll)
+      .map(userId)
+      .compose(eventService::getItemClaimedReturnedEvents)
+      .map(ctx.events::addAll)
+      .map(userId)
+      .compose(eventService::getItemDeclaredLostEvents)
+      .map(ctx.events::addAll)
+      .map(userId)
+      .compose(eventService::getItemAgedToLostEvents)
+      .map(ctx.events::addAll)
+      .map(userId)
+      .compose(eventService::getLoanDueDateChangedEvents)
+      .map(ctx.events::addAll)
+      .map(userId)
+      .compose(eventService::getFeeFineBalanceChangedEvents)
+      .map(ctx.events::addAll)
+      .map(ctx);
+  }
+
+  private Future<RebuildContext> cleanUpUserSummary(RebuildContext ctx) {
+    if (ctx.userSummary == null) {
+      ctx.logFailedValidationError("cleanUpUserSummary");
+      return failedFuture(FAILED_TO_REBUILD_USER_SUMMARY_ERROR_MESSAGE);
+    }
+
+    ctx.userSummary.setOpenLoans(new ArrayList<>());
+    ctx.userSummary.setOpenFeesFines(new ArrayList<>());
+
+    return succeededFuture(ctx);
+  }
+
+  private Future<String> handleEventsInChronologicalOrder(RebuildContext ctx) {
+    if (ctx.userSummary == null || ctx.userSummary.getUserId() == null) {
+      ctx.logFailedValidationError("loadEventsToContext");
+      return failedFuture(FAILED_TO_REBUILD_USER_SUMMARY_ERROR_MESSAGE);
+    }
+
+    ctx.events.stream()
+      .sorted(Comparator.comparingLong(event -> Optional.of(event)
+        .map(Event::getMetadata)
+        .map(Metadata::getCreatedDate)
+        .map(Date::getTime)
+        .orElse(0L)))
+      .forEachOrdered(event -> handleEvent(ctx, event));
+
+    if (isNotEmpty(ctx.userSummary)) {
+      return userSummaryRepository.upsert(ctx.userSummary, ctx.userSummary.getId());
+    } else {
+      return userSummaryRepository.delete(ctx.userSummary.getId())
+        .map(ctx.userSummary.getId())
+        .otherwise(ctx.userSummary.getId());
+    }
   }
 
   private void handleEvent(RebuildContext ctx, Event event) {
@@ -296,7 +385,7 @@ public class UserSummaryService {
     }
   }
 
-  public static class UpdateRetryContext {
+  private static class UpdateRetryContext {
     @Setter
     private UserSummary userSummary;
 
