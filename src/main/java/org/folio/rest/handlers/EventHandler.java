@@ -39,7 +39,7 @@ public abstract class EventHandler<E extends Event> {
   }
 
   public Future<String> handle(E event) {
-    return handle(event, true);
+    return handle(event, false);
   }
 
   /**
