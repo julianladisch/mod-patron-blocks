@@ -1,0 +1,26 @@
+stages:
+  - name: Build
+    steps:
+      - runScriptConfig:
+          image: maven:3.6.3-openjdk-11
+          shellScript: git submodule init && git submodule update && mvn package -DskipTests
+  - name: Build Docker with DIND
+    steps:
+      - publishImageConfig:
+          dockerfilePath: ./Dockerfile
+          buildContext: .
+          tag: docker.dev.folio.org/mod-patron-blocks:MODPATBLK-91-rancher
+          pushRemote: true
+          registry: docker.dev.folio.org
+  - name: Deploy
+    steps:
+      - applyAppConfig:
+          catalogTemplate: p-jqjbc:vega-helmcharts-mod-patron-blocks
+          version: 0.1.32
+          answers:
+            image.repository: docker.dev.folio.org/mod-patron-blocks
+            image.tag: MODPATBLK-91-rancher
+          targetNamespace: vega
+          name: mod-patron-blocks
+timeout: 60
+notification: {}
