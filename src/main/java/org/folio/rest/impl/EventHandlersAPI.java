@@ -44,7 +44,7 @@ public class EventHandlersAPI implements AutomatedPatronBlocksHandlers {
     logEventReceived(event);
 
     new FeeFineBalanceChangedEventHandler(okapiHeaders, vertxContext.owner())
-      .handle(event, false)
+      .handle(event, true)
       .onComplete(result -> handleOperationResult(result, asyncResultHandler,
         EventType.FEE_FINE_BALANCE_CHANGED));
   }
@@ -57,7 +57,7 @@ public class EventHandlersAPI implements AutomatedPatronBlocksHandlers {
     logEventReceived(event);
 
     new ItemCheckedOutEventHandler(okapiHeaders, vertxContext.owner())
-      .handle(event, false)
+      .handle(event, true)
       .onComplete(
         result -> handleOperationResult(result, asyncResultHandler, EventType.ITEM_CHECKED_OUT));
   }
@@ -69,7 +69,7 @@ public class EventHandlersAPI implements AutomatedPatronBlocksHandlers {
 
     logEventReceived(event);
     new ItemCheckedInEventHandler(okapiHeaders, vertxContext.owner())
-      .handle(event, false)
+      .handle(event, true)
       .onComplete(
         result -> handleOperationResult(result, asyncResultHandler, EventType.ITEM_CHECKED_IN));
     ;
@@ -83,7 +83,7 @@ public class EventHandlersAPI implements AutomatedPatronBlocksHandlers {
     logEventReceived(event);
 
     new ItemDeclaredLostEventHandler(okapiHeaders, vertxContext.owner())
-      .handle(event, false)
+      .handle(event, true)
       .onComplete(
         result -> handleOperationResult(result, asyncResultHandler, EventType.ITEM_DECLARED_LOST));
   }
@@ -96,7 +96,7 @@ public class EventHandlersAPI implements AutomatedPatronBlocksHandlers {
     logEventReceived(event);
 
     new ItemAgedToLostEventHandler(okapiHeaders, vertxContext.owner())
-      .handle(event, false)
+      .handle(event, true)
       .onComplete(
         result -> handleOperationResult(result, asyncResultHandler, EventType.ITEM_AGED_TO_LOST));
   }
@@ -108,7 +108,7 @@ public class EventHandlersAPI implements AutomatedPatronBlocksHandlers {
 
     logEventReceived(event);
     new ItemClaimedReturnedEventHandler(okapiHeaders, vertxContext.owner())
-      .handle(event, false)
+      .handle(event, true)
       .onComplete(result -> handleOperationResult(result, asyncResultHandler,
         EventType.ITEM_CLAIMED_RETURNED));
   }
@@ -121,7 +121,7 @@ public class EventHandlersAPI implements AutomatedPatronBlocksHandlers {
     logEventReceived(event);
 
     new LoanDueDateChangedEventHandler(okapiHeaders, vertxContext.owner())
-      .handle(event, false)
+      .handle(event, true)
       .onComplete(result -> handleOperationResult(result, asyncResultHandler,
         EventType.LOAN_DUE_DATE_CHANGED));
   }

@@ -48,11 +48,11 @@ public abstract class EventHandler<E extends Event> {
    * @param event the event to handle
    * @return ID of a UserSummary affected by the processed event
    */
-  public Future<String> handle(E event, boolean rebuildUserSummary) {
+  public Future<String> handle(E event, boolean doNotRebuildUserSummary) {
     return eventService.save(event)
-      .compose(eventId -> rebuildUserSummary
-        ? userSummaryService.rebuild(event.getUserId())
-        : updateUserSummary(event))
+      .compose(eventId -> doNotRebuildUserSummary
+        ? updateUserSummary(event)
+        : userSummaryService.rebuild(event.getUserId()))
       .onComplete(result -> logResult(result, event));
   }
 
