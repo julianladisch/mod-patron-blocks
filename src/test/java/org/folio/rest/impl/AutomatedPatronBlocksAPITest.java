@@ -168,8 +168,7 @@ public class AutomatedPatronBlocksAPITest extends TestBase {
 
         stubLoan(loanId, dueDate, false);
 
-        waitFor(itemCheckedOutEventHandler.handle(
-          buildItemCheckedOutEvent(userId, loanId, dueDate), true));
+        waitFor(itemCheckedOutEventHandler.handle(buildItemCheckedOutEvent(userId, loanId, dueDate)));
       });
 
     String expectedResponse = createLimitsAndBuildExpectedResponse(condition, singleLimit);
@@ -348,8 +347,7 @@ public class AutomatedPatronBlocksAPITest extends TestBase {
 
         stubLoan(loanId, dueDate, false);
 
-        waitFor(itemCheckedOutEventHandler.handle(
-          buildItemCheckedOutEvent(userId, loanId, dueDate)));
+        waitFor(itemCheckedOutEventHandler.handle(buildItemCheckedOutEvent(userId, loanId, dueDate)));
       });
 
     String expectedResponse = createLimitsAndBuildExpectedResponse(condition, singleLimit);
