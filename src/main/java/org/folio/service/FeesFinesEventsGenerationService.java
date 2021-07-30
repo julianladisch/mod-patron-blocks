@@ -1,8 +1,10 @@
 package org.folio.service;
 
 import java.math.BigDecimal;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import org.folio.repository.SynchronizationJobRepository;
 import org.folio.rest.client.BulkDownloadClient;
@@ -31,6 +33,8 @@ public class FeesFinesEventsGenerationService extends EventsGenerationService<Ac
   protected Future<Account> generateEvents(Account account) {
     final String accountId = account.getId();
     log.info("Generating events for account {}...", accountId);
+
+    userIds.add(account.getUserId());
 
     final FeeFineBalanceChangedEvent event = new FeeFineBalanceChangedEvent()
       .withBalance(BigDecimal.valueOf(account.getRemaining()))
