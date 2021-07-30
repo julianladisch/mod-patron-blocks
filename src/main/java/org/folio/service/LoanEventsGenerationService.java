@@ -3,8 +3,7 @@ package org.folio.service;
 import static io.vertx.core.Future.succeededFuture;
 import static org.apache.commons.lang3.BooleanUtils.isTrue;
 
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.folio.repository.SynchronizationJobRepository;
@@ -50,6 +49,8 @@ public class LoanEventsGenerationService extends EventsGenerationService<Loan> {
   protected Future<Loan> generateEvents(Loan loan) {
     final String loanId = loan.getId();
     log.info("Generating events for loan {}...", loanId);
+
+    userIds.add(loan.getUserId());
 
     return succeededFuture(loan)
       .compose(v -> generateItemCheckedOutEvent(loan))

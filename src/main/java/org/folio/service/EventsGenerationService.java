@@ -4,7 +4,9 @@ import static io.vertx.core.Future.succeededFuture;
 import static org.folio.rest.jaxrs.model.SynchronizationJob.Scope.USER;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
 
 import org.apache.logging.log4j.LogManager;
@@ -25,6 +27,8 @@ public abstract class EventsGenerationService<T> {
 
   protected final SynchronizationJobRepository syncRepository;
   private final BulkDownloadClient<T> bulkDownloadClient;
+
+  Set<String> userIds = new HashSet<>();
 
   protected EventsGenerationService(BulkDownloadClient<T> bulkDownloadClient,
     SynchronizationJobRepository syncRepository) {
@@ -105,4 +109,8 @@ public abstract class EventsGenerationService<T> {
 
   protected abstract Future<SynchronizationJob> updateStats(SynchronizationJob job,
     List<T> entities);
+
+  public Set<String> getUserIds() {
+    return userIds;
+  }
 }
