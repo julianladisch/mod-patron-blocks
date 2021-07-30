@@ -64,7 +64,7 @@ public class LoanEventsGenerationService extends EventsGenerationService<Loan> {
   }
 
   private Future<String> generateItemCheckedOutEvent(Loan loan) {
-   return checkedOutEventHandler.handle(new ItemCheckedOutEvent()
+   return checkedOutEventHandler.handleSkippingUserSummaryUpdate(new ItemCheckedOutEvent()
       .withLoanId(loan.getId())
       .withUserId(loan.getUserId())
       .withDueDate(loan.getDueDate())
@@ -73,7 +73,7 @@ public class LoanEventsGenerationService extends EventsGenerationService<Loan> {
 
   private Future<String> generateClaimedReturnedEvent(Loan loan) {
     if (CLAIMED_RETURNED_STATUS.equalsIgnoreCase(loan.getItemStatus())) {
-      return claimedReturnedEventHandler.handle(new ItemClaimedReturnedEvent()
+      return claimedReturnedEventHandler.handleSkippingUserSummaryUpdate(new ItemClaimedReturnedEvent()
         .withLoanId(loan.getId())
         .withUserId(loan.getUserId())
         .withMetadata(loan.getMetadata()));
@@ -83,7 +83,7 @@ public class LoanEventsGenerationService extends EventsGenerationService<Loan> {
 
   private Future<String> generateDeclaredLostEvent(Loan loan) {
     if (DECLARED_LOST_STATUS.equals(loan.getItemStatus())) {
-      return declaredLostEventHandler.handle(new ItemDeclaredLostEvent()
+      return declaredLostEventHandler.handleSkippingUserSummaryUpdate(new ItemDeclaredLostEvent()
           .withLoanId(loan.getId())
           .withUserId(loan.getUserId())
           .withMetadata(loan.getMetadata()));
@@ -93,7 +93,7 @@ public class LoanEventsGenerationService extends EventsGenerationService<Loan> {
 
   private Future<Void> generateDueDateChangedEvent(Loan loan) {
     if (isTrue(loan.getDueDateChangedByRecall())) {
-      dueDateChangedEventHandler.handle(new LoanDueDateChangedEvent()
+      dueDateChangedEventHandler.handleSkippingUserSummaryUpdate(new LoanDueDateChangedEvent()
           .withLoanId(loan.getId())
           .withUserId(loan.getUserId())
           .withDueDate(loan.getDueDate())

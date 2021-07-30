@@ -39,6 +39,10 @@ public abstract class EventHandler<E extends Event> {
   }
 
   public Future<String> handle(E event) {
+    return handle(event, false);
+  }
+
+  public Future<String> handleSkippingUserSummaryUpdate(E event) {
     return handle(event, true);
   }
 
@@ -48,10 +52,10 @@ public abstract class EventHandler<E extends Event> {
    * @param event the event to handle
    * @return ID of a UserSummary affected by the processed event
    */
-  public Future<String> handle(E event, boolean rebuildUserSummary) {
+  private Future<String> handle(E event, boolean skipUserSummaryUpdate) {
     return eventService.save(event)
-      .compose(eventId -> rebuildUserSummary
-        ? userSummaryService.rebuild(event.getUserId())
+      .compose(eventId -> skipUserSummaryUpdate
+        ? Future.succeededFuture()
         : updateUserSummary(event))
       .onComplete(result -> logResult(result, event));
   }
