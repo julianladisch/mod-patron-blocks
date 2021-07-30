@@ -71,13 +71,14 @@ public class UserSummaryServiceTest extends TestBase {
         userId, loanId, feeFineId, feeFineTypeId, balance);
       waitFor(userSummaryService.processEvent(userSummary, feeFineBalanceChangedEvent));
       waitFor(userSummaryRepository.get(summaryId)).ifPresent(userSummaryAfterFirstUpdate -> {
-        userSummaryAfterFirstUpdate.setVersion(null);
-        feeFineBalanceChangedEvent.setBalance(BigDecimal.ZERO);
+        userSummaryAfterFirstUpdate.setVersion(1);
+        BigDecimal newBalance = new BigDecimal("7.77");
+        feeFineBalanceChangedEvent.setBalance(newBalance);
         waitFor(
           userSummaryService.processEvent(userSummaryAfterFirstUpdate, feeFineBalanceChangedEvent));
         waitFor(userSummaryRepository.get(summaryId)).ifPresent(
           userSummaryAfterSecondUpdate -> context.assertTrue(
-            userSummaryAfterSecondUpdate.getOpenFeesFines().isEmpty()));
+            userSummaryAfterSecondUpdate.getOpenFeesFines().get(0).getBalance().equals(newBalance)));
       });
     });
   }
