@@ -118,9 +118,13 @@ public class SynchronizationJobService {
     if (job.getScope() == FULL) {
       return userSummaryRepository.removeAll(tenantId)
         .map(job);
-    } else {
+    }
+    else if (job.getScope() == USER) {
       return userSummaryRepository.delete(job.getUserId())
         .map(job);
+    }
+    else {
+      return succeededFuture(job);
     }
   }
 

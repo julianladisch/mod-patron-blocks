@@ -3,8 +3,8 @@ package org.folio.service;
 import static io.vertx.core.Future.succeededFuture;
 import static org.apache.commons.lang3.BooleanUtils.isTrue;
 
-import java.util.*;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.List;
+import java.util.Map;
 
 import org.folio.repository.SynchronizationJobRepository;
 import org.folio.rest.client.BulkDownloadClient;

@@ -119,7 +119,6 @@ public class UserSummaryRepositoryTest extends TestBase {
       createUserSummary(userSummaryId, randomId())));
 
     waitFor(repository.get(userSummaryId)).ifPresent(userSummary1 -> {
-
       userSummary1.withOpenFeesFines(singletonList(
         new OpenFeeFine()
           .withBalance(TEN)

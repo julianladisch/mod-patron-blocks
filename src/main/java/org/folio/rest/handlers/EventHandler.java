@@ -39,30 +39,19 @@ public abstract class EventHandler<E extends Event> {
   }
 
   public Future<String> handle(E event) {
-    return handle(event, false);
+    return eventService.save(event)
+      .compose(eventId -> updateUserSummary(event))
+      .onComplete(result -> logResult(result, event));
   }
 
   public Future<String> handleSkippingUserSummaryUpdate(E event) {
-    return handle(event, true);
-  }
-
-  /**
-   * Handle an event.
-   *
-   * @param event the event to handle
-   * @return ID of a UserSummary affected by the processed event
-   */
-  private Future<String> handle(E event, boolean skipUserSummaryUpdate) {
     return eventService.save(event)
-      .compose(eventId -> skipUserSummaryUpdate
-        ? Future.succeededFuture()
-        : updateUserSummary(event))
       .onComplete(result -> logResult(result, event));
   }
 
   public Future<String> updateUserSummary(E event) {
     return getUserSummary(event)
-      .compose(userSummary -> userSummaryService.processEvent(userSummary, event));
+      .compose(userSummary -> userSummaryService.updateUserSummaryWithEvent(userSummary, event));
   }
 
   protected Future<UserSummary> getUserSummary(E event) {

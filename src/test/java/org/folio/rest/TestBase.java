@@ -261,8 +261,7 @@ public class TestBase {
       .extract();
   }
 
-  protected ExtractableResponse<Response> putWithStatus(String resourcePath, String putBody,
-    int expectedStatus, Header... headers) {
+  protected ExtractableResponse<Response> putWithStatus(String resourcePath, String putBody, int expectedStatus, Header... headers) {
     return RestAssured.given()
       .spec(getRequestSpecification())
       .header(JSON_CONTENT_TYPE_HEADER)
@@ -277,8 +276,7 @@ public class TestBase {
       .extract();
   }
 
-  protected ExtractableResponse<Response> postWithStatus(String resourcePath, String postBody,
-    int expectedStatus, Header... headers) {
+  protected ExtractableResponse<Response> postWithStatus(String resourcePath, String postBody, int expectedStatus, Header... headers) {
     return RestAssured.given()
       .spec(getRequestSpecification())
       .header(JSON_CONTENT_TYPE_HEADER)
@@ -293,8 +291,7 @@ public class TestBase {
       .extract();
   }
 
-  protected ExtractableResponse<Response> deleteWithStatus(String resourcePath,
-    int expectedStatus) {
+  protected ExtractableResponse<Response> deleteWithStatus(String resourcePath, int expectedStatus) {
     return RestAssured.given()
       .spec(getRequestSpecification())
       .when()
