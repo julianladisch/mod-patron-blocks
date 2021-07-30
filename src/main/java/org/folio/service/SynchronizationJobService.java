@@ -116,7 +116,7 @@ public class SynchronizationJobService {
 
   private Future<SynchronizationJob> deleteUserSummaries(SynchronizationJob job) {
     if (job.getScope() == FULL) {
-      return userSummaryRepository.delete("TODO")
+      return userSummaryRepository.removeAll(tenantId)
         .map(job);
     } else {
       return userSummaryRepository.delete(job.getUserId())
