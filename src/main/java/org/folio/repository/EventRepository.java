@@ -7,6 +7,7 @@ import org.folio.rest.persist.Criteria.Criterion;
 import org.folio.rest.persist.Criteria.Limit;
 import org.folio.rest.persist.PostgresClient;
 import org.folio.rest.tools.utils.ModuleName;
+import org.folio.util.UuidHelper;
 
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
@@ -16,6 +17,10 @@ public class EventRepository<T> extends BaseRepository<T> {
 
   public EventRepository(PostgresClient pgClient, String tableName, Class<T> entityType) {
     super(pgClient, tableName, entityType);
+  }
+
+  public Future<String> save(T entity) {
+    return super.save(entity, UuidHelper.randomId());
   }
 
   public Future<List<T>> getByUserId(String userId) {

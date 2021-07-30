@@ -8,16 +8,17 @@ import static org.folio.domain.SynchronizationStatus.IN_PROGRESS;
 import static org.folio.rest.jaxrs.model.SynchronizationJob.Scope.FULL;
 import static org.folio.rest.jaxrs.model.SynchronizationJob.Scope.USER;
 
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
+import java.util.stream.Collectors;
 
+import io.vertx.core.CompositeFuture;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.domain.SynchronizationStatus;
 import org.folio.exception.EntityNotFoundException;
 import org.folio.exception.UserIdNotFoundException;
 import org.folio.repository.SynchronizationJobRepository;
+import org.folio.repository.UserSummaryRepository;
 import org.folio.rest.jaxrs.model.SynchronizationJob;
 import org.folio.rest.persist.PostgresClient;
 import org.folio.rest.tools.utils.TenantTool;
@@ -29,6 +30,8 @@ public class SynchronizationJobService {
 
   private static final Logger log = LogManager.getLogger(SynchronizationJobService.class);
 
+  private final UserSummaryRepository userSummaryRepository;
+  private final UserSummaryService userSummaryService;
   private final SynchronizationJobRepository syncRepository;
   private final LoanEventsGenerationService loanEventsGenerationService;
   private final FeesFinesEventsGenerationService feesFinesEventsGenerationService;
@@ -39,6 +42,8 @@ public class SynchronizationJobService {
     this.tenantId = TenantTool.tenantId(okapiHeaders);
     PostgresClient postgresClient = PostgresClient.getInstance(vertx, tenantId);
     this.syncRepository = new SynchronizationJobRepository(postgresClient);
+    this.userSummaryRepository = new UserSummaryRepository(postgresClient);
+    this.userSummaryService = new UserSummaryService(postgresClient);
     this.eventService = new EventService(postgresClient);
     this.loanEventsGenerationService = new LoanEventsGenerationService(
       okapiHeaders, vertx, syncRepository);
@@ -103,8 +108,36 @@ public class SynchronizationJobService {
       .compose(syncJob -> cleanExistingEvents(syncJob, tenantId))
       .compose(loanEventsGenerationService::generateEvents)
       .compose(feesFinesEventsGenerationService::generateEvents)
+      .compose(this::deleteUserSummaries)
+      .compose(this::rebuildUserSummaries)
       .compose(job -> updateJobStatus(job, DONE))
       .recover(t -> updateJobAsFailed(synchronizationJob, t.getLocalizedMessage()));
+  }
+
+  private Future<SynchronizationJob> deleteUserSummaries(SynchronizationJob job) {
+    if (job.getScope() == FULL) {
+      return userSummaryRepository.removeAll(tenantId)
+        .map(job);
+    }
+    else if (job.getScope() == USER) {
+      return userSummaryRepository.delete(job.getUserId())
+        .map(job);
+    }
+    else {
+      return succeededFuture(job);
+    }
+  }
+
+  private Future<SynchronizationJob> rebuildUserSummaries(SynchronizationJob job) {
+    Set<String> userIds = new HashSet<>();
+    userIds.addAll(loanEventsGenerationService.getUserIds());
+    userIds.addAll(feesFinesEventsGenerationService.getUserIds());
+
+    return CompositeFuture.all(userIds.stream()
+      .filter(Objects::nonNull)
+      .map(userSummaryService::rebuild)
+      .collect(Collectors.toList()))
+      .map(job);
   }
 
   private Future<SynchronizationJob> cleanExistingEvents(SynchronizationJob syncJob,

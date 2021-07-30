@@ -94,7 +94,7 @@ public class BaseRepository<T> {
       ModuleName.getModuleName(), tableName);
     pgClient.execute(deleteAllQuery, reply -> {
       if (reply.failed()) {
-        promise.future().failed();
+        promise.fail(reply.cause());
       } else {
         promise.complete();
       }

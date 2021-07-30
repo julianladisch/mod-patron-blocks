@@ -93,6 +93,7 @@
     },
     {
       "tableName": "user_summary",
+      "withOptimisticLocking": "failOnConflict",
       "withMetadata": true,
       "uniqueIndex": [
         {

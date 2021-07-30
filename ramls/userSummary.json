@@ -8,6 +8,10 @@
       "type": "string",
       "$ref": "raml-util/schemas/uuid.schema"
     },
+    "_version": {
+      "type": "integer",
+      "description": "Record version for optimistic locking"
+    },
     "userId": {
       "description": "Unique ID of the user",
       "type": "string",

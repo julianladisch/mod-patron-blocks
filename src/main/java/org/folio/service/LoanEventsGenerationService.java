@@ -50,6 +50,8 @@ public class LoanEventsGenerationService extends EventsGenerationService<Loan> {
     final String loanId = loan.getId();
     log.info("Generating events for loan {}...", loanId);
 
+    userIds.add(loan.getUserId());
+
     return succeededFuture(loan)
       .compose(v -> generateItemCheckedOutEvent(loan))
       .compose(v -> generateClaimedReturnedEvent(loan))
@@ -62,41 +64,41 @@ public class LoanEventsGenerationService extends EventsGenerationService<Loan> {
   }
 
   private Future<String> generateItemCheckedOutEvent(Loan loan) {
-   return checkedOutEventHandler.handle(new ItemCheckedOutEvent()
+   return checkedOutEventHandler.handleSkippingUserSummaryUpdate(new ItemCheckedOutEvent()
       .withLoanId(loan.getId())
       .withUserId(loan.getUserId())
       .withDueDate(loan.getDueDate())
-      .withMetadata(loan.getMetadata()), true);
+      .withMetadata(loan.getMetadata()));
   }
 
   private Future<String> generateClaimedReturnedEvent(Loan loan) {
     if (CLAIMED_RETURNED_STATUS.equalsIgnoreCase(loan.getItemStatus())) {
-      return claimedReturnedEventHandler.handle(new ItemClaimedReturnedEvent()
+      return claimedReturnedEventHandler.handleSkippingUserSummaryUpdate(new ItemClaimedReturnedEvent()
         .withLoanId(loan.getId())
         .withUserId(loan.getUserId())
-        .withMetadata(loan.getMetadata()), true);
+        .withMetadata(loan.getMetadata()));
     }
     return succeededFuture(null);
   }
 
   private Future<String> generateDeclaredLostEvent(Loan loan) {
     if (DECLARED_LOST_STATUS.equals(loan.getItemStatus())) {
-      return declaredLostEventHandler.handle(new ItemDeclaredLostEvent()
+      return declaredLostEventHandler.handleSkippingUserSummaryUpdate(new ItemDeclaredLostEvent()
           .withLoanId(loan.getId())
           .withUserId(loan.getUserId())
-          .withMetadata(loan.getMetadata()), true);
+          .withMetadata(loan.getMetadata()));
     }
     return succeededFuture(null);
   }
 
   private Future<Void> generateDueDateChangedEvent(Loan loan) {
     if (isTrue(loan.getDueDateChangedByRecall())) {
-      dueDateChangedEventHandler.handle(new LoanDueDateChangedEvent()
+      dueDateChangedEventHandler.handleSkippingUserSummaryUpdate(new LoanDueDateChangedEvent()
           .withLoanId(loan.getId())
           .withUserId(loan.getUserId())
           .withDueDate(loan.getDueDate())
           .withDueDateChangedByRecall(loan.getDueDateChangedByRecall())
-          .withMetadata(loan.getMetadata()), true);
+          .withMetadata(loan.getMetadata()));
     }
     return succeededFuture(null);
   }
