@@ -36,7 +36,7 @@ public class UserSummaryRepositoryTest extends TestBase {
   @Test
   public void shouldAddUserSummary(TestContext context) {
     String summaryId = randomId();
-    UserSummary userSummaryToSave =  createUserSummary(summaryId, randomId());
+    UserSummary userSummaryToSave = createUserSummary(summaryId, randomId());
     waitFor(repository.save(userSummaryToSave));
 
     Optional<UserSummary> retrievedUserSummary = waitFor(repository.get(summaryId));
@@ -48,8 +48,8 @@ public class UserSummaryRepositoryTest extends TestBase {
   @Test
   public void shouldFailWhenAttemptingToSaveSummaryWithDuplicateId(TestContext context) {
     String sameSummaryId = randomId();
-    UserSummary userSummaryToSave1 =  createUserSummary(sameSummaryId, randomId());
-    UserSummary userSummaryToSave2 =  createUserSummary(sameSummaryId, randomId());
+    UserSummary userSummaryToSave1 = createUserSummary(sameSummaryId, randomId());
+    UserSummary userSummaryToSave2 = createUserSummary(sameSummaryId, randomId());
 
     waitFor(repository.save(userSummaryToSave1));
     Future<String> saveDuplicateSummary = repository.save(userSummaryToSave2);
@@ -64,8 +64,8 @@ public class UserSummaryRepositoryTest extends TestBase {
   @Test
   public void shouldFailWhenAttemptingToSaveSummaryWithDuplicateUserId(TestContext context) {
     String sameUserId = randomId();
-    UserSummary userSummaryToSave1 =  createUserSummary(randomId(), sameUserId);
-    UserSummary userSummaryToSave2 =  createUserSummary(randomId(), sameUserId);
+    UserSummary userSummaryToSave1 = createUserSummary(randomId(), sameUserId);
+    UserSummary userSummaryToSave2 = createUserSummary(randomId(), sameUserId);
 
     waitFor(repository.save(userSummaryToSave1));
     Future<String> saveDuplicateSummary = repository.save(userSummaryToSave2);
@@ -118,19 +118,20 @@ public class UserSummaryRepositoryTest extends TestBase {
     waitFor(repository.save(
       createUserSummary(userSummaryId, randomId())));
 
-    UserSummary updatedUserSummary = createUserSummary(userSummaryId, randomId());
-    updatedUserSummary.withOpenFeesFines(singletonList(
-      new OpenFeeFine()
-        .withBalance(TEN)
-        .withFeeFineId(randomId())
-        .withFeeFineTypeId(randomId())
-        .withLoanId(randomId())));
+    waitFor(repository.get(userSummaryId)).ifPresent(userSummary1 -> {
+      userSummary1.withOpenFeesFines(singletonList(
+        new OpenFeeFine()
+          .withBalance(TEN)
+          .withFeeFineId(randomId())
+          .withFeeFineTypeId(randomId())
+          .withLoanId(randomId())));
 
-    waitFor(repository.update(updatedUserSummary));
-    Optional<UserSummary> userSummary = waitFor(repository.get(userSummaryId));
+      waitFor(repository.update(userSummary1));
+      Optional<UserSummary> userSummary = waitFor(repository.get(userSummaryId));
 
-    context.assertTrue(userSummary.isPresent());
-    assertSummariesAreEqual(updatedUserSummary, userSummary.get(), context);
+      context.assertTrue(userSummary.isPresent());
+      assertSummariesAreEqual(userSummary1, userSummary.get(), context);
+    });
   }
 
   @Test
@@ -172,18 +173,19 @@ public class UserSummaryRepositoryTest extends TestBase {
     UserSummary initialUserSummary = createUserSummary(summaryId, randomId());
 
     waitFor(repository.upsert(initialUserSummary));
-    Optional<UserSummary> retrievedInitialSummary =
+    Optional<UserSummary> retrievedInitialSummaryOptional =
       waitFor(repository.get(summaryId));
 
-    context.assertTrue(retrievedInitialSummary.isPresent());
-    assertSummariesAreEqual(initialUserSummary, retrievedInitialSummary.get(), context);
+    context.assertTrue(retrievedInitialSummaryOptional.isPresent());
+    UserSummary retrievedInitialSummary = retrievedInitialSummaryOptional.get();
+    assertSummariesAreEqual(initialUserSummary, retrievedInitialSummary, context);
 
-    UserSummary updatedSummary = initialUserSummary.withOpenLoans(singletonList(
+    UserSummary updatedSummary = retrievedInitialSummary.withOpenLoans(singletonList(
       new OpenLoan()
-      .withLoanId(randomId())
-      .withDueDate(new Date())
-      .withItemLost(false)
-      .withRecall(false)));
+        .withLoanId(randomId())
+        .withDueDate(new Date())
+        .withItemLost(false)
+        .withRecall(false)));
 
     waitFor(repository.upsert(updatedSummary));
 

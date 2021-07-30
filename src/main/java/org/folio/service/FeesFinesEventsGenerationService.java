@@ -32,6 +32,8 @@ public class FeesFinesEventsGenerationService extends EventsGenerationService<Ac
     final String accountId = account.getId();
     log.info("Generating events for account {}...", accountId);
 
+    userIds.add(account.getUserId());
+
     final FeeFineBalanceChangedEvent event = new FeeFineBalanceChangedEvent()
       .withBalance(BigDecimal.valueOf(account.getRemaining()))
       .withFeeFineId(account.getId())
@@ -40,7 +42,7 @@ public class FeesFinesEventsGenerationService extends EventsGenerationService<Ac
       .withLoanId(account.getLoanId())
       .withMetadata(account.getMetadata());
 
-    return feeFineBalanceChangedEventHandler.handle(event, true)
+    return feeFineBalanceChangedEventHandler.handleSkippingUserSummaryUpdate(event)
       .onSuccess(r -> log.info("Successfully generated events for account {}", accountId))
       .onFailure(t -> log.error("Failed to generate events for account {}: {}", accountId,
         t.getLocalizedMessage()))
