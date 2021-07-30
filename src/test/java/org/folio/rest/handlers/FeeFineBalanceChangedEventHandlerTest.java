@@ -253,7 +253,7 @@ public class FeeFineBalanceChangedEventHandlerTest extends EventHandlerTestBase 
         FeeFineBalanceChangedEvent event =
           createEvent(null, null, feeFineId2, null, ZERO);
 
-        feeFineBalanceChangedEventHandler.handle(event)
+        feeFineBalanceChangedEventHandler.handle(event,true)
           .onFailure(context::fail)
           .onSuccess(id -> {
             checkResult(id, userId, emptyList(), context);
@@ -269,7 +269,7 @@ public class FeeFineBalanceChangedEventHandlerTest extends EventHandlerTestBase 
     FeeFineBalanceChangedEvent event =
       createEvent(null, null, randomId(), null, ZERO);
 
-    feeFineBalanceChangedEventHandler.handle(event)
+    feeFineBalanceChangedEventHandler.handle(event,true)
       .onSuccess(context::fail)
       .onFailure(throwable -> {
         context.assertTrue(throwable instanceof EntityNotFoundException);

@@ -2,6 +2,7 @@ package org.folio.rest.impl;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
+import static com.github.tomakehurst.wiremock.client.WireMock.traceRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlPathMatching;
 import static java.util.stream.Collectors.toList;
@@ -94,6 +95,7 @@ public class AutomatedPatronBlocksAPITest extends TestBase {
     new ItemClaimedReturnedEventHandler(postgresClient);
 
   private static final EnumMap<Condition, Integer> LIMIT_VALUES;
+
   static {
     LIMIT_VALUES = new EnumMap<>(Condition.class);
     LIMIT_VALUES.put(MAX_NUMBER_OF_ITEMS_CHARGED_OUT, 20);
@@ -167,7 +169,7 @@ public class AutomatedPatronBlocksAPITest extends TestBase {
         stubLoan(loanId, dueDate, false);
 
         waitFor(itemCheckedOutEventHandler.handle(
-          buildItemCheckedOutEvent(userId, loanId, dueDate)));
+          buildItemCheckedOutEvent(userId, loanId, dueDate), true));
       });
 
     String expectedResponse = createLimitsAndBuildExpectedResponse(condition, singleLimit);
@@ -520,8 +522,8 @@ public class AutomatedPatronBlocksAPITest extends TestBase {
 
     IntStream.range(0, numberOfFeesFines)
       .forEach(num -> waitFor(feeFineBalanceChangedEventHandler.handle(
-          buildFeeFineBalanceChangedEvent(userId, randomId(), randomId(), randomId(),
-            balancePerFeeFine))));
+        buildFeeFineBalanceChangedEvent(userId, randomId(), randomId(), randomId(),
+          balancePerFeeFine))));
 
     String expectedResponse = createLimitsAndBuildExpectedResponse(condition, singleLimit);
 
@@ -897,7 +899,8 @@ public class AutomatedPatronBlocksAPITest extends TestBase {
   }
 
   private AutomatedPatronBlock createBlock(Condition condition, String message) {
-    return createBlock(condition, message, expectBlockBorrowing, expectBlockRenewals, expectBlockRequests);
+    return createBlock(condition, message, expectBlockBorrowing, expectBlockRenewals,
+      expectBlockRequests);
   }
 
   private AutomatedPatronBlock createBlock(Condition condition, String message,
