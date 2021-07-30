@@ -51,7 +51,7 @@ public abstract class EventHandler<E extends Event> {
 
   public Future<String> updateUserSummary(E event) {
     return getUserSummary(event)
-      .compose(userSummary -> userSummaryService.processEvent(userSummary, event));
+      .compose(userSummary -> userSummaryService.updateUserSummaryWithEvent(userSummary, event));
   }
 
   protected Future<UserSummary> getUserSummary(E event) {

@@ -45,7 +45,7 @@ public class UserSummaryServiceTest extends TestBase {
       BigDecimal balance = new BigDecimal("3.33");
       FeeFineBalanceChangedEvent feeFineBalanceChangedEvent = buildFeeFineBalanceChangedEvent(
         userId, loanId2, feeFineId, feeFineTypeId, balance);
-      userSummaryService.processEvent(userSummary, feeFineBalanceChangedEvent);
+      userSummaryService.updateUserSummaryWithEvent(userSummary, feeFineBalanceChangedEvent);
       waitFor(userSummaryRepository.get(summaryId)).ifPresent(
         updatedUserSummary -> context.assertTrue(
           updatedUserSummary.getOpenFeesFines().stream()
@@ -69,13 +69,13 @@ public class UserSummaryServiceTest extends TestBase {
       BigDecimal balance = new BigDecimal("3.33");
       FeeFineBalanceChangedEvent feeFineBalanceChangedEvent = buildFeeFineBalanceChangedEvent(
         userId, loanId, feeFineId, feeFineTypeId, balance);
-      waitFor(userSummaryService.processEvent(userSummary, feeFineBalanceChangedEvent));
+      waitFor(userSummaryService.updateUserSummaryWithEvent(userSummary, feeFineBalanceChangedEvent));
       waitFor(userSummaryRepository.get(summaryId)).ifPresent(userSummaryAfterFirstUpdate -> {
         userSummaryAfterFirstUpdate.setVersion(1);
         BigDecimal newBalance = new BigDecimal("7.77");
         feeFineBalanceChangedEvent.setBalance(newBalance);
         waitFor(
-          userSummaryService.processEvent(userSummaryAfterFirstUpdate, feeFineBalanceChangedEvent));
+          userSummaryService.updateUserSummaryWithEvent(userSummaryAfterFirstUpdate, feeFineBalanceChangedEvent));
         waitFor(userSummaryRepository.get(summaryId)).ifPresent(
           userSummaryAfterSecondUpdate -> context.assertTrue(
             userSummaryAfterSecondUpdate.getOpenFeesFines().get(0).getBalance().equals(newBalance)));
@@ -101,8 +101,8 @@ public class UserSummaryServiceTest extends TestBase {
       userId, loanId2, feeFineId2, feeFineTypeId2, balance2);
 
     UserSummary userSummary = createUserSummary(summaryId, userId);
-    waitFor(userSummaryService.processEvent(userSummary, feeFineBalanceChangedEvent1));
-    waitFor(userSummaryService.processEvent(userSummary, feeFineBalanceChangedEvent2));
+    waitFor(userSummaryService.updateUserSummaryWithEvent(userSummary, feeFineBalanceChangedEvent1));
+    waitFor(userSummaryService.updateUserSummaryWithEvent(userSummary, feeFineBalanceChangedEvent2));
     waitFor(userSummaryRepository.get(summaryId)).ifPresent(userSummaryAfterBothUpdates ->
       context.assertTrue(userSummaryAfterBothUpdates.getOpenFeesFines().stream()
         .allMatch(openFeeFine -> openFeeFine.getFeeFineId()

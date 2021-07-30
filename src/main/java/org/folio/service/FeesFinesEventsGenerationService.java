@@ -1,10 +1,8 @@
 package org.folio.service;
 
 import java.math.BigDecimal;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 import org.folio.repository.SynchronizationJobRepository;
 import org.folio.rest.client.BulkDownloadClient;

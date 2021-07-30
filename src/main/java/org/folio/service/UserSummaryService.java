@@ -48,22 +48,21 @@ import lombok.With;
 public class UserSummaryService {
   private static final Logger log = LogManager.getLogger(UserSummaryService.class);
 
+  private static final String FAILED_TO_REBUILD_USER_SUMMARY_ERROR_MESSAGE =
+    "Failed to rebuild user summary";
+  private static final int MAX_NUMBER_OF_RETRIES_ON_VERSION_CONFLICT = 10;
   private static final List<String> LOST_ITEM_FEE_TYPE_IDS = Arrays.asList(
     FeeFineType.LOST_ITEM_FEE.getId(),
     FeeFineType.LOST_ITEM_PROCESSING_FEE.getId()
   );
 
-  private static final String FAILED_TO_REBUILD_USER_SUMMARY_ERROR_MESSAGE =
-    "Failed to rebuild user summary";
-
   private final UserSummaryRepository userSummaryRepository;
+  private final EventService eventService;
 
   public UserSummaryService(PostgresClient postgresClient) {
     userSummaryRepository = new UserSummaryRepository(postgresClient);
     eventService = new EventService(postgresClient);
   }
-
-  private final EventService eventService;
 
   public Future<UserSummary> getByUserId(String userId) {
     return userSummaryRepository.getByUserId(userId)
@@ -71,29 +70,32 @@ public class UserSummaryService {
         new EntityNotFoundInDbException(format("User summary for user ID %s not found", userId))));
   }
 
-  public Future<String> processEvent(UserSummary userSummary, Event event) {
-    return processEvent(new UpdateRetryContext(userSummary), event);
+  public Future<String> updateUserSummaryWithEvent(UserSummary userSummary, Event event) {
+    return recursivelyUpdateUserSummaryWithEvent(new UpdateRetryContext(userSummary), event);
   }
 
-  private Future<String> processEvent(UpdateRetryContext ctx, Event event) {
-    return addEvent(ctx.userSummary, event)
+  private Future<String> recursivelyUpdateUserSummaryWithEvent(UpdateRetryContext ctx,
+    Event event) {
+
+    return updateAndStoreUserSummary(ctx.userSummary, event)
       .recover(throwable -> {
         log.error(throwable.getMessage());
-        if (PgExceptionUtil.isVersionConflict(throwable) &&
-          ctx.shouldRetryUpdate()
-        ) {
+        if (PgExceptionUtil.isVersionConflict(throwable) && ctx.shouldRetryUpdate()) {
+          log.error("Failed to update user summary due to version conflict. User ID: {}. " +
+              "Attempt # {}", ctx.userSummary.getUserId(), ctx.attemptCounter.get());
+
           return userSummaryRepository.findByUserIdOrBuildNew(ctx.userSummary.getUserId())
-            .compose(userSummary1 -> {
+            .compose(latestVersionUserSummary -> {
               ctx.attemptCounter.incrementAndGet();
-              ctx.setUserSummary(userSummary1);
-              return processEvent(ctx, event);
+              ctx.setUserSummary(latestVersionUserSummary);
+              return recursivelyUpdateUserSummaryWithEvent(ctx, event);
             });
         }
         return Future.failedFuture(throwable);
       });
   }
 
-  private Future<String> addEvent(UserSummary userSummary, Event event) {
+  private Future<String> updateAndStoreUserSummary(UserSummary userSummary, Event event) {
     RebuildContext rebuildContext = new RebuildContext().withUserSummary(userSummary);
     handleEvent(rebuildContext, event);
 
@@ -195,27 +197,27 @@ public class UserSummaryService {
     EventType eventType = EventType.getByEvent(event);
 
     switch (eventType) {
-    case ITEM_CHECKED_OUT:
-      updateUserSummary(ctx.userSummary, (ItemCheckedOutEvent) event);
-      break;
-    case ITEM_CHECKED_IN:
-      updateUserSummary(ctx.userSummary, (ItemCheckedInEvent) event);
-      break;
-    case ITEM_CLAIMED_RETURNED:
-      updateUserSummary(ctx.userSummary, (ItemClaimedReturnedEvent) event);
-      break;
-    case ITEM_DECLARED_LOST:
-      updateUserSummary(ctx.userSummary, (ItemDeclaredLostEvent) event);
-      break;
-    case ITEM_AGED_TO_LOST:
-      updateUserSummary(ctx.userSummary, (ItemAgedToLostEvent) event);
-      break;
-    case LOAN_DUE_DATE_CHANGED:
-      updateUserSummary(ctx.userSummary, (LoanDueDateChangedEvent) event);
-      break;
-    case FEE_FINE_BALANCE_CHANGED:
-      updateUserSummary(ctx.userSummary, (FeeFineBalanceChangedEvent) event);
-      break;
+      case ITEM_CHECKED_OUT:
+        updateUserSummary(ctx.userSummary, (ItemCheckedOutEvent) event);
+        break;
+      case ITEM_CHECKED_IN:
+        updateUserSummary(ctx.userSummary, (ItemCheckedInEvent) event);
+        break;
+      case ITEM_CLAIMED_RETURNED:
+        updateUserSummary(ctx.userSummary, (ItemClaimedReturnedEvent) event);
+        break;
+      case ITEM_DECLARED_LOST:
+        updateUserSummary(ctx.userSummary, (ItemDeclaredLostEvent) event);
+        break;
+      case ITEM_AGED_TO_LOST:
+        updateUserSummary(ctx.userSummary, (ItemAgedToLostEvent) event);
+        break;
+      case LOAN_DUE_DATE_CHANGED:
+        updateUserSummary(ctx.userSummary, (LoanDueDateChangedEvent) event);
+        break;
+      case FEE_FINE_BALANCE_CHANGED:
+        updateUserSummary(ctx.userSummary, (FeeFineBalanceChangedEvent) event);
+        break;
     }
   }
 
@@ -389,24 +391,14 @@ public class UserSummaryService {
     @Setter
     private UserSummary userSummary;
 
-    private final long attemptStarted;
     private final AtomicInteger attemptCounter = new AtomicInteger(1);
 
     public UpdateRetryContext(UserSummary userSummary) {
-      this.attemptStarted = System.nanoTime();
       this.userSummary = userSummary;
     }
 
     boolean shouldRetryUpdate() {
-      return !outOfAttempts();
-    }
-
-    private boolean outOfAttempts() {
-      return attemptCounter.get() > 10;
-    }
-
-    private boolean outOfTime() {
-      return (System.nanoTime() - this.attemptStarted) > 1000000000000000011L;
+      return attemptCounter.get() <= MAX_NUMBER_OF_RETRIES_ON_VERSION_CONFLICT;
     }
   }
 }
