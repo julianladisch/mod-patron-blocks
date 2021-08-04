@@ -39,15 +39,33 @@
             "type": "boolean",
             "default": false
           },
-          "itemLost" : {
+          "itemLost": {
             "description": "Indicates if the item associated with the loan is in status 'Aged to lost' or 'Declared lost'",
             "type": "boolean",
             "default": false
           },
-          "itemClaimedReturned" : {
+          "itemClaimedReturned": {
             "description": "Indicates if the item associated with the loan is in status 'Claimed returned'",
             "type": "boolean",
             "default": false
+          },
+          "gracePeriod": {
+            "type": "object",
+            "properties": {
+              "duration": {
+                "description": "Duration of grace period",
+                "type": "integer"
+              },
+              "intervalId": {
+                "description": "Type of grace period, e.g Month, Week, etc",
+                "type": "string"
+              }
+            },
+            "additionalProperties": false,
+            "required": [
+              "duration",
+              "intervalId"
+            ]
           }
         },
         "additionalProperties": false,

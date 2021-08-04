@@ -20,6 +20,7 @@ import org.folio.rest.client.CirculationStorageClient;
 import org.folio.rest.client.UsersClient;
 import org.folio.rest.jaxrs.model.AutomatedPatronBlock;
 import org.folio.rest.jaxrs.model.AutomatedPatronBlocks;
+import org.folio.rest.jaxrs.model.OpenLoan;
 import org.folio.rest.jaxrs.model.PatronBlockCondition;
 import org.folio.rest.jaxrs.model.PatronBlockLimit;
 import org.folio.rest.jaxrs.model.UserSummary;
@@ -126,10 +127,12 @@ public class PatronBlocksService {
 
     List<Future<LoanOverdueMinutes>> overdueMinutesFutures = new ArrayList<>();
 
-    ctx.userSummary.getOpenLoans().forEach(openLoan ->
+    ctx.userSummary.getOpenLoans().stream()
+      .filter(OpenLoan::getRecall)
+      .forEach(openLoan ->
       overdueMinutesFutures.add(
         circulationStorageClient.findLoanById(openLoan.getLoanId())
-          .compose(loan -> overduePeriodCalculatorService.getMinutes(loan, DateTime.now()))
+          .compose(loan -> overduePeriodCalculatorService.getMinutes(loan, DateTime.now(),openLoan.getGracePeriod()))
           .map(intValue -> new LoanOverdueMinutes(openLoan.getLoanId(), intValue))
       ));
 

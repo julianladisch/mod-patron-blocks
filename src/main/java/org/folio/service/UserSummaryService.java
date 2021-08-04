@@ -229,7 +229,8 @@ public class UserSummaryService {
 
       openLoans.add(new OpenLoan()
         .withLoanId(event.getLoanId())
-        .withDueDate(event.getDueDate()));
+        .withDueDate(event.getDueDate())
+        .withGracePeriod(event.getGracePeriod()));
     } else {
       log.error("Event {}:{} is ignored. Open loan {} already exists",
         ITEM_CHECKED_OUT.name(), event.getId(), event.getLoanId());

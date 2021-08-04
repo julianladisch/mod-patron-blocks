@@ -11,6 +11,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.exception.OverduePeriodCalculatorException;
 import org.folio.rest.client.CirculationStorageClient;
+import org.folio.rest.jaxrs.model.GracePeriod;
 import org.folio.rest.jaxrs.model.Loan;
 import org.folio.rest.jaxrs.model.LoanPolicy;
 import org.folio.rest.jaxrs.model.LoansPolicy;
@@ -39,7 +40,7 @@ public class OverduePeriodCalculatorService {
     this.circulationStorageClient = circulationStorageClient;
   }
 
-  public Future<Integer> getMinutes(Loan loan, DateTime systemTime) {
+  public Future<Integer> getMinutes(Loan loan, DateTime systemTime, GracePeriod gracePeriod) {
     if (loan == null || loan.getLoanPolicyId() == null || loan.getDueDate() == null
       || systemTime == null) {
 
@@ -51,8 +52,7 @@ public class OverduePeriodCalculatorService {
 
     return succeededFuture(new CalculationContext())
       .map(ctx -> ctx.withLoan(loan))
-      .compose(ctx -> circulationStorageClient.findLoanPolicyById(loan.getLoanPolicyId())
-        .map(ctx::withLoanPolicy))
+      .map(ctx -> ctx.withGracePeriod(gracePeriod))
       .compose(ctx -> {
         if (loanIsOverdue(ctx.getLoan(), systemTime)) {
           return succeededFuture(ctx)
@@ -80,10 +80,8 @@ public class OverduePeriodCalculatorService {
 
   private int getGracePeriodMinutes(CalculationContext context) {
     return Optional.ofNullable(context)
-      .map(CalculationContext::getLoanPolicy)
-      .map(LoanPolicy::getLoansPolicy)
-      .map(LoansPolicy::getGracePeriod)
-      .map(gp -> Period.from(gp.getDuration(), gp.getIntervalId().value()))
+      .map(CalculationContext::getGracePeriod)
+      .map(gp -> Period.from(gp.getDuration(), gp.getIntervalId()))
       .map(Period::toMinutes)
       .orElse(ZERO_MINUTES);
   }
@@ -95,5 +93,6 @@ public class OverduePeriodCalculatorService {
   private static class CalculationContext {
     final Loan loan;
     final LoanPolicy loanPolicy;
+    final GracePeriod gracePeriod;
   }
 }
