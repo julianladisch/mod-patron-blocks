@@ -1,3 +1,6 @@
+## 1.3.1 2021-08-04
+* Change limit for double values (MODPATBLK-92)
+
 ## 1.3.0 2021-06-14
 * Upgrade mod-pubsub-client to v2.3.0 (MODPATBLK-89)
 * Upgrade RMB to v33.0.0, update Vert.x to v4.1.0 (MODPATBLK-86)

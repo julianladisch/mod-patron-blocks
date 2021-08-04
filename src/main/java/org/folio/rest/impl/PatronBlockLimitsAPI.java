@@ -29,7 +29,7 @@ public class PatronBlockLimitsAPI implements PatronBlockLimits {
     ImmutableList.of("cf7a0d5f-a327-4ca1-aa9e-dc55ec006b8a");
   private static final String VALUE_FIELD = "value";
   private static final double MIN_DOUBLE_LIMIT = 0.0;
-  private static final double MAX_DOUBLE_LIMIT = 9999.99;
+  private static final double MAX_DOUBLE_LIMIT = 999999.99;
   private static final int MIN_INT_LIMIT = 0;
   private static final int MAX_INT_LIMIT = 999999;
 
