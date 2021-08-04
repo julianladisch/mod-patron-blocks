@@ -15,7 +15,9 @@ import static org.folio.domain.Condition.MAX_OUTSTANDING_FEE_FINE_BALANCE;
 import static org.folio.domain.Condition.RECALL_OVERDUE_BY_MAX_NUMBER_OF_DAYS;
 import static org.folio.repository.PatronBlockLimitsRepository.PATRON_BLOCK_LIMITS_TABLE_NAME;
 import static org.folio.repository.UserSummaryRepository.USER_SUMMARY_TABLE_NAME;
+import static org.folio.rest.utils.EntityBuilder.buildEmptyGracePeriod;
 import static org.folio.rest.utils.EntityBuilder.buildFeeFineBalanceChangedEvent;
+import static org.folio.rest.utils.EntityBuilder.buildGracePeriod;
 import static org.folio.rest.utils.EntityBuilder.buildItemAgedToLostEvent;
 import static org.folio.rest.utils.EntityBuilder.buildItemCheckedOutEvent;
 import static org.folio.rest.utils.EntityBuilder.buildItemClaimedReturnedEvent;
@@ -714,7 +716,8 @@ public class AutomatedPatronBlocksAPITest extends TestBase {
         stubLoan(loanId, dueDate, false);
 
         waitFor(itemCheckedOutEventHandler.handle(
-          buildItemCheckedOutEvent(userId, loanId, dueDate)));
+          buildItemCheckedOutEvent(userId, loanId, dueDate,
+            buildGracePeriod(3,"Weeks"))));
       });
 
     String expectedResponse = createLimitsAndBuildExpectedResponse(condition, true);
@@ -738,10 +741,10 @@ public class AutomatedPatronBlocksAPITest extends TestBase {
         String loanId = randomId();
         Date dueDate = now().minusHours(1).toDate();
 
-        stubLoan(loanId, dueDate, false);
+        stubLoan(loanId, dueDate, true);
 
         waitFor(itemCheckedOutEventHandler.handle(
-          buildItemCheckedOutEvent(userId, loanId, dueDate)));
+          buildItemCheckedOutEvent(userId, loanId, dueDate, buildEmptyGracePeriod())));
       });
 
     String expectedResponse = createLimitsAndBuildExpectedResponse(condition, true);

@@ -24,6 +24,7 @@ import org.folio.domain.EventType;
 import org.folio.domain.FeeFineType;
 import org.folio.exception.EntityNotFoundInDbException;
 import org.folio.repository.UserSummaryRepository;
+import org.folio.rest.client.CirculationStorageClient;
 import org.folio.rest.jaxrs.model.FeeFineBalanceChangedEvent;
 import org.folio.rest.jaxrs.model.ItemAgedToLostEvent;
 import org.folio.rest.jaxrs.model.ItemCheckedInEvent;

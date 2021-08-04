@@ -17,8 +17,4 @@ public class CirculationStorageClient extends OkapiClient {
   public Future<Loan> findLoanById(String loanId) {
     return fetchById("loan-storage/loans", loanId, Loan.class);
   }
-
-  public Future<LoanPolicy> findLoanPolicyById(String loanPolicyId) {
-    return fetchById("loan-policy-storage/loan-policies", loanPolicyId, LoanPolicy.class);
-  }
 }

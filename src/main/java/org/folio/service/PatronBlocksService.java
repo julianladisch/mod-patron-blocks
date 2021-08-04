@@ -127,12 +127,12 @@ public class PatronBlocksService {
 
     List<Future<LoanOverdueMinutes>> overdueMinutesFutures = new ArrayList<>();
 
-    ctx.userSummary.getOpenLoans().stream()
-      .filter(OpenLoan::getRecall)
+    ctx.userSummary.getOpenLoans()
       .forEach(openLoan ->
       overdueMinutesFutures.add(
         circulationStorageClient.findLoanById(openLoan.getLoanId())
-          .compose(loan -> overduePeriodCalculatorService.getMinutes(loan, DateTime.now(),openLoan.getGracePeriod()))
+          .compose(loan -> overduePeriodCalculatorService.getMinutes(loan, DateTime.now(),
+            openLoan.getGracePeriod()))
           .map(intValue -> new LoanOverdueMinutes(openLoan.getLoanId(), intValue))
       ));
 
