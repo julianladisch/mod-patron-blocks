@@ -65,6 +65,7 @@ import org.junit.runner.RunWith;
 import io.restassured.http.ContentType;
 import io.restassured.response.Response;
 import io.restassured.response.ValidatableResponse;
+import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
@@ -168,9 +169,10 @@ public class AutomatedPatronBlocksAPITest extends TestBase {
         String loanId = randomId();
         Date dueDate = now().plusHours(1).toDate();
 
-        stubLoan(loanId, dueDate, true);
+        stubLoan(loanId, dueDate, false);
 
-        waitFor(itemCheckedOutEventHandler.handle(buildItemCheckedOutEvent(userId, loanId, dueDate)));
+        waitFor(
+          itemCheckedOutEventHandler.handle(buildItemCheckedOutEvent(userId, loanId, dueDate)));
       });
 
     String expectedResponse = createLimitsAndBuildExpectedResponse(condition, singleLimit);
@@ -229,7 +231,7 @@ public class AutomatedPatronBlocksAPITest extends TestBase {
         String loanId = randomId();
         Date dueDate = now().plusHours(1).toDate();
 
-        stubLoan(loanId, dueDate, true);
+        stubLoan(loanId, dueDate, false);
 
         waitFor(itemCheckedOutEventHandler.handle(
           buildItemCheckedOutEvent(userId, loanId, dueDate)));
@@ -289,7 +291,7 @@ public class AutomatedPatronBlocksAPITest extends TestBase {
         String loanId = randomId();
         Date dueDate = now().plusHours(1).toDate();
 
-        stubLoan(loanId, dueDate, true);
+        stubLoan(loanId, dueDate, false);
 
         waitFor(itemCheckedOutEventHandler.handle(
           buildItemCheckedOutEvent(userId, loanId, dueDate)));
@@ -347,9 +349,10 @@ public class AutomatedPatronBlocksAPITest extends TestBase {
         String loanId = randomId();
         Date dueDate = now().minusHours(1).toDate();
 
-        stubLoan(loanId, dueDate, true);
+        stubLoan(loanId, dueDate, false);
 
-        waitFor(itemCheckedOutEventHandler.handle(buildItemCheckedOutEvent(userId, loanId, dueDate)));
+        waitFor(
+          itemCheckedOutEventHandler.handle(buildItemCheckedOutEvent(userId, loanId, dueDate)));
       });
 
     String expectedResponse = createLimitsAndBuildExpectedResponse(condition, singleLimit);
@@ -402,7 +405,7 @@ public class AutomatedPatronBlocksAPITest extends TestBase {
         String loanId = randomId();
         Date dueDate = now().minusHours(1).toDate();
 
-        stubLoan(loanId, dueDate, true);
+        stubLoan(loanId, dueDate, false);
 
         waitFor(itemCheckedOutEventHandler.handle(
           buildItemCheckedOutEvent(userId, loanId, dueDate)));
@@ -461,7 +464,7 @@ public class AutomatedPatronBlocksAPITest extends TestBase {
     String loanId = randomId();
     Date dueDate = now().minusDays(limitValue + dueDateDelta).toDate();
 
-    stubLoan(loanId, dueDate, true);
+    stubLoan(loanId, dueDate, false);
 
     waitFor(itemCheckedOutEventHandler.handle(
       buildItemCheckedOutEvent(userId, loanId, dueDate)));
@@ -598,13 +601,13 @@ public class AutomatedPatronBlocksAPITest extends TestBase {
         Date dueDate = now().minusDays(LIMIT_VALUES.get(RECALL_OVERDUE_BY_MAX_NUMBER_OF_DAYS) + 1)
           .toDate();
 
-        stubLoan(loanId, dueDate, true);
+        stubLoan(loanId, dueDate, false);
 
         waitFor(itemCheckedOutEventHandler.handle(
           buildItemCheckedOutEvent(userId, loanId, dueDate)));
 
         waitFor(loanDueDateChangedEventHandler.handle(
-          buildLoanDueDateChangedEvent(userId, loanId, dueDate, true)));
+          buildLoanDueDateChangedEvent(userId, loanId, dueDate, false)));
 
         waitFor(itemDeclaredLostEventHandler.handle(buildItemDeclaredLostEvent(userId, loanId)));
 
@@ -633,7 +636,7 @@ public class AutomatedPatronBlocksAPITest extends TestBase {
         String loanId = randomId();
         Date dueDate = now().plusHours(1).toDate();
 
-        stubLoan(loanId, dueDate, true);
+        stubLoan(loanId, dueDate, false);
 
         waitFor(itemCheckedOutEventHandler.handle(
           buildItemCheckedOutEvent(userId, loanId, dueDate)));
@@ -717,7 +720,7 @@ public class AutomatedPatronBlocksAPITest extends TestBase {
 
         waitFor(itemCheckedOutEventHandler.handle(
           buildItemCheckedOutEvent(userId, loanId, dueDate,
-            buildGracePeriod(3,"Weeks"))));
+            buildGracePeriod(3, "Weeks"))));
       });
 
     String expectedResponse = createLimitsAndBuildExpectedResponse(condition, true);
@@ -741,10 +744,66 @@ public class AutomatedPatronBlocksAPITest extends TestBase {
         String loanId = randomId();
         Date dueDate = now().minusHours(1).toDate();
 
-        stubLoan(loanId, dueDate, true);
+        stubLoan(loanId, dueDate, false);
 
         waitFor(itemCheckedOutEventHandler.handle(
           buildItemCheckedOutEvent(userId, loanId, dueDate, buildEmptyGracePeriod())));
+      });
+
+    String expectedResponse = createLimitsAndBuildExpectedResponse(condition, true);
+
+    sendRequest(userId)
+      .then()
+      .statusCode(200)
+      .contentType(ContentType.JSON)
+      .body(equalTo(expectedResponse));
+  }
+
+  @Test
+  public void blockWhenAmountOfOverdueLoansIsBiggerThanAmountOfLoansWithGracePeriod() {
+    expectAllBlocks();
+
+    final Condition condition = MAX_NUMBER_OF_ITEMS_CHARGED_OUT;
+    int limitValue = LIMIT_VALUES.get(condition);
+
+    int valuesLeft = limitValue;
+
+    valuesLeft = valuesLeft - 5;
+
+    IntStream.range(0, 5)
+      .forEach(num -> {
+        String loanId = randomId();
+        Date dueDate = now().minusHours(1).toDate();
+
+        stubLoan(loanId, dueDate, false);
+
+        waitFor(itemCheckedOutEventHandler.handle(
+          buildItemCheckedOutEvent(userId, loanId, dueDate,null)));
+      });
+
+    valuesLeft = valuesLeft - 5;
+
+    IntStream.range(0, 5)
+      .forEach(num -> {
+        String loanId = randomId();
+        Date dueDate = now().minusHours(2).toDate();
+
+        stubLoan(loanId, dueDate, false);
+
+        waitFor(itemCheckedOutEventHandler.handle(
+          buildItemCheckedOutEvent(userId, loanId, dueDate,
+            buildGracePeriod(1, "Hours"))));
+      });
+
+    IntStream.range(0, valuesLeft)
+      .forEach(num -> {
+        String loanId = randomId();
+        Date dueDate = now().minusHours(2).toDate();
+
+        stubLoan(loanId, dueDate, false);
+
+        waitFor(itemCheckedOutEventHandler.handle(
+          buildItemCheckedOutEvent(userId, loanId, dueDate)));
       });
 
     String expectedResponse = createLimitsAndBuildExpectedResponse(condition, true);
@@ -774,7 +833,7 @@ public class AutomatedPatronBlocksAPITest extends TestBase {
         String loanId = randomId();
         Date dueDate = now().minusHours(6).toDate();
 
-        stubLoan(loanId, dueDate, true);
+        stubLoan(loanId, dueDate, false);
 
         waitFor(itemCheckedOutEventHandler.handle(
           buildItemCheckedOutEvent(userId, loanId, dueDate)));
@@ -805,7 +864,7 @@ public class AutomatedPatronBlocksAPITest extends TestBase {
         String loanId = randomId();
         Date dueDate = now().plusHours(1).toDate();
 
-        stubLoan(loanId, dueDate, true);
+        stubLoan(loanId, dueDate, false);
 
         waitFor(itemCheckedOutEventHandler.handle(
           buildItemCheckedOutEvent(userId, loanId, dueDate)));
@@ -818,7 +877,7 @@ public class AutomatedPatronBlocksAPITest extends TestBase {
         String loanId = randomId();
         Date dueDate = now().plusHours(1).toDate();
 
-        stubLoan(loanId, dueDate, true);
+        stubLoan(loanId, dueDate, false);
 
         waitFor(itemCheckedOutEventHandler.handle(
           buildItemCheckedOutEvent(userId, loanId, dueDate)));

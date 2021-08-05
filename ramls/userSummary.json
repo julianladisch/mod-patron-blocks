@@ -50,22 +50,7 @@
             "default": false
           },
           "gracePeriod": {
-            "type": "object",
-            "properties": {
-              "duration": {
-                "description": "Duration of grace period",
-                "type": "integer"
-              },
-              "intervalId": {
-                "description": "Type of grace period, e.g Month, Week, etc",
-                "type": "string"
-              }
-            },
-            "additionalProperties": false,
-            "required": [
-              "duration",
-              "intervalId"
-            ]
+            "$ref": "period.json"
           }
         },
         "additionalProperties": false,

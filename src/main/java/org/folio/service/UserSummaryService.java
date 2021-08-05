@@ -83,7 +83,7 @@ public class UserSummaryService {
         log.error(throwable.getMessage());
         if (PgExceptionUtil.isVersionConflict(throwable) && ctx.shouldRetryUpdate()) {
           log.error("Failed to update user summary due to version conflict. User ID: {}. " +
-              "Attempt # {}", ctx.userSummary.getUserId(), ctx.attemptCounter.get());
+            "Attempt # {}", ctx.userSummary.getUserId(), ctx.attemptCounter.get());
 
           return userSummaryRepository.findByUserIdOrBuildNew(ctx.userSummary.getUserId())
             .compose(latestVersionUserSummary -> {
@@ -198,27 +198,27 @@ public class UserSummaryService {
     EventType eventType = EventType.getByEvent(event);
 
     switch (eventType) {
-      case ITEM_CHECKED_OUT:
-        updateUserSummary(ctx.userSummary, (ItemCheckedOutEvent) event);
-        break;
-      case ITEM_CHECKED_IN:
-        updateUserSummary(ctx.userSummary, (ItemCheckedInEvent) event);
-        break;
-      case ITEM_CLAIMED_RETURNED:
-        updateUserSummary(ctx.userSummary, (ItemClaimedReturnedEvent) event);
-        break;
-      case ITEM_DECLARED_LOST:
-        updateUserSummary(ctx.userSummary, (ItemDeclaredLostEvent) event);
-        break;
-      case ITEM_AGED_TO_LOST:
-        updateUserSummary(ctx.userSummary, (ItemAgedToLostEvent) event);
-        break;
-      case LOAN_DUE_DATE_CHANGED:
-        updateUserSummary(ctx.userSummary, (LoanDueDateChangedEvent) event);
-        break;
-      case FEE_FINE_BALANCE_CHANGED:
-        updateUserSummary(ctx.userSummary, (FeeFineBalanceChangedEvent) event);
-        break;
+    case ITEM_CHECKED_OUT:
+      updateUserSummary(ctx.userSummary, (ItemCheckedOutEvent) event);
+      break;
+    case ITEM_CHECKED_IN:
+      updateUserSummary(ctx.userSummary, (ItemCheckedInEvent) event);
+      break;
+    case ITEM_CLAIMED_RETURNED:
+      updateUserSummary(ctx.userSummary, (ItemClaimedReturnedEvent) event);
+      break;
+    case ITEM_DECLARED_LOST:
+      updateUserSummary(ctx.userSummary, (ItemDeclaredLostEvent) event);
+      break;
+    case ITEM_AGED_TO_LOST:
+      updateUserSummary(ctx.userSummary, (ItemAgedToLostEvent) event);
+      break;
+    case LOAN_DUE_DATE_CHANGED:
+      updateUserSummary(ctx.userSummary, (LoanDueDateChangedEvent) event);
+      break;
+    case FEE_FINE_BALANCE_CHANGED:
+      updateUserSummary(ctx.userSummary, (FeeFineBalanceChangedEvent) event);
+      break;
     }
   }
 
@@ -272,6 +272,7 @@ public class UserSummaryService {
     updateUserSummaryForLostItem(userSummary, event.getLoanId());
   }
 
+  //TODO remove open loan creation from all events except checked out event
   private void updateUserSummaryForLostItem(UserSummary userSummary, String loanId) {
     List<OpenLoan> openLoans = userSummary.getOpenLoans();
 
