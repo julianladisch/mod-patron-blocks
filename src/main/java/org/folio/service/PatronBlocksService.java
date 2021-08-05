@@ -129,12 +129,20 @@ public class PatronBlocksService {
 
     ctx.userSummary.getOpenLoans()
       .forEach(openLoan ->
-      overdueMinutesFutures.add(
-        circulationStorageClient.findLoanById(openLoan.getLoanId())
-          .compose(loan -> overduePeriodCalculatorService.getMinutes(loan, DateTime.now(),
-            openLoan.getGracePeriod()))
-          .map(intValue -> new LoanOverdueMinutes(openLoan.getLoanId(), intValue))
-      ));
+        overdueMinutesFutures.add(
+          circulationStorageClient.findLoanById(openLoan.getLoanId())
+            .compose(loan -> {
+                if (Boolean.FALSE.equals(loan.getDueDateChangedByRecall())) {
+                  return failedFuture("Loan has not been recalled");
+                } else {
+                  return succeededFuture(loan);
+                }
+              }
+            )
+            .compose(loan -> overduePeriodCalculatorService.getMinutes(loan, DateTime.now(),
+              openLoan.getGracePeriod()))
+            .map(intValue -> new LoanOverdueMinutes(openLoan.getLoanId(), intValue))
+        ));
 
     Future<BlocksCalculationContext> result = CustomCompositeFuture.all(overdueMinutesFutures)
       .map(ar -> {
@@ -150,8 +158,7 @@ public class PatronBlocksService {
 
     if (result.failed()) {
       return failedFuture(DEFAULT_ERROR_MESSAGE);
-    }
-    else {
+    } else {
       return result;
     }
   }

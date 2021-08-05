@@ -168,7 +168,7 @@ public class AutomatedPatronBlocksAPITest extends TestBase {
         String loanId = randomId();
         Date dueDate = now().plusHours(1).toDate();
 
-        stubLoan(loanId, dueDate, false);
+        stubLoan(loanId, dueDate, true);
 
         waitFor(itemCheckedOutEventHandler.handle(buildItemCheckedOutEvent(userId, loanId, dueDate)));
       });
@@ -229,7 +229,7 @@ public class AutomatedPatronBlocksAPITest extends TestBase {
         String loanId = randomId();
         Date dueDate = now().plusHours(1).toDate();
 
-        stubLoan(loanId, dueDate, false);
+        stubLoan(loanId, dueDate, true);
 
         waitFor(itemCheckedOutEventHandler.handle(
           buildItemCheckedOutEvent(userId, loanId, dueDate)));
@@ -289,7 +289,7 @@ public class AutomatedPatronBlocksAPITest extends TestBase {
         String loanId = randomId();
         Date dueDate = now().plusHours(1).toDate();
 
-        stubLoan(loanId, dueDate, false);
+        stubLoan(loanId, dueDate, true);
 
         waitFor(itemCheckedOutEventHandler.handle(
           buildItemCheckedOutEvent(userId, loanId, dueDate)));
@@ -347,7 +347,7 @@ public class AutomatedPatronBlocksAPITest extends TestBase {
         String loanId = randomId();
         Date dueDate = now().minusHours(1).toDate();
 
-        stubLoan(loanId, dueDate, false);
+        stubLoan(loanId, dueDate, true);
 
         waitFor(itemCheckedOutEventHandler.handle(buildItemCheckedOutEvent(userId, loanId, dueDate)));
       });
@@ -633,7 +633,7 @@ public class AutomatedPatronBlocksAPITest extends TestBase {
         String loanId = randomId();
         Date dueDate = now().plusHours(1).toDate();
 
-        stubLoan(loanId, dueDate, false);
+        stubLoan(loanId, dueDate, true);
 
         waitFor(itemCheckedOutEventHandler.handle(
           buildItemCheckedOutEvent(userId, loanId, dueDate)));
@@ -774,7 +774,7 @@ public class AutomatedPatronBlocksAPITest extends TestBase {
         String loanId = randomId();
         Date dueDate = now().minusHours(6).toDate();
 
-        stubLoan(loanId, dueDate, false);
+        stubLoan(loanId, dueDate, true);
 
         waitFor(itemCheckedOutEventHandler.handle(
           buildItemCheckedOutEvent(userId, loanId, dueDate)));
@@ -805,7 +805,7 @@ public class AutomatedPatronBlocksAPITest extends TestBase {
         String loanId = randomId();
         Date dueDate = now().plusHours(1).toDate();
 
-        stubLoan(loanId, dueDate, false);
+        stubLoan(loanId, dueDate, true);
 
         waitFor(itemCheckedOutEventHandler.handle(
           buildItemCheckedOutEvent(userId, loanId, dueDate)));
@@ -818,7 +818,7 @@ public class AutomatedPatronBlocksAPITest extends TestBase {
         String loanId = randomId();
         Date dueDate = now().plusHours(1).toDate();
 
-        stubLoan(loanId, dueDate, false);
+        stubLoan(loanId, dueDate, true);
 
         waitFor(itemCheckedOutEventHandler.handle(
           buildItemCheckedOutEvent(userId, loanId, dueDate)));

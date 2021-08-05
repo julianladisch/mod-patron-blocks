@@ -3,7 +3,6 @@ package org.folio.rest.client;
 import java.util.Map;
 
 import org.folio.rest.jaxrs.model.Loan;
-import org.folio.rest.jaxrs.model.LoanPolicy;
 
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
