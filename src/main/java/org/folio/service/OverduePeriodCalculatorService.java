@@ -17,7 +17,7 @@ public class OverduePeriodCalculatorService {
 
   private static final int ZERO_MINUTES = 0;
 
-  public int getMinutes(OpenLoan loan, DateTime systemTime, GracePeriod gracePeriod)
+  public int getMinutes(OpenLoan loan, DateTime systemTime)
     throws OverduePeriodCalculatorException {
     if (loan == null || loan.getDueDate() == null || systemTime == null) {
 
@@ -28,7 +28,8 @@ public class OverduePeriodCalculatorService {
     }
 
     if (loanIsOverdue(loan, systemTime)) {
-      return adjustOverdueWithGracePeriod(gracePeriod, calculateOverdueMinutes(loan, systemTime));
+      return adjustOverdueWithGracePeriod(loan.getGracePeriod(),
+        calculateOverdueMinutes(loan, systemTime));
     } else {
       return ZERO_MINUTES;
     }

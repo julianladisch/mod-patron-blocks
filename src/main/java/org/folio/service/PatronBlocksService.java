@@ -123,10 +123,9 @@ public class PatronBlocksService {
     for (OpenLoan openLoan : ctx.userSummary.getOpenLoans()) {
       int minutes;
       try {
-        minutes = overduePeriodCalculatorService.getMinutes(openLoan, DateTime.now(),
-          openLoan.getGracePeriod());
+        minutes = overduePeriodCalculatorService.getMinutes(openLoan, DateTime.now());
       } catch (OverduePeriodCalculatorException e) {
-        continue;
+        return failedFuture(e);
       }
       overdueMinutes.add(new LoanOverdueMinutes(openLoan.getLoanId(), minutes));
     }
