@@ -38,9 +38,6 @@ public class OverduePeriodCalculatorService {
     return loan.getDueDate().before(systemTime.toDate());
   }
 
-  //TODO test event with and without graceperiod maxamount charged out (partially with and without graceperiod )
-  //10 without overdue,20 with overdue
-
   private int calculateOverdueMinutes(OpenLoan loan, DateTime systemTime) {
     return minutesBetween(new DateTime(loan.getDueDate()), systemTime).getMinutes();
   }
@@ -51,7 +48,7 @@ public class OverduePeriodCalculatorService {
 
   private int getGracePeriodMinutes(GracePeriod gracePeriod) {
     return Optional.ofNullable(gracePeriod)
-      .map(gp -> Period.from(gp.getDuration(), gp.getIntervalId()))
+      .map(gp -> Period.from(gp.getDuration(), gp.getIntervalId().value()))
       .map(Period::toMinutes)
       .orElse(ZERO_MINUTES);
   }

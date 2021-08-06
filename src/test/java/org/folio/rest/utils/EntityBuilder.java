@@ -79,7 +79,7 @@ public class EntityBuilder {
   public static GracePeriod buildGracePeriod(Integer duration, String intervalId){
     return new GracePeriod()
       .withDuration(duration)
-      .withIntervalId(intervalId);
+      .withIntervalId(GracePeriod.IntervalId.fromValue(intervalId));
   }
 
   public static GracePeriod buildEmptyGracePeriod(){
