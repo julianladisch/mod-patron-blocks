@@ -1,6 +1,7 @@
 package org.folio.rest.impl;
 
 import static java.util.Map.entry;
+import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.apache.http.HttpStatus.SC_BAD_REQUEST;
 import static org.apache.http.HttpStatus.SC_NO_CONTENT;
 import static org.apache.http.HttpStatus.SC_UNPROCESSABLE_ENTITY;
@@ -12,6 +13,7 @@ import static org.folio.rest.utils.EntityBuilder.buildItemCheckedInEvent;
 import static org.folio.rest.utils.EntityBuilder.buildItemCheckedOutEvent;
 import static org.folio.rest.utils.EntityBuilder.buildItemClaimedReturnedEvent;
 import static org.folio.rest.utils.EntityBuilder.buildItemDeclaredLostEvent;
+import static org.folio.rest.utils.EntityBuilder.buildLoan;
 import static org.folio.rest.utils.EntityBuilder.buildLoanDueDateChangedEvent;
 import static org.folio.rest.utils.EntityBuilder.buildUserSummary;
 import static org.junit.Assert.assertEquals;
@@ -23,9 +25,11 @@ import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.Collections;
 import java.util.Date;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+import org.awaitility.Awaitility;
 import org.folio.domain.Event;
 import org.folio.domain.FeeFineType;
 import org.folio.repository.UserSummaryRepository;
@@ -37,7 +41,6 @@ import org.folio.rest.jaxrs.model.ItemCheckedOutEvent;
 import org.folio.rest.jaxrs.model.ItemClaimedReturnedEvent;
 import org.folio.rest.jaxrs.model.ItemDeclaredLostEvent;
 import org.folio.rest.jaxrs.model.LoanDueDateChangedEvent;
-import org.folio.rest.jaxrs.model.OpenFeeFine;
 import org.folio.rest.jaxrs.model.UserSummary;
 import org.junit.After;
 import org.junit.Test;
@@ -53,7 +56,6 @@ public class EventHandlersAPITest extends TestBase {
   public static final String USER_ID = randomId();
   public static final String INVALID_USER_ID = USER_ID + "xyz";
   private static final String LOAN_ID = randomId();
-
 
   private static final String EVENT_HANDLERS_ROOT_URL = "/automated-patron-blocks/handlers/";
 
@@ -99,8 +101,8 @@ public class EventHandlersAPITest extends TestBase {
     userSummaryRepository.save(buildUserSummary(USER_ID, Collections.singletonList(
         buildFeeFine(LOAN_ID, feeFineId, FeeFineType.LOST_ITEM_FEE.getId(), BigDecimal.ONE)),
       Collections.EMPTY_LIST));
-    sendItemCheckOutEventAndEvent(buildFeeFineBalanceChangedEvent(USER_ID, LOAN_ID, feeFineId,
-      FeeFineType.LOST_ITEM_FEE.getId(), BigDecimal.TEN));
+    sendEvent(buildFeeFineBalanceChangedEvent(USER_ID, LOAN_ID, feeFineId,
+      FeeFineType.LOST_ITEM_FEE.getId(), BigDecimal.TEN), SC_NO_CONTENT);
 
     getUserSummary()
       .ifPresentOrElse(userSummary -> {
@@ -113,15 +115,33 @@ public class EventHandlersAPITest extends TestBase {
   }
 
   @Test
+  public void shouldFailToSaveEvents(){
+    sendEvent(createItemCheckedInEvent(), SC_NO_CONTENT);
+    sendEvent(createFeeFineBalanceChangedEvent(), SC_NO_CONTENT);
+    sendEvent(createItemClaimedReturnedEvent(), SC_NO_CONTENT);
+    sendEvent(createItemDeclaredLostEvent(), SC_NO_CONTENT);
+    sendEvent(createItemAgedToLostEvent(), SC_NO_CONTENT);
+    sendEvent(createLoanDueDateChangedEvent(), SC_NO_CONTENT);
+    assertFalse(getUserSummary().isPresent());
+  }
+
+  @Test
   public void feeFineBalanceChangedEventValidationFails() {
     sendEventAndVerifyValidationFailure(
       createFeeFineBalanceChangedEvent().withUserId(INVALID_USER_ID));
   }
 
   @Test
-  public void itemCheckedInEventProcessedSuccessfully() {
-    assertFalse(getUserSummary().isPresent());
-    sendEvent(createItemCheckedInEvent(), SC_NO_CONTENT);
+  public void itemCheckedInEventProcessedSuccessfully(TestContext context) {
+    createUserSummaryWithLoan();
+
+    Date returnDate = Date.from(LocalDate.now()
+      .atStartOfDay(ZoneId.systemDefault()).toInstant());
+    sendEvent(buildItemCheckedInEvent(USER_ID, LOAN_ID, returnDate), SC_NO_CONTENT);
+
+    getUserSummary()
+      .ifPresentOrElse(userSummary -> assertEquals(0, userSummary.getOpenLoans().size()),
+        context::fail);
   }
 
   @Test
@@ -132,7 +152,7 @@ public class EventHandlersAPITest extends TestBase {
 
   @Test
   public void itemCheckedOutEventProcessedSuccessfully() {
-    sendItemCheckOutEventAndEvent(createItemCheckedOutEvent());
+    sendEventAndVerifyThatUserSummaryWasCreated(createItemCheckedOutEvent());
   }
 
   @Test
@@ -142,8 +162,25 @@ public class EventHandlersAPITest extends TestBase {
   }
 
   @Test
-  public void loanDueDateChangedEventProcessedSuccessfully() {
-    sendItemCheckOutEventAndEvent(createLoanDueDateChangedEvent());
+  public void loanDueDateChangedEventProcessedSuccessfully(TestContext context) {
+    createUserSummaryWithLoan();
+    Date dueDate = new Date();
+    sendEvent(buildLoanDueDateChangedEvent(USER_ID, LOAN_ID, dueDate, true),
+      SC_NO_CONTENT);
+    getUserSummary()
+      .ifPresentOrElse(userSummary -> {
+        userSummary.getOpenLoans().stream()
+          .findFirst()
+          .ifPresentOrElse(openLoan -> {
+            context.assertEquals(dueDate, openLoan.getDueDate());
+            context.assertTrue(openLoan.getRecall());
+          }, context::fail);
+      }, context::fail);
+  }
+
+  private void createUserSummaryWithLoan() {
+    userSummaryRepository.save(buildUserSummary(USER_ID, Collections.EMPTY_LIST,
+      List.of(buildLoan(true, true, new Date(), LOAN_ID))));
   }
 
   @Test
@@ -153,8 +190,20 @@ public class EventHandlersAPITest extends TestBase {
   }
 
   @Test
-  public void itemDeclaredLostEventProcessedSuccessfully() {
-    sendItemCheckOutEventAndEvent(createItemDeclaredLostEvent());
+  public void itemDeclaredLostEventProcessedSuccessfully(TestContext context) {
+    createUserSummaryWithLoan();
+
+    sendEvent(buildItemDeclaredLostEvent(USER_ID, LOAN_ID), SC_NO_CONTENT);
+
+    getUserSummary()
+      .ifPresentOrElse(userSummary -> {
+        userSummary.getOpenLoans().stream()
+          .findFirst()
+          .ifPresentOrElse(openLoan -> {
+            context.assertTrue(openLoan.getItemLost());
+            context.assertFalse(openLoan.getItemClaimedReturned());
+          }, context::fail);
+      }, context::fail);
   }
 
   @Test
@@ -164,9 +213,20 @@ public class EventHandlersAPITest extends TestBase {
   }
 
   @Test
-  public void itemAgedToLostEventProcessedSuccessfully() {
-    sendEvent(createItemCheckedOutEvent(),204);
-    sendItemCheckOutEventAndEvent(createItemAgedToLostEvent());
+  public void itemAgedToLostEventProcessedSuccessfully(TestContext context) {
+    createUserSummaryWithLoan();
+
+    sendEvent(buildItemAgedToLostEvent(USER_ID, LOAN_ID), SC_NO_CONTENT);
+
+    getUserSummary()
+      .ifPresentOrElse(userSummary -> {
+        userSummary.getOpenLoans().stream()
+          .findFirst()
+          .ifPresentOrElse(openLoan -> {
+            context.assertTrue(openLoan.getItemLost());
+            context.assertFalse(openLoan.getItemClaimedReturned());
+          }, context::fail);
+      }, context::fail);
   }
 
   @Test
@@ -176,8 +236,20 @@ public class EventHandlersAPITest extends TestBase {
   }
 
   @Test
-  public void itemClaimedReturnedEventProcessedSuccessfully() {
-    sendItemCheckOutEventAndEvent(createItemClaimedReturnedEvent());
+  public void itemClaimedReturnedEventProcessedSuccessfully(TestContext context) {
+    createUserSummaryWithLoan();
+
+    sendEvent(buildItemClaimedReturnedEvent(USER_ID, LOAN_ID), SC_NO_CONTENT);
+
+    getUserSummary()
+      .ifPresentOrElse(userSummary -> {
+        userSummary.getOpenLoans().stream()
+          .findFirst()
+          .ifPresentOrElse(openLoan -> {
+            context.assertFalse(openLoan.getItemLost());
+            context.assertTrue(openLoan.getItemClaimedReturned());
+          }, context::fail);
+      }, context::fail);
   }
 
   @Test
@@ -227,13 +299,21 @@ public class EventHandlersAPITest extends TestBase {
   }
 
   private void sendItemCheckOutEventAndEvent(Event event) {
-    //assertFalse(getUserSummary().isPresent());
-
-    // sending item check out event to create user summary
+   /* // sending item check out event to create user summary
     sendEvent(buildItemCheckedOutEvent(USER_ID, LOAN_ID, Date.from(LocalDate.now()
-        .atStartOfDay(ZoneId.systemDefault()).toInstant())), SC_NO_CONTENT);
+        .atStartOfDay(ZoneId.systemDefault()).toInstant())), SC_NO_CONTENT);*/
 
     sendEvent(event, SC_NO_CONTENT);
+  }
+
+  private void sendEventAndVerifyThatUserSummaryWasCreated(Event event) {
+    assertFalse(getUserSummary().isPresent());
+
+    sendEvent(event, SC_NO_CONTENT);
+
+    Awaitility.await()
+      .atMost(5, SECONDS)
+      .until(() -> getUserSummary().isPresent());
   }
 
   private ValidatableResponse sendEventAndVerifyValidationFailure(Event event) {
