@@ -67,7 +67,7 @@ public class EntityBuilder {
   }
 
   public static ItemCheckedOutEvent buildItemCheckedOutEvent(String userId, String loanId,
-    Date dueDate,GracePeriod gracePeriod) {
+    Date dueDate, GracePeriod gracePeriod) {
 
     return new ItemCheckedOutEvent()
       .withUserId(userId)
@@ -76,17 +76,11 @@ public class EntityBuilder {
       .withMetadata(buildDefaultMetadata())
       .withGracePeriod(gracePeriod);
   }
-
-  public static GracePeriod buildGracePeriod(Integer duration, String intervalId){
+  public static GracePeriod buildGracePeriod(Integer duration, GracePeriod.IntervalId intervalId){
     return new GracePeriod()
       .withDuration(duration)
-      .withIntervalId(GracePeriod.IntervalId.fromValue(intervalId));
+      .withIntervalId(intervalId);
   }
-
-  public static GracePeriod buildEmptyGracePeriod(){
-    return buildGracePeriod(0,"Months");
-  }
-
   public static ItemCheckedInEvent buildItemCheckedInEvent(String userId, String loanId,
     Date returnDate) {
 

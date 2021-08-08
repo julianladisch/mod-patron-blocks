@@ -1,11 +1,11 @@
 package org.folio.rest.impl;
 
 import static java.util.Map.entry;
-import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.apache.http.HttpStatus.SC_BAD_REQUEST;
 import static org.apache.http.HttpStatus.SC_NO_CONTENT;
 import static org.apache.http.HttpStatus.SC_UNPROCESSABLE_ENTITY;
 import static org.folio.repository.UserSummaryRepository.USER_SUMMARY_TABLE_NAME;
+import static org.folio.rest.utils.EntityBuilder.buildFeeFine;
 import static org.folio.rest.utils.EntityBuilder.buildFeeFineBalanceChangedEvent;
 import static org.folio.rest.utils.EntityBuilder.buildItemAgedToLostEvent;
 import static org.folio.rest.utils.EntityBuilder.buildItemCheckedInEvent;
@@ -13,16 +13,21 @@ import static org.folio.rest.utils.EntityBuilder.buildItemCheckedOutEvent;
 import static org.folio.rest.utils.EntityBuilder.buildItemClaimedReturnedEvent;
 import static org.folio.rest.utils.EntityBuilder.buildItemDeclaredLostEvent;
 import static org.folio.rest.utils.EntityBuilder.buildLoanDueDateChangedEvent;
+import static org.folio.rest.utils.EntityBuilder.buildUserSummary;
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.fail;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.ZoneId;
+import java.util.Collections;
 import java.util.Date;
 import java.util.Map;
 import java.util.Optional;
 
-import org.awaitility.Awaitility;
 import org.folio.domain.Event;
+import org.folio.domain.FeeFineType;
 import org.folio.repository.UserSummaryRepository;
 import org.folio.rest.TestBase;
 import org.folio.rest.jaxrs.model.FeeFineBalanceChangedEvent;
@@ -32,19 +37,23 @@ import org.folio.rest.jaxrs.model.ItemCheckedOutEvent;
 import org.folio.rest.jaxrs.model.ItemClaimedReturnedEvent;
 import org.folio.rest.jaxrs.model.ItemDeclaredLostEvent;
 import org.folio.rest.jaxrs.model.LoanDueDateChangedEvent;
+import org.folio.rest.jaxrs.model.OpenFeeFine;
 import org.folio.rest.jaxrs.model.UserSummary;
 import org.junit.After;
-import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
 import io.restassured.response.ValidatableResponse;
+import io.vertx.core.Future;
+import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
 
 @RunWith(VertxUnitRunner.class)
 public class EventHandlersAPITest extends TestBase {
   public static final String USER_ID = randomId();
   public static final String INVALID_USER_ID = USER_ID + "xyz";
+  private static final String LOAN_ID = randomId();
+
 
   private static final String EVENT_HANDLERS_ROOT_URL = "/automated-patron-blocks/handlers/";
 
@@ -82,10 +91,25 @@ public class EventHandlersAPITest extends TestBase {
     super.resetMocks();
     deleteAllFromTable(USER_SUMMARY_TABLE_NAME);
   }
+  //TODO test all events created and all failed
 
   @Test
-  public void feeFineBalanceChangedEventProcessedSuccessfully() {
-    sendEventAndVerifyThatUserSummaryWasCreated(createFeeFineBalanceChangedEvent());
+  public void feeFineBalanceChangedEventProcessedSuccessfully(TestContext context) {
+    String feeFineId = randomId();
+    userSummaryRepository.save(buildUserSummary(USER_ID, Collections.singletonList(
+        buildFeeFine(LOAN_ID, feeFineId, FeeFineType.LOST_ITEM_FEE.getId(), BigDecimal.ONE)),
+      Collections.EMPTY_LIST));
+    sendItemCheckOutEventAndEvent(buildFeeFineBalanceChangedEvent(USER_ID, LOAN_ID, feeFineId,
+      FeeFineType.LOST_ITEM_FEE.getId(), BigDecimal.TEN));
+
+    getUserSummary()
+      .ifPresentOrElse(userSummary -> {
+        userSummary.getOpenFeesFines().stream()
+          .findFirst()
+          .ifPresentOrElse(feeFine -> {
+            assertEquals(BigDecimal.TEN, feeFine.getBalance());
+            }, context::fail);
+      }, context::fail);
   }
 
   @Test
@@ -108,7 +132,7 @@ public class EventHandlersAPITest extends TestBase {
 
   @Test
   public void itemCheckedOutEventProcessedSuccessfully() {
-    sendEventAndVerifyThatUserSummaryWasCreated(createItemCheckedOutEvent());
+    sendItemCheckOutEventAndEvent(createItemCheckedOutEvent());
   }
 
   @Test
@@ -119,7 +143,7 @@ public class EventHandlersAPITest extends TestBase {
 
   @Test
   public void loanDueDateChangedEventProcessedSuccessfully() {
-    sendEventAndVerifyThatUserSummaryWasCreated(createLoanDueDateChangedEvent());
+    sendItemCheckOutEventAndEvent(createLoanDueDateChangedEvent());
   }
 
   @Test
@@ -130,7 +154,7 @@ public class EventHandlersAPITest extends TestBase {
 
   @Test
   public void itemDeclaredLostEventProcessedSuccessfully() {
-    sendEventAndVerifyThatUserSummaryWasCreated(createItemDeclaredLostEvent());
+    sendItemCheckOutEventAndEvent(createItemDeclaredLostEvent());
   }
 
   @Test
@@ -141,7 +165,8 @@ public class EventHandlersAPITest extends TestBase {
 
   @Test
   public void itemAgedToLostEventProcessedSuccessfully() {
-    sendEventAndVerifyThatUserSummaryWasCreated(createItemAgedToLostEvent());
+    sendEvent(createItemCheckedOutEvent(),204);
+    sendItemCheckOutEventAndEvent(createItemAgedToLostEvent());
   }
 
   @Test
@@ -152,7 +177,7 @@ public class EventHandlersAPITest extends TestBase {
 
   @Test
   public void itemClaimedReturnedEventProcessedSuccessfully() {
-    sendEventAndVerifyThatUserSummaryWasCreated(createItemClaimedReturnedEvent());
+    sendItemCheckOutEventAndEvent(createItemClaimedReturnedEvent());
   }
 
   @Test
@@ -201,14 +226,14 @@ public class EventHandlersAPITest extends TestBase {
     return buildItemClaimedReturnedEvent(USER_ID, randomId());
   }
 
-  private void sendEventAndVerifyThatUserSummaryWasCreated(Event event) {
-    assertFalse(getUserSummary().isPresent());
+  private void sendItemCheckOutEventAndEvent(Event event) {
+    //assertFalse(getUserSummary().isPresent());
+
+    // sending item check out event to create user summary
+    sendEvent(buildItemCheckedOutEvent(USER_ID, LOAN_ID, Date.from(LocalDate.now()
+        .atStartOfDay(ZoneId.systemDefault()).toInstant())), SC_NO_CONTENT);
 
     sendEvent(event, SC_NO_CONTENT);
-
-    Awaitility.await()
-      .atMost(5, SECONDS)
-      .until(() -> getUserSummary().isPresent());
   }
 
   private ValidatableResponse sendEventAndVerifyValidationFailure(Event event) {
@@ -216,7 +241,8 @@ public class EventHandlersAPITest extends TestBase {
   }
 
   private ValidatableResponse sendEvent(Event event, int expectedStatus) {
-    return sendEvent(toJson(event), getHandlerUrlForEvent(event), expectedStatus);
+    return waitFor(Future.succeededFuture(sendEvent(toJson(event), getHandlerUrlForEvent(event),
+      expectedStatus)));
   }
 
   private ValidatableResponse sendEvent(String eventPayload, String handlerUrl, int expectedStatus) {
