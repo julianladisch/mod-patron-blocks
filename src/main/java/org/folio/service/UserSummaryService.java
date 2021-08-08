@@ -292,8 +292,7 @@ public class UserSummaryService {
   private void updateUserSummaryForLostItem(UserSummary userSummary, String loanId, String eventId,
     String eventName) {
     userSummary.getOpenLoans().stream()
-      .filter(
-        loan -> StringUtils.equals(loan.getLoanId(), loanId))
+      .filter(loan -> StringUtils.equals(loan.getLoanId(), loanId))
       .findAny()
       .ifPresentOrElse(openLoan -> {
         openLoan.setItemLost(true);

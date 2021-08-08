@@ -325,7 +325,8 @@ public class FeeFineBalanceChangedEventHandlerTest extends EventHandlerTestBase 
     UserSummary userSummary = waitFor(userSummaryRepository.getByUserId(userId)
       .map(Optional::get));
 
-    context.assertEquals(0, new BigDecimal("3.80").compareTo(userSummary.getOpenFeesFines().stream()
+    context.assertEquals(0, new BigDecimal("3.80").compareTo(
+      userSummary.getOpenFeesFines().stream()
       .map(OpenFeeFine::getBalance)
       .reduce(BigDecimal::add)
       .orElse(ZERO)));
