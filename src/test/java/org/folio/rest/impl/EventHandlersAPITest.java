@@ -93,31 +93,16 @@ public class EventHandlersAPITest extends TestBase {
     super.resetMocks();
     deleteAllFromTable(USER_SUMMARY_TABLE_NAME);
   }
-  //TODO test all events created and all failed
 
   @Test
-  public void feeFineBalanceChangedEventProcessedSuccessfully(TestContext context) {
-    String feeFineId = randomId();
-    userSummaryRepository.save(buildUserSummary(USER_ID, Collections.singletonList(
-        buildFeeFine(LOAN_ID, feeFineId, FeeFineType.LOST_ITEM_FEE.getId(), BigDecimal.ONE)),
-      Collections.EMPTY_LIST));
-    sendEvent(buildFeeFineBalanceChangedEvent(USER_ID, LOAN_ID, feeFineId,
-      FeeFineType.LOST_ITEM_FEE.getId(), BigDecimal.TEN), SC_NO_CONTENT);
-
-    getUserSummary()
-      .ifPresentOrElse(userSummary -> {
-        userSummary.getOpenFeesFines().stream()
-          .findFirst()
-          .ifPresentOrElse(feeFine -> {
-            assertEquals(BigDecimal.TEN, feeFine.getBalance());
-            }, context::fail);
-      }, context::fail);
+  public void feeFineBalanceChangedEventProcessedSuccessfully() {
+    sendEventAndVerifyThatUserSummaryWasCreated(createFeeFineBalanceChangedEvent());
   }
 
   @Test
   public void shouldFailToSaveEvents(){
+    assertFalse(getUserSummary().isPresent());
     sendEvent(createItemCheckedInEvent(), SC_NO_CONTENT);
-    sendEvent(createFeeFineBalanceChangedEvent(), SC_NO_CONTENT);
     sendEvent(createItemClaimedReturnedEvent(), SC_NO_CONTENT);
     sendEvent(createItemDeclaredLostEvent(), SC_NO_CONTENT);
     sendEvent(createItemAgedToLostEvent(), SC_NO_CONTENT);
@@ -135,13 +120,9 @@ public class EventHandlersAPITest extends TestBase {
   public void itemCheckedInEventProcessedSuccessfully(TestContext context) {
     createUserSummaryWithLoan();
 
-    Date returnDate = Date.from(LocalDate.now()
-      .atStartOfDay(ZoneId.systemDefault()).toInstant());
-    sendEvent(buildItemCheckedInEvent(USER_ID, LOAN_ID, returnDate), SC_NO_CONTENT);
+    sendEvent(buildItemCheckedInEvent(USER_ID, LOAN_ID, new Date()), SC_NO_CONTENT);
 
-    getUserSummary()
-      .ifPresentOrElse(userSummary -> assertEquals(0, userSummary.getOpenLoans().size()),
-        context::fail);
+    context.assertTrue(getUserSummary().isEmpty());
   }
 
   @Test
@@ -296,14 +277,6 @@ public class EventHandlersAPITest extends TestBase {
 
   private static ItemClaimedReturnedEvent createItemClaimedReturnedEvent() {
     return buildItemClaimedReturnedEvent(USER_ID, randomId());
-  }
-
-  private void sendItemCheckOutEventAndEvent(Event event) {
-   /* // sending item check out event to create user summary
-    sendEvent(buildItemCheckedOutEvent(USER_ID, LOAN_ID, Date.from(LocalDate.now()
-        .atStartOfDay(ZoneId.systemDefault()).toInstant())), SC_NO_CONTENT);*/
-
-    sendEvent(event, SC_NO_CONTENT);
   }
 
   private void sendEventAndVerifyThatUserSummaryWasCreated(Event event) {

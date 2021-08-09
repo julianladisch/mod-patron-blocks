@@ -37,54 +37,6 @@ public class LoanDueDateChangedEventHandlerTest extends EventHandlerTestBase {
   }
 
   @Test
-  public void createNewSummaryIfDoesNotExist(TestContext context) {
-    String userId = randomId();
-
-    Optional<UserSummary> summaryBeforeEvent = waitFor(userSummaryRepository.getByUserId(userId));
-    context.assertFalse(summaryBeforeEvent.isPresent());
-
-    LoanDueDateChangedEvent event = new LoanDueDateChangedEvent()
-      .withUserId(userId)
-      .withLoanId(randomId())
-      .withDueDate(new Date())
-      .withDueDateChangedByRecall(false)
-      .withMetadata(buildDefaultMetadata());
-
-    String summaryId = waitFor(loanDueDateChangedEventHandler.handle(event));
-
-    UserSummary expectedSummary = new UserSummary()
-      .withId(summaryId)
-      .withUserId(userId)
-      .withOpenLoans(singletonList(new OpenLoan()
-        .withLoanId(event.getLoanId())
-        .withDueDate(event.getDueDate())
-        .withRecall(event.getDueDateChangedByRecall())));
-
-    checkUserSummary(summaryId, expectedSummary, context);
-  }
-
-  @Test
-  public void createNewLoanInExistingSummaryIfItDoesNotExist(TestContext context) {
-    String userId = randomId();
-    String loanId = randomId();
-    Date dueDate = new Date();
-    boolean dueDateChangedByRecall = true;
-
-    String updatedSummaryId = waitFor(loanDueDateChangedEventHandler.handle(
-      buildLoanDueDateChangedEvent(userId, loanId, dueDate, dueDateChangedByRecall)));
-
-    UserSummary expectedSummary = new UserSummary()
-      .withId(updatedSummaryId)
-      .withUserId(userId)
-      .withOpenLoans(singletonList(new OpenLoan()
-        .withLoanId(loanId)
-        .withDueDate(dueDate)
-        .withRecall(dueDateChangedByRecall)));
-
-    checkUserSummary(updatedSummaryId, expectedSummary, context);
-  }
-
-  @Test
   public void existingLoanIsUpdated(TestContext context) {
     String userId = randomId();
     String loanId = randomId();

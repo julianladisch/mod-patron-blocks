@@ -314,30 +314,19 @@ public class FeeFineBalanceChangedEventHandlerTest extends EventHandlerTestBase 
     waitFor(itemCheckedOutEventHandler.handle(
       buildItemCheckedOutEvent(userId, loanId, new Date())));
 
-    //TODO FEE FINE SHOULD BE CREATED ???
     waitFor(itemDeclaredLostEventHandler.handle(
       buildItemDeclaredLostEvent(userId, loanId)));
-
-    UserSummary userSummary = waitFor(userSummaryRepository.getByUserId(userId)
-      .map(Optional::get));
-
-    userSummary.getOpenFeesFines().addAll(List.of(
-      buildFeeFine(loanId, feeFineId1, feeFineTypeId1, feeFineBalance1),
-      buildFeeFine(loanId, feeFineId2, feeFineTypeId2, feeFineBalance2)));
-
-    waitFor(userSummaryRepository.update(userSummary));
-
     waitFor(GenericCompositeFuture.all(List.of(
       feeFineBalanceChangedEventHandler.handle(buildFeeFineBalanceChangedEvent(
         userId, loanId, feeFineId1, feeFineTypeId1, feeFineBalance1)),
       feeFineBalanceChangedEventHandler.handle(buildFeeFineBalanceChangedEvent(
         userId, loanId, feeFineId2, feeFineTypeId2, feeFineBalance2)))));
 
-    UserSummary updatedUserSummary = waitFor(userSummaryRepository.getByUserId(userId)
+    UserSummary userSummary = waitFor(userSummaryRepository.getByUserId(userId)
       .map(Optional::get));
 
     context.assertEquals(0, new BigDecimal("3.80").compareTo(
-      updatedUserSummary.getOpenFeesFines().stream()
+      userSummary.getOpenFeesFines().stream()
       .map(OpenFeeFine::getBalance)
       .reduce(BigDecimal::add)
       .orElse(ZERO)));
@@ -364,16 +353,6 @@ public class FeeFineBalanceChangedEventHandlerTest extends EventHandlerTestBase 
 
     waitFor(itemDeclaredLostEventHandler.handle(
       buildItemDeclaredLostEvent(userId, loanId)));
-
-    UserSummary userSummary = waitFor(userSummaryRepository.getByUserId(userId)
-      .map(Optional::get));
-
-    userSummary.getOpenFeesFines().addAll(List.of(
-      buildFeeFine(loanId, feeFineId1, feeFineTypeId1, feeFineBalance1),
-      buildFeeFine(loanId, feeFineId2, feeFineTypeId2, feeFineBalance2)));
-
-    waitFor(userSummaryRepository.update(userSummary));
-
     waitFor(feeFineBalanceChangedEventHandler.handle(buildFeeFineBalanceChangedEvent(
       userId, loanId, feeFineId1, feeFineTypeId1, feeFineBalance1)));
 

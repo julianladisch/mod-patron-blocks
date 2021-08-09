@@ -314,19 +314,25 @@ public class UserSummaryService {
   private void updateUserSummary(UserSummary userSummary, FeeFineBalanceChangedEvent event) {
     List<OpenFeeFine> openFeesFines = userSummary.getOpenFeesFines();
 
-    openFeesFines.stream()
+    OpenFeeFine openFeeFine = openFeesFines.stream()
       .filter(feeFine -> StringUtils.equals(feeFine.getFeeFineId(), event.getFeeFineId()))
       .findFirst()
-      .ifPresentOrElse(openFeeFine -> {
-        if (feeFineIsClosed(event)) {
-          openFeesFines.remove(openFeeFine);
-          removeLoanIfLastLostItemFeeWasClosed(userSummary, event);
-        } else {
-          openFeeFine.setBalance(event.getBalance());
-          openFeeFine.setLoanId(event.getLoanId());
-        }
-      }, () -> log.error("Event {}:{} is ignored. Open fee fine {} was not found for user {}",
-        FEE_FINE_BALANCE_CHANGED.name(), event.getId(), event.getFeeFineId(), event.getUserId()));
+      .orElseGet(() -> {
+        OpenFeeFine newFeeFine = new OpenFeeFine()
+          .withFeeFineId(event.getFeeFineId())
+          .withFeeFineTypeId(event.getFeeFineTypeId())
+          .withBalance(event.getBalance());
+        openFeesFines.add(newFeeFine);
+        return newFeeFine;
+      });
+
+    if (feeFineIsClosed(event)) {
+      openFeesFines.remove(openFeeFine);
+      removeLoanIfLastLostItemFeeWasClosed(userSummary, event);
+    } else {
+      openFeeFine.setBalance(event.getBalance());
+      openFeeFine.setLoanId(event.getLoanId());
+    }
   }
 
   private void updateUserSummary(UserSummary userSummary, LoanClosedEvent event) {
