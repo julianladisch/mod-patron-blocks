@@ -32,57 +32,6 @@ public class ItemClaimedReturnedEventHandlerTest extends EventHandlerTestBase {
   }
 
   @Test
-  public void userSummaryShouldBeCreatedWhenDoesNotExist(TestContext context) {
-    String userId = randomId();
-    String loanId = randomId();
-
-    ItemClaimedReturnedEvent event = new ItemClaimedReturnedEvent()
-      .withUserId(userId)
-      .withLoanId(loanId)
-      .withMetadata(buildDefaultMetadata());
-
-    String summaryId = waitFor(itemClaimedReturnedEventHandler.handle(event));
-
-    UserSummary userSummaryToCompare = new UserSummary()
-      .withUserId(userId)
-      .withOpenLoans(singletonList(new OpenLoan()
-        .withLoanId(loanId)
-        .withRecall(false)
-        .withItemClaimedReturned(true)
-        .withItemLost(false)));
-
-    checkUserSummary(summaryId, userSummaryToCompare, context);
-  }
-
-  @Test
-  public void newOpenLoanShouldBeCreatedForExistingSummaryWhenDoesNotExist(TestContext context) {
-    String userId = randomId();
-    String loanId = randomId();
-
-    UserSummary userSummary = new UserSummary()
-      .withUserId(userId);
-
-    waitFor(userSummaryRepository.save(userSummary));
-
-    ItemClaimedReturnedEvent event = new ItemClaimedReturnedEvent()
-      .withUserId(userId)
-      .withLoanId(loanId)
-      .withMetadata(buildDefaultMetadata());
-
-    String summaryId = waitFor(itemClaimedReturnedEventHandler.handle(event));
-
-    UserSummary userSummaryToCompare = new UserSummary()
-      .withUserId(userId)
-      .withOpenLoans(singletonList(new OpenLoan()
-        .withLoanId(loanId)
-        .withRecall(false)
-        .withItemClaimedReturned(true)
-        .withItemLost(false)));
-
-    checkUserSummary(summaryId, userSummaryToCompare, context);
-  }
-
-  @Test
   public void shouldFlipItemClaimedReturnedFlagWhenUserSummaryExists(TestContext context) {
     String userId = randomId();
     String loanId = randomId();

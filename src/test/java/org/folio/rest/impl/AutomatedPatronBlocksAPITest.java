@@ -503,21 +503,10 @@ public class AutomatedPatronBlocksAPITest extends TestBase {
 
     BigDecimal balancePerFeeFine = BigDecimal.valueOf(limitValue + feeFineBalanceDelta)
       .divide(BigDecimal.valueOf(numberOfFeesFines), 2, RoundingMode.UNNECESSARY);
-
-    String loanId = randomId();
-    String feeFineId1 = randomId();
-    String feeFineTypeId = FeeFineType.LOST_ITEM_FEE.getId();
-    String feeFineId2 = randomId();
-    List<OpenFeeFine> feesFines = List.of(buildFeeFine(loanId, feeFineId1,
-      feeFineTypeId, BigDecimal.ONE), buildFeeFine(loanId, feeFineId2, feeFineTypeId,
-      BigDecimal.ONE));
-    summaryRepository.save(buildUserSummary(userId, feesFines, List.of()));
-
-
     IntStream.range(0, numberOfFeesFines)
       .forEach(num -> waitFor(feeFineBalanceChangedEventHandler.handle(
-        buildFeeFineBalanceChangedEvent(userId, loanId, feesFines.get(num).getFeeFineId(),
-          feeFineTypeId, balancePerFeeFine))));
+        buildFeeFineBalanceChangedEvent(userId, randomId(), randomId(), randomId(),
+          balancePerFeeFine))));
 
     String expectedResponse = createLimitsAndBuildExpectedResponse(condition, singleLimit);
 
@@ -606,13 +595,6 @@ public class AutomatedPatronBlocksAPITest extends TestBase {
         }
 
         if (num == 0) {
-          UserSummary userSummary = waitFor(
-            summaryRepository.getByUserId(userId).map(Optional::get));
-
-          userSummary.getOpenFeesFines().add(buildFeeFine(loanId, randomId(), randomId(),
-            BigDecimal.ONE));
-
-          waitFor(summaryRepository.update(userSummary));
           waitFor(feeFineBalanceChangedEventHandler.handle(
             buildFeeFineBalanceChangedEvent(userId, loanId, randomId(), randomId(), balance)));
         }
