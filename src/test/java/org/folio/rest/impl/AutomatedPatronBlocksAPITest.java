@@ -15,6 +15,7 @@ import static org.folio.domain.Condition.RECALL_OVERDUE_BY_MAX_NUMBER_OF_DAYS;
 import static org.folio.repository.PatronBlockLimitsRepository.PATRON_BLOCK_LIMITS_TABLE_NAME;
 import static org.folio.repository.UserSummaryRepository.USER_SUMMARY_TABLE_NAME;
 import static org.folio.rest.jaxrs.model.GracePeriod.IntervalId;
+import static org.folio.rest.utils.EntityBuilder.buildFeeFine;
 import static org.folio.rest.utils.EntityBuilder.buildFeeFineBalanceChangedEvent;
 import static org.folio.rest.utils.EntityBuilder.buildGracePeriod;
 import static org.folio.rest.utils.EntityBuilder.buildItemAgedToLostEvent;
@@ -22,6 +23,7 @@ import static org.folio.rest.utils.EntityBuilder.buildItemCheckedOutEvent;
 import static org.folio.rest.utils.EntityBuilder.buildItemClaimedReturnedEvent;
 import static org.folio.rest.utils.EntityBuilder.buildItemDeclaredLostEvent;
 import static org.folio.rest.utils.EntityBuilder.buildLoanDueDateChangedEvent;
+import static org.folio.rest.utils.EntityBuilder.buildUserSummary;
 import static org.hamcrest.core.IsEqual.equalTo;
 import static org.joda.time.DateTime.now;
 
@@ -38,6 +40,7 @@ import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 import org.folio.domain.Condition;
+import org.folio.domain.FeeFineType;
 import org.folio.repository.PatronBlockConditionsRepository;
 import org.folio.repository.PatronBlockLimitsRepository;
 import org.folio.repository.UserSummaryRepository;
@@ -504,10 +507,20 @@ public class AutomatedPatronBlocksAPITest extends TestBase {
     BigDecimal balancePerFeeFine = BigDecimal.valueOf(limitValue + feeFineBalanceDelta)
       .divide(BigDecimal.valueOf(numberOfFeesFines), 2, RoundingMode.UNNECESSARY);
 
+    String loanId = randomId();
+    String feeFineId1 = randomId();
+    String feeFineTypeId = FeeFineType.LOST_ITEM_FEE.getId();
+    String feeFineId2 = randomId();
+    List<OpenFeeFine> feesFines = List.of(buildFeeFine(loanId, feeFineId1,
+      feeFineTypeId, BigDecimal.ONE), buildFeeFine(loanId, feeFineId2, feeFineTypeId,
+      BigDecimal.ONE));
+    summaryRepository.save(buildUserSummary(userId, feesFines, List.of()));
+
+
     IntStream.range(0, numberOfFeesFines)
       .forEach(num -> waitFor(feeFineBalanceChangedEventHandler.handle(
-        buildFeeFineBalanceChangedEvent(userId, randomId(), randomId(), randomId(),
-          balancePerFeeFine))));
+        buildFeeFineBalanceChangedEvent(userId, loanId, feesFines.get(num).getFeeFineId(),
+          feeFineTypeId, balancePerFeeFine))));
 
     String expectedResponse = createLimitsAndBuildExpectedResponse(condition, singleLimit);
 

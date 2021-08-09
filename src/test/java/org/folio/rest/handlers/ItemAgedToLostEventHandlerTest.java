@@ -43,6 +43,9 @@ public class ItemAgedToLostEventHandlerTest extends EventHandlerTestBase {
       .withLoanId(loanId)
       .withMetadata(buildDefaultMetadata());
 
+    Date dueDate = new Date();
+    waitFor(itemCheckedOutEventHandler.handle(buildItemCheckedOutEvent(userId, loanId, dueDate)));
+
     String summaryId = waitFor(itemAgedToLostEventHandler.handle(event));
 
     UserSummary userSummaryToCompare = new UserSummary()
@@ -50,6 +53,7 @@ public class ItemAgedToLostEventHandlerTest extends EventHandlerTestBase {
       .withOpenLoans(singletonList(new OpenLoan()
         .withLoanId(loanId)
         .withRecall(false)
+        .withDueDate(dueDate)
         .withItemClaimedReturned(false)
         .withItemLost(true)));
 
