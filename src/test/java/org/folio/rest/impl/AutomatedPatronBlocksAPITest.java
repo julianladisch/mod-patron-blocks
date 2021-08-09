@@ -2,7 +2,6 @@ package org.folio.rest.impl;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
-import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlPathMatching;
 import static java.util.stream.Collectors.toList;
 import static org.apache.commons.lang3.StringUtils.EMPTY;
@@ -59,8 +58,6 @@ import org.folio.rest.jaxrs.model.OpenLoan;
 import org.folio.rest.jaxrs.model.PatronBlockCondition;
 import org.folio.rest.jaxrs.model.PatronBlockLimit;
 import org.folio.rest.jaxrs.model.UserSummary;
-import org.joda.time.DateTime;
-import org.joda.time.format.ISODateTimeFormat;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -68,6 +65,7 @@ import org.junit.runner.RunWith;
 import io.restassured.http.ContentType;
 import io.restassured.response.Response;
 import io.restassured.response.ValidatableResponse;
+import io.vertx.core.Future;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
@@ -77,7 +75,6 @@ public class AutomatedPatronBlocksAPITest extends TestBase {
   private static final String PATRON_GROUP_ID = randomId();
   private static final boolean SINGLE_LIMIT = true;
   private static final boolean ALL_LIMITS = false;
-  private static final String LOAN_POLICY_ID = randomId();
 
   private final PatronBlockLimitsRepository limitsRepository =
     new PatronBlockLimitsRepository(postgresClient);
@@ -609,9 +606,15 @@ public class AutomatedPatronBlocksAPITest extends TestBase {
         }
 
         if (num == 0) {
+          UserSummary userSummary = waitFor(
+            summaryRepository.getByUserId(userId).map(Optional::get));
+
+          userSummary.getOpenFeesFines().add(buildFeeFine(loanId, randomId(), randomId(),
+            BigDecimal.ONE));
+
+          waitFor(summaryRepository.update(userSummary));
           waitFor(feeFineBalanceChangedEventHandler.handle(
-            buildFeeFineBalanceChangedEvent(userId, loanId, randomId(), randomId(),
-              balance)));
+            buildFeeFineBalanceChangedEvent(userId, loanId, randomId(), randomId(), balance)));
         }
       });
   }
