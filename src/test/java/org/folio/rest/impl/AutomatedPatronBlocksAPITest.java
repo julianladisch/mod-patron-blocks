@@ -709,7 +709,7 @@ public class AutomatedPatronBlocksAPITest extends TestBase {
         Date dueDate = now().minusHours(1).toDate();
 
         waitFor(itemCheckedOutEventHandler.handle(
-          buildItemCheckedOutEvent(userId, loanId, dueDate, null)));
+          buildItemCheckedOutEvent(userId, loanId, dueDate)));
       });
 
     String expectedResponse = createLimitsAndBuildExpectedResponse(condition, true);

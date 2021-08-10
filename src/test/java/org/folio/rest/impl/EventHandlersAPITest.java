@@ -100,7 +100,7 @@ public class EventHandlersAPITest extends TestBase {
   }
 
   @Test
-  public void shouldFailToSaveEvents(){
+  public void shouldNotCreateUserSummary() {
     assertFalse(getUserSummary().isPresent());
     sendEvent(createItemCheckedInEvent(), SC_NO_CONTENT);
     sendEvent(createItemClaimedReturnedEvent(), SC_NO_CONTENT);
@@ -118,11 +118,8 @@ public class EventHandlersAPITest extends TestBase {
 
   @Test
   public void itemCheckedInEventProcessedSuccessfully(TestContext context) {
-    createUserSummaryWithLoan();
-
-    sendEvent(buildItemCheckedInEvent(USER_ID, LOAN_ID, new Date()), SC_NO_CONTENT);
-
-    context.assertTrue(getUserSummary().isEmpty());
+    assertFalse(getUserSummary().isPresent());
+    sendEvent(createItemCheckedInEvent(), SC_NO_CONTENT);
   }
 
   @Test
