@@ -72,11 +72,7 @@ public class EntityBuilder {
   public static ItemCheckedOutEvent buildItemCheckedOutEvent(String userId, String loanId,
     Date dueDate, GracePeriod gracePeriod) {
 
-    return new ItemCheckedOutEvent()
-      .withUserId(userId)
-      .withLoanId(loanId)
-      .withDueDate(dueDate)
-      .withMetadata(buildDefaultMetadata())
+    return buildItemCheckedOutEvent(userId, loanId, dueDate)
       .withGracePeriod(gracePeriod);
   }
   public static GracePeriod buildGracePeriod(Integer duration, GracePeriod.IntervalId intervalId){
