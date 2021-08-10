@@ -3,16 +3,17 @@ package org.folio.service;
 import static io.vertx.core.Future.failedFuture;
 import static io.vertx.core.Future.succeededFuture;
 import static java.lang.String.format;
+import static java.util.stream.Collectors.toMap;
 import static org.folio.okapi.common.XOkapiHeaders.TENANT;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.folio.domain.ActionBlocks;
-import org.folio.exception.OverduePeriodCalculatorException;
 import org.folio.repository.PatronBlockConditionsRepository;
 import org.folio.repository.PatronBlockLimitsRepository;
 import org.folio.rest.client.UsersClient;
@@ -25,7 +26,6 @@ import org.folio.rest.jaxrs.model.UserSummary;
 import org.folio.rest.persist.PostgresClient;
 import org.folio.rest.tools.utils.TenantTool;
 import org.folio.util.AsyncProcessingContext;
-import org.joda.time.DateTime;
 
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
@@ -34,13 +34,16 @@ import lombok.NoArgsConstructor;
 import lombok.With;
 
 public class PatronBlocksService {
+  private static final Logger log = LogManager.getLogger(PatronBlocksService.class);
+
   private static final String DEFAULT_ERROR_MESSAGE = "Failed to calculate automated patron blocks";
+  private static final String OVERDUE_MINUTES_CALCULATION_ERROR_TEMPLATE =
+    "Failed to calculate overdue minutes: {}";
 
   private final UserSummaryService userSummaryService;
   private final PatronBlockConditionsRepository conditionsRepository;
   private final PatronBlockLimitsRepository limitsRepository;
   private final UsersClient usersClient;
-  private final OverduePeriodCalculatorService overduePeriodCalculatorService;
 
   public PatronBlocksService(Map<String, String> okapiHeaders, Vertx vertx) {
     String tenantId = TenantTool.calculateTenantId(okapiHeaders.get(TENANT));
@@ -49,7 +52,6 @@ public class PatronBlocksService {
     conditionsRepository = new PatronBlockConditionsRepository(postgresClient);
     limitsRepository = new PatronBlockLimitsRepository(postgresClient);
     usersClient = new UsersClient(vertx, okapiHeaders);
-    overduePeriodCalculatorService = new OverduePeriodCalculatorService();
   }
 
   public Future<AutomatedPatronBlocks> getBlocksForUser(String userId) {
@@ -64,7 +66,7 @@ public class PatronBlocksService {
       .compose(this::addUserGroupIdToContext)
       .compose(this::addPatronBlockLimitsToContext)
       .compose(this::addAllPatronBlockConditionsToContext)
-      .compose(this::addOverdueMinutesToContext)
+      .map(this::addOverdueMinutesToContext)
       .map(this::calculateBlocks);
   }
 
@@ -115,24 +117,27 @@ public class PatronBlocksService {
     return conditionsRepository.getAllWithDefaultLimit().map(ctx::withPatronBlockConditions);
   }
 
-  private Future<BlocksCalculationContext> addOverdueMinutesToContext(
-    BlocksCalculationContext ctx) {
+  private BlocksCalculationContext addOverdueMinutesToContext(BlocksCalculationContext ctx) {
+    return ctx.withOverdueMinutes(
+      ctx.userSummary.getOpenLoans()
+        .stream()
+        .filter(PatronBlocksService::validateLoan)
+        .collect(toMap(OpenLoan::getLoanId, OverduePeriodCalculator::calculateOverdueMinutes))
+    );
+  }
 
-    List<LoanOverdueMinutes> overdueMinutes = new ArrayList<>();
-
-    for (OpenLoan openLoan : ctx.userSummary.getOpenLoans()) {
-      int minutes;
-      try {
-        minutes = overduePeriodCalculatorService.getMinutes(openLoan, DateTime.now());
-      } catch (OverduePeriodCalculatorException e) {
-        return failedFuture(e);
-      }
-      overdueMinutes.add(new LoanOverdueMinutes(openLoan.getLoanId(), minutes));
+  private static boolean validateLoan(OpenLoan loan) {
+    if (loan == null) {
+      log.error(OVERDUE_MINUTES_CALCULATION_ERROR_TEMPLATE, "loan is null");
+      return false;
     }
 
-    return succeededFuture(ctx.withOverdueMinutes(
-      overdueMinutes.stream().collect(Collectors.toMap(r -> r.loanId, r -> r.overdueMinutes,
-      (key, value) -> key))));
+    if (loan.getDueDate() == null) {
+      log.error(OVERDUE_MINUTES_CALCULATION_ERROR_TEMPLATE, "due date is null");
+      return false;
+    }
+
+    return true;
   }
 
   private BlocksCalculationContext addCurrentConditionToContext(
@@ -218,9 +223,4 @@ public class PatronBlocksService {
     }
   }
 
-  @AllArgsConstructor
-  private static class LoanOverdueMinutes {
-    final String loanId;
-    final Integer overdueMinutes;
-  }
 }
