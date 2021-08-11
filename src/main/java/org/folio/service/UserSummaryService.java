@@ -3,15 +3,9 @@ package org.folio.service;
 import static io.vertx.core.Future.failedFuture;
 import static io.vertx.core.Future.succeededFuture;
 import static java.lang.String.format;
-import static org.folio.domain.EventType.*;
-import static org.folio.domain.EventType.FEE_FINE_BALANCE_CHANGED;
-import static org.folio.domain.EventType.ITEM_AGED_TO_LOST;
-import static org.folio.domain.EventType.ITEM_CHECKED_IN;
 import static org.folio.domain.EventType.ITEM_CHECKED_OUT;
-import static org.folio.domain.EventType.ITEM_CLAIMED_RETURNED;
-import static org.folio.domain.EventType.ITEM_DECLARED_LOST;
-import static org.folio.domain.EventType.LOAN_CLOSED;
-import static org.folio.domain.EventType.LOAN_DUE_DATE_CHANGED;
+import static org.folio.domain.EventType.getByEvent;
+import static org.folio.domain.EventType.getNameByEvent;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
@@ -47,15 +41,10 @@ import org.folio.rest.persist.PgExceptionUtil;
 import org.folio.rest.persist.PostgresClient;
 import org.folio.util.AsyncProcessingContext;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-
 import io.vertx.core.Future;
-import io.vertx.core.json.JsonObject;
 import lombok.AllArgsConstructor;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import lombok.SneakyThrows;
 import lombok.With;
 
 public class UserSummaryService {

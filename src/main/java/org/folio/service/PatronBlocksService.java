@@ -9,6 +9,9 @@ import static org.folio.okapi.common.XOkapiHeaders.TENANT;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.function.BiFunction;
+import java.util.function.BinaryOperator;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import org.apache.logging.log4j.LogManager;
@@ -39,6 +42,12 @@ public class PatronBlocksService {
   private static final String DEFAULT_ERROR_MESSAGE = "Failed to calculate automated patron blocks";
   private static final String OVERDUE_MINUTES_CALCULATION_ERROR_TEMPLATE =
     "Failed to calculate overdue minutes: {}";
+
+  private final BinaryOperator<Integer> mergeFunction = (oldValue, newValue) -> {
+    log.error("Two open loans with the same loanId found! Newest overdue minutes amount" +
+      " saved. Old value -> {}, new value -> {}", oldValue, newValue);
+    return newValue;
+  };
 
   private final UserSummaryService userSummaryService;
   private final PatronBlockConditionsRepository conditionsRepository;
@@ -123,12 +132,7 @@ public class PatronBlocksService {
         .stream()
         .filter(PatronBlocksService::validateLoan)
         .collect(toMap(OpenLoan::getLoanId, OverduePeriodCalculator::calculateOverdueMinutes,
-          (oldValue, newValue) -> {
-          log.error("Two open loans with the same loanId found! Newest overdue minutes amount" +
-            " saved. Old value -> {}, new value -> {}", oldValue, newValue);
-          return newValue;
-        }))
-    );
+          mergeFunction)));
   }
 
   private static boolean validateLoan(OpenLoan openLoan) {
