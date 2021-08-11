@@ -34,33 +34,6 @@ public class ItemAgedToLostEventHandlerTest extends EventHandlerTestBase {
   }
 
   @Test
-  public void userSummaryShouldBeCreatedWhenDoesNotExist(TestContext context) {
-    String userId = randomId();
-    String loanId = randomId();
-
-    ItemAgedToLostEvent event = new ItemAgedToLostEvent()
-      .withUserId(userId)
-      .withLoanId(loanId)
-      .withMetadata(buildDefaultMetadata());
-
-    Date dueDate = new Date();
-    waitFor(itemCheckedOutEventHandler.handle(buildItemCheckedOutEvent(userId, loanId, dueDate)));
-
-    String summaryId = waitFor(itemAgedToLostEventHandler.handle(event));
-
-    UserSummary userSummaryToCompare = new UserSummary()
-      .withUserId(userId)
-      .withOpenLoans(singletonList(new OpenLoan()
-        .withLoanId(loanId)
-        .withRecall(false)
-        .withDueDate(dueDate)
-        .withItemClaimedReturned(false)
-        .withItemLost(true)));
-
-    checkUserSummary(summaryId, userSummaryToCompare, context);
-  }
-
-  @Test
   public void shouldFlipItemLostFlagWhenUserSummaryExists(TestContext context) {
     String userId = randomId();
     String loanId = randomId();

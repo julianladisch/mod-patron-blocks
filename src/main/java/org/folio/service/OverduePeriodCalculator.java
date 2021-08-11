@@ -14,29 +14,29 @@ public class OverduePeriodCalculator {
     throw new UnsupportedOperationException("Do not instantiate");
   }
 
-  public static int calculateOverdueMinutes(OpenLoan loan) {
+  public static int calculateOverdueMinutes(OpenLoan openLoan) {
     final DateTime systemTime = DateTime.now();
 
-    return loanIsOverdue(loan, systemTime)
-      ? calculateOverdueMinutes(loan, systemTime)
+    return loanIsOverdue(openLoan, systemTime)
+      ? calculateOverdueMinutes(openLoan, systemTime)
       : ZERO_MINUTES;
   }
 
-  private static boolean loanIsOverdue(OpenLoan loan, DateTime systemTime) {
-    return loan.getDueDate().before(systemTime.toDate());
+  private static boolean loanIsOverdue(OpenLoan openLoan, DateTime systemTime) {
+    return openLoan.getDueDate().before(systemTime.toDate());
   }
 
-  private static Integer calculateOverdueMinutes(OpenLoan loan, DateTime systemTime) {
-    DateTime dueDate = new DateTime(loan.getDueDate());
+  private static Integer calculateOverdueMinutes(OpenLoan openLoan, DateTime systemTime) {
+    DateTime dueDate = new DateTime(openLoan.getDueDate());
     int overdueMinutes = minutesBetween(dueDate, systemTime).getMinutes();
 
-    return overdueMinutes > getGracePeriodMinutes(loan)
+    return overdueMinutes > getGracePeriodMinutes(openLoan)
       ? overdueMinutes
       : ZERO_MINUTES;
   }
 
-  private static int getGracePeriodMinutes(OpenLoan loan) {
-    return ofNullable(loan.getGracePeriod())
+  private static int getGracePeriodMinutes(OpenLoan openLoan) {
+    return ofNullable(openLoan.getGracePeriod())
       .map(Period::from)
       .map(Period::toMinutes)
       .orElse(ZERO_MINUTES);

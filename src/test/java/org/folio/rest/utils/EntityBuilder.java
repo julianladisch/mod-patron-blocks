@@ -23,16 +23,13 @@ import org.folio.rest.jaxrs.model.SynchronizationJob;
 import org.folio.rest.jaxrs.model.UserSummary;
 
 public class EntityBuilder {
-  public static OpenLoan buildLoan(boolean recall, boolean itemLost, Date dueDate, String loanId) {
+
+  public static OpenLoan buildLoan(boolean recall, boolean itemLost, Date dueDate) {
     return new OpenLoan()
-      .withLoanId(loanId)
+      .withLoanId(randomId())
       .withDueDate(dueDate)
       .withRecall(recall)
       .withItemLost(itemLost);
-  }
-
-  public static OpenLoan buildLoan(boolean recall, boolean itemLost, Date dueDate) {
-    return buildLoan(recall, itemLost, dueDate, randomId());
   }
 
   public static OpenFeeFine buildFeeFine(String loanId, String feeFineId, String feeFineTypeId,

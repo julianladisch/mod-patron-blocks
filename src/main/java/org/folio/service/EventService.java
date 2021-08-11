@@ -15,7 +15,6 @@ import org.folio.rest.jaxrs.model.ItemDeclaredLostEvent;
 import org.folio.rest.jaxrs.model.LoanClosedEvent;
 import org.folio.rest.jaxrs.model.LoanDueDateChangedEvent;
 import org.folio.rest.persist.PostgresClient;
-import org.folio.util.UuidHelper;
 
 import io.vertx.core.Future;
 
@@ -69,24 +68,24 @@ public class EventService {
     EventType eventType = EventType.getByEvent(event);
 
     switch (eventType) {
-    case ITEM_CHECKED_OUT:
-      return save((ItemCheckedOutEvent) event);
-    case ITEM_CHECKED_IN:
-      return save((ItemCheckedInEvent) event);
-    case ITEM_CLAIMED_RETURNED:
-      return save((ItemClaimedReturnedEvent) event);
-    case ITEM_DECLARED_LOST:
-      return save((ItemDeclaredLostEvent) event);
-    case ITEM_AGED_TO_LOST:
-      return save((ItemAgedToLostEvent) event);
-    case LOAN_DUE_DATE_CHANGED:
-      return save((LoanDueDateChangedEvent) event);
-    case FEE_FINE_BALANCE_CHANGED:
-      return save((FeeFineBalanceChangedEvent) event);
+      case ITEM_CHECKED_OUT:
+        return save((ItemCheckedOutEvent) event);
+      case ITEM_CHECKED_IN:
+        return save((ItemCheckedInEvent) event);
+      case ITEM_CLAIMED_RETURNED:
+        return save((ItemClaimedReturnedEvent) event);
+      case ITEM_DECLARED_LOST:
+        return save((ItemDeclaredLostEvent) event);
+      case ITEM_AGED_TO_LOST:
+        return save((ItemAgedToLostEvent) event);
+      case LOAN_DUE_DATE_CHANGED:
+        return save((LoanDueDateChangedEvent) event);
+      case FEE_FINE_BALANCE_CHANGED:
+        return save((FeeFineBalanceChangedEvent) event);
       case LOAN_CLOSED:
-      return save((LoanClosedEvent) event);
-    default:
-      throw new IllegalStateException("Unexpected value: " + eventType);
+        return save((LoanClosedEvent) event);
+      default:
+        throw new IllegalStateException("Unexpected value: " + eventType);
     }
   }
 
