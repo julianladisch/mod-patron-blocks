@@ -41,12 +41,11 @@ public class PatronBlocksService {
   private static final String OVERDUE_MINUTES_CALCULATION_ERROR_TEMPLATE =
     "Failed to calculate overdue minutes: {}";
 
-  private final BinaryOperator<Integer> mergeFunction = (oldValue, newValue) -> {
-    log.error("Two open loans with the same loanId found! Newest overdue minutes amount" +
-      " saved. Old value -> {}, new value -> {}", oldValue, newValue);
+  private static final BinaryOperator<Integer> OVERDUE_MINUTES_MERGE_FUNCTION = (oldValue, newValue) -> {
+    log.warn("Two open loans with the same loanId found! Newest overdue minutes amount" +
+      " saved. Old value: {}, new value: {}", oldValue, newValue);
     return newValue;
   };
-
   private final UserSummaryService userSummaryService;
   private final PatronBlockConditionsRepository conditionsRepository;
   private final PatronBlockLimitsRepository limitsRepository;
@@ -130,7 +129,7 @@ public class PatronBlocksService {
         .stream()
         .filter(PatronBlocksService::validateLoan)
         .collect(toMap(OpenLoan::getLoanId, OverduePeriodCalculator::calculateOverdueMinutes,
-          mergeFunction)));
+          OVERDUE_MINUTES_MERGE_FUNCTION)));
   }
 
   private static boolean validateLoan(OpenLoan openLoan) {
