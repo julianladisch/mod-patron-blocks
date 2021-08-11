@@ -8,6 +8,7 @@ import java.util.List;
 
 import org.folio.domain.SynchronizationStatus;
 import org.folio.rest.jaxrs.model.FeeFineBalanceChangedEvent;
+import org.folio.rest.jaxrs.model.GracePeriod;
 import org.folio.rest.jaxrs.model.ItemAgedToLostEvent;
 import org.folio.rest.jaxrs.model.ItemCheckedInEvent;
 import org.folio.rest.jaxrs.model.ItemCheckedOutEvent;
@@ -65,6 +66,17 @@ public class EntityBuilder {
       .withMetadata(buildDefaultMetadata());
   }
 
+  public static ItemCheckedOutEvent buildItemCheckedOutEvent(String userId, String loanId,
+    Date dueDate, GracePeriod gracePeriod) {
+
+    return buildItemCheckedOutEvent(userId, loanId, dueDate)
+      .withGracePeriod(gracePeriod);
+  }
+  public static GracePeriod buildGracePeriod(Integer duration, GracePeriod.IntervalId intervalId){
+    return new GracePeriod()
+      .withDuration(duration)
+      .withIntervalId(intervalId);
+  }
   public static ItemCheckedInEvent buildItemCheckedInEvent(String userId, String loanId,
     Date returnDate) {
 

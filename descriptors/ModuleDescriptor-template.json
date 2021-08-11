@@ -19,10 +19,6 @@
       "version": "7.0"
     },
     {
-      "id": "loan-policy-storage",
-      "version": "2.1"
-    },
-    {
       "id": "users",
       "version": "15.1"
     }
@@ -44,8 +40,6 @@
             "pubsub.event-types.post",
             "pubsub.publishers.post",
             "pubsub.subscribers.post",
-            "circulation-storage.loans.item.get",
-            "circulation-storage.loan-policies.item.get",
             "users.item.get"
           ]
         }

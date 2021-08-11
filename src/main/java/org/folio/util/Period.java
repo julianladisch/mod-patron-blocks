@@ -8,6 +8,8 @@ import static org.joda.time.DateTimeConstants.MINUTES_PER_WEEK;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.folio.rest.jaxrs.model.GracePeriod;
+
 public class Period {
   private static final String MONTHS = "Months";
   private static final String WEEKS = "Weeks";
@@ -37,6 +39,10 @@ public class Period {
 
   public static Period from(Integer duration, String interval) {
     return new Period(duration, interval);
+  }
+
+  public static Period from(GracePeriod gracePeriod) {
+    return new Period(gracePeriod.getDuration(), gracePeriod.getIntervalId().value());
   }
 
   public int toMinutes() {

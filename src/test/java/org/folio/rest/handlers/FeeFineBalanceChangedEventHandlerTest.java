@@ -5,6 +5,7 @@ import static java.util.Collections.emptyList;
 import static java.util.Collections.singletonList;
 import static org.folio.repository.UserSummaryRepository.USER_SUMMARY_TABLE_NAME;
 import static org.folio.rest.utils.EntityBuilder.buildDefaultMetadata;
+import static org.folio.rest.utils.EntityBuilder.buildFeeFine;
 import static org.folio.rest.utils.EntityBuilder.buildFeeFineBalanceChangedEvent;
 import static org.folio.rest.utils.EntityBuilder.buildItemCheckedOutEvent;
 import static org.folio.rest.utils.EntityBuilder.buildItemDeclaredLostEvent;
@@ -315,7 +316,6 @@ public class FeeFineBalanceChangedEventHandlerTest extends EventHandlerTestBase 
 
     waitFor(itemDeclaredLostEventHandler.handle(
       buildItemDeclaredLostEvent(userId, loanId)));
-
     waitFor(GenericCompositeFuture.all(List.of(
       feeFineBalanceChangedEventHandler.handle(buildFeeFineBalanceChangedEvent(
         userId, loanId, feeFineId1, feeFineTypeId1, feeFineBalance1)),
@@ -325,7 +325,8 @@ public class FeeFineBalanceChangedEventHandlerTest extends EventHandlerTestBase 
     UserSummary userSummary = waitFor(userSummaryRepository.getByUserId(userId)
       .map(Optional::get));
 
-    context.assertEquals(0, new BigDecimal("3.80").compareTo(userSummary.getOpenFeesFines().stream()
+    context.assertEquals(0, new BigDecimal("3.80").compareTo(
+      userSummary.getOpenFeesFines().stream()
       .map(OpenFeeFine::getBalance)
       .reduce(BigDecimal::add)
       .orElse(ZERO)));
@@ -352,7 +353,6 @@ public class FeeFineBalanceChangedEventHandlerTest extends EventHandlerTestBase 
 
     waitFor(itemDeclaredLostEventHandler.handle(
       buildItemDeclaredLostEvent(userId, loanId)));
-
     waitFor(feeFineBalanceChangedEventHandler.handle(buildFeeFineBalanceChangedEvent(
       userId, loanId, feeFineId1, feeFineTypeId1, feeFineBalance1)));
 

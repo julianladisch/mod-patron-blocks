@@ -3,12 +3,13 @@ package org.folio.service;
 import static io.vertx.core.Future.failedFuture;
 import static io.vertx.core.Future.succeededFuture;
 import static java.lang.String.format;
+import static java.util.stream.Collectors.toMap;
 import static org.folio.okapi.common.XOkapiHeaders.TENANT;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.function.BinaryOperator;
 import java.util.stream.Collectors;
 
 import org.apache.logging.log4j.LogManager;
@@ -16,18 +17,16 @@ import org.apache.logging.log4j.Logger;
 import org.folio.domain.ActionBlocks;
 import org.folio.repository.PatronBlockConditionsRepository;
 import org.folio.repository.PatronBlockLimitsRepository;
-import org.folio.rest.client.CirculationStorageClient;
 import org.folio.rest.client.UsersClient;
 import org.folio.rest.jaxrs.model.AutomatedPatronBlock;
 import org.folio.rest.jaxrs.model.AutomatedPatronBlocks;
+import org.folio.rest.jaxrs.model.OpenLoan;
 import org.folio.rest.jaxrs.model.PatronBlockCondition;
 import org.folio.rest.jaxrs.model.PatronBlockLimit;
 import org.folio.rest.jaxrs.model.UserSummary;
 import org.folio.rest.persist.PostgresClient;
 import org.folio.rest.tools.utils.TenantTool;
 import org.folio.util.AsyncProcessingContext;
-import org.folio.util.CustomCompositeFuture;
-import org.joda.time.DateTime;
 
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
@@ -39,13 +38,18 @@ public class PatronBlocksService {
   private static final Logger log = LogManager.getLogger(PatronBlocksService.class);
 
   private static final String DEFAULT_ERROR_MESSAGE = "Failed to calculate automated patron blocks";
+  private static final String OVERDUE_MINUTES_CALCULATION_ERROR_TEMPLATE =
+    "Failed to calculate overdue minutes: {}";
 
+  private static final BinaryOperator<Integer> OVERDUE_MINUTES_MERGE_FUNCTION = (oldValue, newValue) -> {
+    log.warn("Two open loans with the same loanId found! Newest overdue minutes amount" +
+      " saved. Old value: {}, new value: {}", oldValue, newValue);
+    return newValue;
+  };
   private final UserSummaryService userSummaryService;
   private final PatronBlockConditionsRepository conditionsRepository;
   private final PatronBlockLimitsRepository limitsRepository;
   private final UsersClient usersClient;
-  private final OverduePeriodCalculatorService overduePeriodCalculatorService;
-  private final CirculationStorageClient circulationStorageClient;
 
   public PatronBlocksService(Map<String, String> okapiHeaders, Vertx vertx) {
     String tenantId = TenantTool.calculateTenantId(okapiHeaders.get(TENANT));
@@ -54,8 +58,6 @@ public class PatronBlocksService {
     conditionsRepository = new PatronBlockConditionsRepository(postgresClient);
     limitsRepository = new PatronBlockLimitsRepository(postgresClient);
     usersClient = new UsersClient(vertx, okapiHeaders);
-    circulationStorageClient = new CirculationStorageClient(vertx, okapiHeaders);
-    overduePeriodCalculatorService = new OverduePeriodCalculatorService(circulationStorageClient);
   }
 
   public Future<AutomatedPatronBlocks> getBlocksForUser(String userId) {
@@ -70,7 +72,7 @@ public class PatronBlocksService {
       .compose(this::addUserGroupIdToContext)
       .compose(this::addPatronBlockLimitsToContext)
       .compose(this::addAllPatronBlockConditionsToContext)
-      .compose(this::addOverdueMinutesToContext)
+      .map(this::addOverdueMinutesToContext)
       .map(this::calculateBlocks);
   }
 
@@ -121,36 +123,27 @@ public class PatronBlocksService {
     return conditionsRepository.getAllWithDefaultLimit().map(ctx::withPatronBlockConditions);
   }
 
-  private Future<BlocksCalculationContext> addOverdueMinutesToContext(
-    BlocksCalculationContext ctx) {
+  private BlocksCalculationContext addOverdueMinutesToContext(BlocksCalculationContext ctx) {
+    return ctx.withOverdueMinutes(
+      ctx.userSummary.getOpenLoans()
+        .stream()
+        .filter(PatronBlocksService::validateLoan)
+        .collect(toMap(OpenLoan::getLoanId, OverduePeriodCalculator::calculateOverdueMinutes,
+          OVERDUE_MINUTES_MERGE_FUNCTION)));
+  }
 
-    List<Future<LoanOverdueMinutes>> overdueMinutesFutures = new ArrayList<>();
-
-    ctx.userSummary.getOpenLoans().forEach(openLoan ->
-      overdueMinutesFutures.add(
-        circulationStorageClient.findLoanById(openLoan.getLoanId())
-          .compose(loan -> overduePeriodCalculatorService.getMinutes(loan, DateTime.now()))
-          .map(intValue -> new LoanOverdueMinutes(openLoan.getLoanId(), intValue))
-      ));
-
-    Future<BlocksCalculationContext> result = CustomCompositeFuture.all(overdueMinutesFutures)
-      .map(ar -> {
-        Map<String, Integer> overdueMinutes = ar.list().stream()
-          .filter(LoanOverdueMinutes.class::isInstance)
-          .map(LoanOverdueMinutes.class::cast)
-          .collect(Collectors.toMap(r -> r.loanId, r -> r.overdueMinutes, (key, value) -> key));
-
-        return ctx.withOverdueMinutes(overdueMinutes);
-      })
-      .onFailure(throwable -> log.error(
-        format("Failed to perform 'addOverdueMinutesToContext': %s", throwable.getMessage())));
-
-    if (result.failed()) {
-      return failedFuture(DEFAULT_ERROR_MESSAGE);
+  private static boolean validateLoan(OpenLoan openLoan) {
+    if (openLoan == null) {
+      log.error(OVERDUE_MINUTES_CALCULATION_ERROR_TEMPLATE, "openLoan is null");
+      return false;
     }
-    else {
-      return result;
+
+    if (openLoan.getDueDate() == null) {
+      log.error(OVERDUE_MINUTES_CALCULATION_ERROR_TEMPLATE, "due date is null");
+      return false;
     }
+
+    return true;
   }
 
   private BlocksCalculationContext addCurrentConditionToContext(
@@ -236,9 +229,4 @@ public class PatronBlocksService {
     }
   }
 
-  @AllArgsConstructor
-  private static class LoanOverdueMinutes {
-    final String loanId;
-    final Integer overdueMinutes;
-  }
 }

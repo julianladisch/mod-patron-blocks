@@ -1,11 +1,13 @@
 {
   "$schema": "http://json-schema.org/draft-04/schema#",
   "type": "object",
-  "javaInterfaces" : ["org.folio.domain.Event"],
+  "javaInterfaces": [
+    "org.folio.domain.Event"
+  ],
   "description": "Item checked out event",
   "properties": {
     "id": {
-      "description" : "A globally unique identifier (UUID) for the event",
+      "description": "A globally unique identifier (UUID) for the event",
       "type": "string",
       "$ref": "../raml-util/schemas/uuid.schema"
     },
@@ -29,6 +31,9 @@
       "type": "object",
       "$ref": "../raml-util/schemas/metadata.schema",
       "readonly": true
+    },
+    "gracePeriod": {
+      "$ref": "../period.json"
     }
   },
   "additionalProperties": false,

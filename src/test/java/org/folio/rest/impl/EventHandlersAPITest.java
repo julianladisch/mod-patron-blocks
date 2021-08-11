@@ -34,7 +34,6 @@ import org.folio.rest.jaxrs.model.ItemDeclaredLostEvent;
 import org.folio.rest.jaxrs.model.LoanDueDateChangedEvent;
 import org.folio.rest.jaxrs.model.UserSummary;
 import org.junit.After;
-import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
@@ -45,7 +44,6 @@ import io.vertx.ext.unit.junit.VertxUnitRunner;
 public class EventHandlersAPITest extends TestBase {
   public static final String USER_ID = randomId();
   public static final String INVALID_USER_ID = USER_ID + "xyz";
-
   private static final String EVENT_HANDLERS_ROOT_URL = "/automated-patron-blocks/handlers/";
 
   private static final String FEE_FINE_BALANCE_CHANGED_HANDLER_URL =
@@ -89,6 +87,17 @@ public class EventHandlersAPITest extends TestBase {
   }
 
   @Test
+  public void shouldNotCreateUserSummary() {
+    assertFalse(getUserSummary().isPresent());
+    sendEvent(createItemCheckedInEvent(), SC_NO_CONTENT);
+    sendEvent(createItemClaimedReturnedEvent(), SC_NO_CONTENT);
+    sendEvent(createItemDeclaredLostEvent(), SC_NO_CONTENT);
+    sendEvent(createItemAgedToLostEvent(), SC_NO_CONTENT);
+    sendEvent(createLoanDueDateChangedEvent(), SC_NO_CONTENT);
+    assertFalse(getUserSummary().isPresent());
+  }
+
+  @Test
   public void feeFineBalanceChangedEventValidationFails() {
     sendEventAndVerifyValidationFailure(
       createFeeFineBalanceChangedEvent().withUserId(INVALID_USER_ID));
@@ -96,7 +105,6 @@ public class EventHandlersAPITest extends TestBase {
 
   @Test
   public void itemCheckedInEventProcessedSuccessfully() {
-    assertFalse(getUserSummary().isPresent());
     sendEvent(createItemCheckedInEvent(), SC_NO_CONTENT);
   }
 
@@ -119,7 +127,7 @@ public class EventHandlersAPITest extends TestBase {
 
   @Test
   public void loanDueDateChangedEventProcessedSuccessfully() {
-    sendEventAndVerifyThatUserSummaryWasCreated(createLoanDueDateChangedEvent());
+    sendEvent(createLoanDueDateChangedEvent(), SC_NO_CONTENT);
   }
 
   @Test
@@ -130,7 +138,7 @@ public class EventHandlersAPITest extends TestBase {
 
   @Test
   public void itemDeclaredLostEventProcessedSuccessfully() {
-    sendEventAndVerifyThatUserSummaryWasCreated(createItemDeclaredLostEvent());
+    sendEvent(createItemDeclaredLostEvent(), SC_NO_CONTENT);
   }
 
   @Test
@@ -141,7 +149,7 @@ public class EventHandlersAPITest extends TestBase {
 
   @Test
   public void itemAgedToLostEventProcessedSuccessfully() {
-    sendEventAndVerifyThatUserSummaryWasCreated(createItemAgedToLostEvent());
+    sendEvent(createItemAgedToLostEvent(), SC_NO_CONTENT);
   }
 
   @Test
@@ -152,7 +160,7 @@ public class EventHandlersAPITest extends TestBase {
 
   @Test
   public void itemClaimedReturnedEventProcessedSuccessfully() {
-    sendEventAndVerifyThatUserSummaryWasCreated(createItemClaimedReturnedEvent());
+    sendEvent(createItemClaimedReturnedEvent(), SC_NO_CONTENT);
   }
 
   @Test

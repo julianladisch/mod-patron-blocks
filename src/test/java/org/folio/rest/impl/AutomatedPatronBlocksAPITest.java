@@ -2,7 +2,6 @@ package org.folio.rest.impl;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
-import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlPathMatching;
 import static java.util.stream.Collectors.toList;
 import static org.apache.commons.lang3.StringUtils.EMPTY;
@@ -14,7 +13,9 @@ import static org.folio.domain.Condition.MAX_OUTSTANDING_FEE_FINE_BALANCE;
 import static org.folio.domain.Condition.RECALL_OVERDUE_BY_MAX_NUMBER_OF_DAYS;
 import static org.folio.repository.PatronBlockLimitsRepository.PATRON_BLOCK_LIMITS_TABLE_NAME;
 import static org.folio.repository.UserSummaryRepository.USER_SUMMARY_TABLE_NAME;
+import static org.folio.rest.jaxrs.model.GracePeriod.IntervalId;
 import static org.folio.rest.utils.EntityBuilder.buildFeeFineBalanceChangedEvent;
+import static org.folio.rest.utils.EntityBuilder.buildGracePeriod;
 import static org.folio.rest.utils.EntityBuilder.buildItemAgedToLostEvent;
 import static org.folio.rest.utils.EntityBuilder.buildItemCheckedOutEvent;
 import static org.folio.rest.utils.EntityBuilder.buildItemClaimedReturnedEvent;
@@ -54,8 +55,6 @@ import org.folio.rest.jaxrs.model.OpenLoan;
 import org.folio.rest.jaxrs.model.PatronBlockCondition;
 import org.folio.rest.jaxrs.model.PatronBlockLimit;
 import org.folio.rest.jaxrs.model.UserSummary;
-import org.joda.time.DateTime;
-import org.joda.time.format.ISODateTimeFormat;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -72,7 +71,6 @@ public class AutomatedPatronBlocksAPITest extends TestBase {
   private static final String PATRON_GROUP_ID = randomId();
   private static final boolean SINGLE_LIMIT = true;
   private static final boolean ALL_LIMITS = false;
-  private static final String LOAN_POLICY_ID = randomId();
 
   private final PatronBlockLimitsRepository limitsRepository =
     new PatronBlockLimitsRepository(postgresClient);
@@ -126,12 +124,6 @@ public class AutomatedPatronBlocksAPITest extends TestBase {
 
     Arrays.stream(Condition.values())
       .forEach(condition -> updateCondition(condition, true, true, true));
-
-    wireMock.stubFor(get(urlEqualTo("/loan-policy-storage/loan-policies/" + LOAN_POLICY_ID))
-      .atPriority(5)
-      .willReturn(aResponse()
-        .withStatus(200)
-        .withBody(makeLoanPolicyResponseBody())));
   }
 
   @Test
@@ -166,9 +158,8 @@ public class AutomatedPatronBlocksAPITest extends TestBase {
         String loanId = randomId();
         Date dueDate = now().plusHours(1).toDate();
 
-        stubLoan(loanId, dueDate, false);
-
-        waitFor(itemCheckedOutEventHandler.handle(buildItemCheckedOutEvent(userId, loanId, dueDate)));
+        waitFor(
+          itemCheckedOutEventHandler.handle(buildItemCheckedOutEvent(userId, loanId, dueDate)));
       });
 
     String expectedResponse = createLimitsAndBuildExpectedResponse(condition, singleLimit);
@@ -226,8 +217,6 @@ public class AutomatedPatronBlocksAPITest extends TestBase {
       .forEach(num -> {
         String loanId = randomId();
         Date dueDate = now().plusHours(1).toDate();
-
-        stubLoan(loanId, dueDate, false);
 
         waitFor(itemCheckedOutEventHandler.handle(
           buildItemCheckedOutEvent(userId, loanId, dueDate)));
@@ -287,8 +276,6 @@ public class AutomatedPatronBlocksAPITest extends TestBase {
         String loanId = randomId();
         Date dueDate = now().plusHours(1).toDate();
 
-        stubLoan(loanId, dueDate, false);
-
         waitFor(itemCheckedOutEventHandler.handle(
           buildItemCheckedOutEvent(userId, loanId, dueDate)));
 
@@ -345,9 +332,8 @@ public class AutomatedPatronBlocksAPITest extends TestBase {
         String loanId = randomId();
         Date dueDate = now().minusHours(1).toDate();
 
-        stubLoan(loanId, dueDate, false);
-
-        waitFor(itemCheckedOutEventHandler.handle(buildItemCheckedOutEvent(userId, loanId, dueDate)));
+        waitFor(
+          itemCheckedOutEventHandler.handle(buildItemCheckedOutEvent(userId, loanId, dueDate)));
       });
 
     String expectedResponse = createLimitsAndBuildExpectedResponse(condition, singleLimit);
@@ -399,8 +385,6 @@ public class AutomatedPatronBlocksAPITest extends TestBase {
       .forEach(num -> {
         String loanId = randomId();
         Date dueDate = now().minusHours(1).toDate();
-
-        stubLoan(loanId, dueDate, true);
 
         waitFor(itemCheckedOutEventHandler.handle(
           buildItemCheckedOutEvent(userId, loanId, dueDate)));
@@ -459,8 +443,6 @@ public class AutomatedPatronBlocksAPITest extends TestBase {
     String loanId = randomId();
     Date dueDate = now().minusDays(limitValue + dueDateDelta).toDate();
 
-    stubLoan(loanId, dueDate, true);
-
     waitFor(itemCheckedOutEventHandler.handle(
       buildItemCheckedOutEvent(userId, loanId, dueDate)));
 
@@ -517,7 +499,6 @@ public class AutomatedPatronBlocksAPITest extends TestBase {
 
     BigDecimal balancePerFeeFine = BigDecimal.valueOf(limitValue + feeFineBalanceDelta)
       .divide(BigDecimal.valueOf(numberOfFeesFines), 2, RoundingMode.UNNECESSARY);
-
     IntStream.range(0, numberOfFeesFines)
       .forEach(num -> waitFor(feeFineBalanceChangedEventHandler.handle(
         buildFeeFineBalanceChangedEvent(userId, randomId(), randomId(), randomId(),
@@ -596,8 +577,6 @@ public class AutomatedPatronBlocksAPITest extends TestBase {
         Date dueDate = now().minusDays(LIMIT_VALUES.get(RECALL_OVERDUE_BY_MAX_NUMBER_OF_DAYS) + 1)
           .toDate();
 
-        stubLoan(loanId, dueDate, true);
-
         waitFor(itemCheckedOutEventHandler.handle(
           buildItemCheckedOutEvent(userId, loanId, dueDate)));
 
@@ -613,8 +592,7 @@ public class AutomatedPatronBlocksAPITest extends TestBase {
 
         if (num == 0) {
           waitFor(feeFineBalanceChangedEventHandler.handle(
-            buildFeeFineBalanceChangedEvent(userId, loanId, randomId(), randomId(),
-              balance)));
+            buildFeeFineBalanceChangedEvent(userId, loanId, randomId(), randomId(), balance)));
         }
       });
   }
@@ -630,8 +608,6 @@ public class AutomatedPatronBlocksAPITest extends TestBase {
       .forEach(num -> {
         String loanId = randomId();
         Date dueDate = now().plusHours(1).toDate();
-
-        stubLoan(loanId, dueDate, false);
 
         waitFor(itemCheckedOutEventHandler.handle(
           buildItemCheckedOutEvent(userId, loanId, dueDate)));
@@ -677,9 +653,6 @@ public class AutomatedPatronBlocksAPITest extends TestBase {
       .forEach(num -> {
         String loanId = randomId();
         Date dueDate = now().plusHours(1).toDate();
-
-        stubLoan(loanId, dueDate, false);
-
         waitFor(itemCheckedOutEventHandler.handle(
           buildItemCheckedOutEvent(userId, loanId, dueDate)));
       });
@@ -697,12 +670,6 @@ public class AutomatedPatronBlocksAPITest extends TestBase {
   public void noBlockWhenLoanIsNotOverdueBecauseOfGracePeriod() {
     expectNoBlocks();
 
-    wireMock.stubFor(get(urlEqualTo("/loan-policy-storage/loan-policies/" + LOAN_POLICY_ID))
-      .atPriority(5)
-      .willReturn(aResponse()
-        .withStatus(200)
-        .withBody(makeLoanPolicyWithGracePeriodResponseBody())));
-
     final Condition condition = MAX_NUMBER_OF_OVERDUE_ITEMS;
     int limitValue = LIMIT_VALUES.get(condition);
 
@@ -711,10 +678,9 @@ public class AutomatedPatronBlocksAPITest extends TestBase {
         String loanId = randomId();
         Date dueDate = now().minusHours(1).toDate();
 
-        stubLoan(loanId, dueDate, false);
-
         waitFor(itemCheckedOutEventHandler.handle(
-          buildItemCheckedOutEvent(userId, loanId, dueDate)));
+          buildItemCheckedOutEvent(userId, loanId, dueDate,
+            buildGracePeriod(3, IntervalId.HOURS))));
       });
 
     String expectedResponse = createLimitsAndBuildExpectedResponse(condition, true);
@@ -738,10 +704,32 @@ public class AutomatedPatronBlocksAPITest extends TestBase {
         String loanId = randomId();
         Date dueDate = now().minusHours(1).toDate();
 
-        stubLoan(loanId, dueDate, false);
-
         waitFor(itemCheckedOutEventHandler.handle(
           buildItemCheckedOutEvent(userId, loanId, dueDate)));
+      });
+
+    String expectedResponse = createLimitsAndBuildExpectedResponse(condition, true);
+
+    sendRequest(userId)
+      .then()
+      .statusCode(200)
+      .contentType(ContentType.JSON)
+      .body(equalTo(expectedResponse));
+  }
+
+  @Test
+  public void blockWhenLoanIsOverdueAndGracePeriodIsNull() {
+    expectAllBlocks();
+    final Condition condition = MAX_NUMBER_OF_OVERDUE_ITEMS;
+    int limitValue = LIMIT_VALUES.get(condition);
+
+    IntStream.range(0, limitValue + 1)
+      .forEach(num -> {
+        String loanId = randomId();
+        Date dueDate = now().minusHours(1).toDate();
+
+        waitFor(itemCheckedOutEventHandler.handle(
+          buildItemCheckedOutEvent(userId, loanId, dueDate, null)));
       });
 
     String expectedResponse = createLimitsAndBuildExpectedResponse(condition, true);
@@ -757,12 +745,6 @@ public class AutomatedPatronBlocksAPITest extends TestBase {
   public void blockWhenLoanIsOverdueAndGracePeriodExists() {
     expectAllBlocks();
 
-    wireMock.stubFor(get(urlEqualTo("/loan-policy-storage/loan-policies/" + LOAN_POLICY_ID))
-      .atPriority(5)
-      .willReturn(aResponse()
-        .withStatus(200)
-        .withBody(makeLoanPolicyWithGracePeriodResponseBody())));
-
     final Condition condition = MAX_NUMBER_OF_OVERDUE_ITEMS;
     int limitValue = LIMIT_VALUES.get(condition);
 
@@ -771,10 +753,9 @@ public class AutomatedPatronBlocksAPITest extends TestBase {
         String loanId = randomId();
         Date dueDate = now().minusHours(6).toDate();
 
-        stubLoan(loanId, dueDate, false);
-
         waitFor(itemCheckedOutEventHandler.handle(
-          buildItemCheckedOutEvent(userId, loanId, dueDate)));
+          buildItemCheckedOutEvent(userId, loanId, dueDate,
+            buildGracePeriod(1, IntervalId.HOURS))));
       });
 
     String expectedResponse = createLimitsAndBuildExpectedResponse(condition, true);
@@ -802,8 +783,6 @@ public class AutomatedPatronBlocksAPITest extends TestBase {
         String loanId = randomId();
         Date dueDate = now().plusHours(1).toDate();
 
-        stubLoan(loanId, dueDate, false);
-
         waitFor(itemCheckedOutEventHandler.handle(
           buildItemCheckedOutEvent(userId, loanId, dueDate)));
 
@@ -814,8 +793,6 @@ public class AutomatedPatronBlocksAPITest extends TestBase {
       .forEach(num -> {
         String loanId = randomId();
         Date dueDate = now().plusHours(1).toDate();
-
-        stubLoan(loanId, dueDate, false);
 
         waitFor(itemCheckedOutEventHandler.handle(
           buildItemCheckedOutEvent(userId, loanId, dueDate)));
@@ -955,50 +932,5 @@ public class AutomatedPatronBlocksAPITest extends TestBase {
     expectBlockBorrowing = true;
     expectBlockRenewals = true;
     expectBlockRequests = true;
-  }
-
-  private static String makeLoanPolicyResponseBody() {
-    return new JsonObject()
-      .put("id", LOAN_POLICY_ID)
-      .put("loansPolicy", new JsonObject()
-        .put("gracePeriod", new JsonObject()
-          .put("duration", 0)
-          .put("intervalId", "Minutes")))
-      .put("requestManagement", new JsonObject()
-        .put("recalls", new JsonObject()
-          .put("allowRecallsToExtendOverdueLoans", true)))
-      .encodePrettily();
-  }
-
-  private static String makeLoanPolicyWithGracePeriodResponseBody() {
-    return new JsonObject()
-      .put("id", LOAN_POLICY_ID)
-      .put("loansPolicy", new JsonObject()
-        .put("gracePeriod", new JsonObject()
-          .put("duration", 5)
-          .put("intervalId", "Hours")))
-      .put("requestManagement", new JsonObject()
-        .put("recalls", new JsonObject()
-          .put("allowRecallsToExtendOverdueLoans", true)))
-      .encodePrettily();
-  }
-
-  private static String makeLoanResponseBody(Date dueDate, boolean recall, String itemId) {
-    return new JsonObject()
-      .put("id", randomId())
-      .put("overdueFinePolicyId", randomId())
-      .put("loanPolicyId", LOAN_POLICY_ID)
-      .put("dueDate", new DateTime(dueDate).toString(ISODateTimeFormat.dateTime()))
-      .put("dueDateChangedByRecall", recall)
-      .put("itemId", itemId)
-      .encodePrettily();
-  }
-
-  private static void stubLoan(String loanId, Date dueDate, boolean recall) {
-    wireMock.stubFor(get(urlEqualTo("/loan-storage/loans/" + loanId))
-      .atPriority(5)
-      .willReturn(aResponse()
-        .withStatus(200)
-        .withBody(makeLoanResponseBody(dueDate, recall, randomId()))));
   }
 }
