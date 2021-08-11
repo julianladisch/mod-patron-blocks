@@ -126,7 +126,7 @@ public class PatronBlocksService {
           (oldValue, newValue) -> {
           log.error("Two open loans with the same loanId found! Newest overdue minutes amount" +
             " saved. Old value -> {}, new value -> {}", oldValue, newValue);
-          return newValue;
+          return oldValue >= newValue ? oldValue : newValue;
         }))
     );
   }
