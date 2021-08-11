@@ -122,17 +122,22 @@ public class PatronBlocksService {
       ctx.userSummary.getOpenLoans()
         .stream()
         .filter(PatronBlocksService::validateLoan)
-        .collect(toMap(OpenLoan::getLoanId, OverduePeriodCalculator::calculateOverdueMinutes))
+        .collect(toMap(OpenLoan::getLoanId, OverduePeriodCalculator::calculateOverdueMinutes,
+          (oldValue, newValue) -> {
+          log.error("Two open loans with the same loanId found! Newest overdue minutes amount" +
+            " saved. Old value -> {}, new value -> {}", oldValue, newValue);
+          return newValue;
+        }))
     );
   }
 
-  private static boolean validateLoan(OpenLoan loan) {
-    if (loan == null) {
-      log.error(OVERDUE_MINUTES_CALCULATION_ERROR_TEMPLATE, "loan is null");
+  private static boolean validateLoan(OpenLoan openLoan) {
+    if (openLoan == null) {
+      log.error(OVERDUE_MINUTES_CALCULATION_ERROR_TEMPLATE, "openLoan is null");
       return false;
     }
 
-    if (loan.getDueDate() == null) {
+    if (openLoan.getDueDate() == null) {
       log.error(OVERDUE_MINUTES_CALCULATION_ERROR_TEMPLATE, "due date is null");
       return false;
     }

@@ -6,32 +6,23 @@ import static org.apache.http.HttpStatus.SC_BAD_REQUEST;
 import static org.apache.http.HttpStatus.SC_NO_CONTENT;
 import static org.apache.http.HttpStatus.SC_UNPROCESSABLE_ENTITY;
 import static org.folio.repository.UserSummaryRepository.USER_SUMMARY_TABLE_NAME;
-import static org.folio.rest.utils.EntityBuilder.buildFeeFine;
 import static org.folio.rest.utils.EntityBuilder.buildFeeFineBalanceChangedEvent;
 import static org.folio.rest.utils.EntityBuilder.buildItemAgedToLostEvent;
 import static org.folio.rest.utils.EntityBuilder.buildItemCheckedInEvent;
 import static org.folio.rest.utils.EntityBuilder.buildItemCheckedOutEvent;
 import static org.folio.rest.utils.EntityBuilder.buildItemClaimedReturnedEvent;
 import static org.folio.rest.utils.EntityBuilder.buildItemDeclaredLostEvent;
-import static org.folio.rest.utils.EntityBuilder.buildLoan;
 import static org.folio.rest.utils.EntityBuilder.buildLoanDueDateChangedEvent;
-import static org.folio.rest.utils.EntityBuilder.buildUserSummary;
-import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.fail;
 
 import java.math.BigDecimal;
-import java.time.LocalDate;
-import java.time.ZoneId;
-import java.util.Collections;
 import java.util.Date;
-import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
 import org.awaitility.Awaitility;
 import org.folio.domain.Event;
-import org.folio.domain.FeeFineType;
 import org.folio.repository.UserSummaryRepository;
 import org.folio.rest.TestBase;
 import org.folio.rest.jaxrs.model.FeeFineBalanceChangedEvent;
@@ -47,16 +38,12 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 
 import io.restassured.response.ValidatableResponse;
-import io.vertx.core.Future;
-import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
 
 @RunWith(VertxUnitRunner.class)
 public class EventHandlersAPITest extends TestBase {
   public static final String USER_ID = randomId();
   public static final String INVALID_USER_ID = USER_ID + "xyz";
-  private static final String LOAN_ID = randomId();
-
   private static final String EVENT_HANDLERS_ROOT_URL = "/automated-patron-blocks/handlers/";
 
   private static final String FEE_FINE_BALANCE_CHANGED_HANDLER_URL =
@@ -117,8 +104,7 @@ public class EventHandlersAPITest extends TestBase {
   }
 
   @Test
-  public void itemCheckedInEventProcessedSuccessfully(TestContext context) {
-    assertFalse(getUserSummary().isPresent());
+  public void itemCheckedInEventProcessedSuccessfully() {
     sendEvent(createItemCheckedInEvent(), SC_NO_CONTENT);
   }
 
@@ -140,25 +126,8 @@ public class EventHandlersAPITest extends TestBase {
   }
 
   @Test
-  public void loanDueDateChangedEventProcessedSuccessfully(TestContext context) {
-    createUserSummaryWithLoan();
-    Date dueDate = new Date();
-    sendEvent(buildLoanDueDateChangedEvent(USER_ID, LOAN_ID, dueDate, true),
-      SC_NO_CONTENT);
-    getUserSummary()
-      .ifPresentOrElse(userSummary -> {
-        userSummary.getOpenLoans().stream()
-          .findFirst()
-          .ifPresentOrElse(openLoan -> {
-            context.assertEquals(dueDate, openLoan.getDueDate());
-            context.assertTrue(openLoan.getRecall());
-          }, context::fail);
-      }, context::fail);
-  }
-
-  private void createUserSummaryWithLoan() {
-    userSummaryRepository.save(buildUserSummary(USER_ID, Collections.EMPTY_LIST,
-      List.of(buildLoan(true, true, new Date(), LOAN_ID))));
+  public void loanDueDateChangedEventProcessedSuccessfully() {
+    sendEvent(createLoanDueDateChangedEvent(), SC_NO_CONTENT);
   }
 
   @Test
@@ -168,20 +137,8 @@ public class EventHandlersAPITest extends TestBase {
   }
 
   @Test
-  public void itemDeclaredLostEventProcessedSuccessfully(TestContext context) {
-    createUserSummaryWithLoan();
-
-    sendEvent(buildItemDeclaredLostEvent(USER_ID, LOAN_ID), SC_NO_CONTENT);
-
-    getUserSummary()
-      .ifPresentOrElse(userSummary -> {
-        userSummary.getOpenLoans().stream()
-          .findFirst()
-          .ifPresentOrElse(openLoan -> {
-            context.assertTrue(openLoan.getItemLost());
-            context.assertFalse(openLoan.getItemClaimedReturned());
-          }, context::fail);
-      }, context::fail);
+  public void itemDeclaredLostEventProcessedSuccessfully() {
+    sendEvent(createItemDeclaredLostEvent(), SC_NO_CONTENT);
   }
 
   @Test
@@ -191,20 +148,8 @@ public class EventHandlersAPITest extends TestBase {
   }
 
   @Test
-  public void itemAgedToLostEventProcessedSuccessfully(TestContext context) {
-    createUserSummaryWithLoan();
-
-    sendEvent(buildItemAgedToLostEvent(USER_ID, LOAN_ID), SC_NO_CONTENT);
-
-    getUserSummary()
-      .ifPresentOrElse(userSummary -> {
-        userSummary.getOpenLoans().stream()
-          .findFirst()
-          .ifPresentOrElse(openLoan -> {
-            context.assertTrue(openLoan.getItemLost());
-            context.assertFalse(openLoan.getItemClaimedReturned());
-          }, context::fail);
-      }, context::fail);
+  public void itemAgedToLostEventProcessedSuccessfully() {
+    sendEvent(createItemAgedToLostEvent(), SC_NO_CONTENT);
   }
 
   @Test
@@ -214,20 +159,8 @@ public class EventHandlersAPITest extends TestBase {
   }
 
   @Test
-  public void itemClaimedReturnedEventProcessedSuccessfully(TestContext context) {
-    createUserSummaryWithLoan();
-
-    sendEvent(buildItemClaimedReturnedEvent(USER_ID, LOAN_ID), SC_NO_CONTENT);
-
-    getUserSummary()
-      .ifPresentOrElse(userSummary -> {
-        userSummary.getOpenLoans().stream()
-          .findFirst()
-          .ifPresentOrElse(openLoan -> {
-            context.assertFalse(openLoan.getItemLost());
-            context.assertTrue(openLoan.getItemClaimedReturned());
-          }, context::fail);
-      }, context::fail);
+  public void itemClaimedReturnedEventProcessedSuccessfully() {
+    sendEvent(createItemClaimedReturnedEvent(), SC_NO_CONTENT);
   }
 
   @Test
@@ -291,8 +224,7 @@ public class EventHandlersAPITest extends TestBase {
   }
 
   private ValidatableResponse sendEvent(Event event, int expectedStatus) {
-    return waitFor(Future.succeededFuture(sendEvent(toJson(event), getHandlerUrlForEvent(event),
-      expectedStatus)));
+    return sendEvent(toJson(event), getHandlerUrlForEvent(event), expectedStatus);
   }
 
   private ValidatableResponse sendEvent(String eventPayload, String handlerUrl, int expectedStatus) {

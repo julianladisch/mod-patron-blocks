@@ -3,6 +3,7 @@ package org.folio.service;
 import static io.vertx.core.Future.failedFuture;
 import static io.vertx.core.Future.succeededFuture;
 import static java.lang.String.format;
+import static org.folio.domain.EventType.*;
 import static org.folio.domain.EventType.FEE_FINE_BALANCE_CHANGED;
 import static org.folio.domain.EventType.ITEM_AGED_TO_LOST;
 import static org.folio.domain.EventType.ITEM_CHECKED_IN;
@@ -46,10 +47,15 @@ import org.folio.rest.persist.PgExceptionUtil;
 import org.folio.rest.persist.PostgresClient;
 import org.folio.util.AsyncProcessingContext;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 import io.vertx.core.Future;
+import io.vertx.core.json.JsonObject;
 import lombok.AllArgsConstructor;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import lombok.SneakyThrows;
 import lombok.With;
 
 public class UserSummaryService {
@@ -194,40 +200,40 @@ public class UserSummaryService {
   }
 
   private void handleEvent(RebuildContext ctx, Event event) {
-    if (ctx.userSummary == null || event == null || EventType.getByEvent(event) == null ||
+    if (ctx.userSummary == null || event == null || getByEvent(event) == null ||
       event.getMetadata() == null) {
 
       ctx.logFailedValidationError("handleEvent");
       return;
     }
 
-    EventType eventType = EventType.getByEvent(event);
+    EventType eventType = getByEvent(event);
 
     switch (eventType) {
-    case ITEM_CHECKED_OUT:
-      updateUserSummary(ctx.userSummary, (ItemCheckedOutEvent) event);
-      break;
-    case ITEM_CHECKED_IN:
-      updateUserSummary(ctx.userSummary, (ItemCheckedInEvent) event);
-      break;
-    case ITEM_CLAIMED_RETURNED:
-      updateUserSummary(ctx.userSummary, (ItemClaimedReturnedEvent) event);
-      break;
-    case ITEM_DECLARED_LOST:
-      updateUserSummary(ctx.userSummary, (ItemDeclaredLostEvent) event);
-      break;
-    case ITEM_AGED_TO_LOST:
-      updateUserSummary(ctx.userSummary, (ItemAgedToLostEvent) event);
-      break;
-    case LOAN_DUE_DATE_CHANGED:
-      updateUserSummary(ctx.userSummary, (LoanDueDateChangedEvent) event);
-      break;
-    case FEE_FINE_BALANCE_CHANGED:
-      updateUserSummary(ctx.userSummary, (FeeFineBalanceChangedEvent) event);
-      break;
-    case LOAN_CLOSED:
-      updateUserSummary(ctx.userSummary, (LoanClosedEvent) event);
-      break;
+      case ITEM_CHECKED_OUT:
+        updateUserSummary(ctx.userSummary, (ItemCheckedOutEvent) event);
+        break;
+      case ITEM_CHECKED_IN:
+        updateUserSummary(ctx.userSummary, (ItemCheckedInEvent) event);
+        break;
+      case ITEM_CLAIMED_RETURNED:
+        updateUserSummary(ctx.userSummary, (ItemClaimedReturnedEvent) event);
+        break;
+      case ITEM_DECLARED_LOST:
+        updateUserSummary(ctx.userSummary, (ItemDeclaredLostEvent) event);
+        break;
+      case ITEM_AGED_TO_LOST:
+        updateUserSummary(ctx.userSummary, (ItemAgedToLostEvent) event);
+        break;
+      case LOAN_DUE_DATE_CHANGED:
+        updateUserSummary(ctx.userSummary, (LoanDueDateChangedEvent) event);
+        break;
+      case FEE_FINE_BALANCE_CHANGED:
+        updateUserSummary(ctx.userSummary, (FeeFineBalanceChangedEvent) event);
+        break;
+      case LOAN_CLOSED:
+        updateUserSummary(ctx.userSummary, (LoanClosedEvent) event);
+        break;
     }
   }
 
@@ -248,24 +254,17 @@ public class UserSummaryService {
   }
 
   private void updateUserSummary(UserSummary userSummary, ItemCheckedInEvent event) {
-    removeLoanFromUserSummary(userSummary, ITEM_CHECKED_IN.name(), event.getId(),
-      event.getUserId(), event.getLoanId());
+    removeLoanFromUserSummary(userSummary, event, event.getLoanId());
   }
 
-  private void removeLoanFromUserSummary(UserSummary userSummary, String eventName, String eventId,
-    String userId, String loanId) {
+  private void removeLoanFromUserSummary(UserSummary userSummary, Event event, String loanId) {
 
     boolean loanRemoved = userSummary.getOpenLoans()
       .removeIf(loan -> StringUtils.equals(loan.getLoanId(), loanId));
 
     if (!loanRemoved) {
-      logOpenLoanNotFound(eventName, eventId, userId, loanId);
+      logOpenLoanNotFound(event, loanId);
     }
-  }
-
-  private void logOpenLoanNotFound(String eventName, String eventId, String userId, String loanId) {
-    log.error("Event {}:{} is ignored. Open loan {} was not found for user {}", eventName,
-      eventId, loanId, userId);
   }
 
   private void updateUserSummary(UserSummary userSummary, ItemClaimedReturnedEvent event) {
@@ -275,29 +274,25 @@ public class UserSummaryService {
       .ifPresentOrElse(openLoan -> {
         openLoan.setItemClaimedReturned(true);
         openLoan.setItemLost(false);
-      }, () -> logOpenLoanNotFound(ITEM_CLAIMED_RETURNED.name(), event.getId(), event.getUserId(),
-        event.getLoanId()));
+      }, () -> logOpenLoanNotFound(event, event.getLoanId()));
   }
 
   private void updateUserSummary(UserSummary userSummary, ItemDeclaredLostEvent event) {
-    updateUserSummaryForLostItem(userSummary, event.getLoanId(), event.getId(),
-      ITEM_DECLARED_LOST.name());
+    updateUserSummaryForLostItem(userSummary, event, event.getLoanId());
   }
 
   private void updateUserSummary(UserSummary userSummary, ItemAgedToLostEvent event) {
-    updateUserSummaryForLostItem(userSummary, event.getLoanId(), event.getId(),
-      ITEM_AGED_TO_LOST.name());
+    updateUserSummaryForLostItem(userSummary, event, event.getLoanId());
   }
 
-  private void updateUserSummaryForLostItem(UserSummary userSummary, String loanId, String eventId,
-    String eventName) {
+  private void updateUserSummaryForLostItem(UserSummary userSummary, Event event, String loanId) {
     userSummary.getOpenLoans().stream()
       .filter(loan -> StringUtils.equals(loan.getLoanId(), loanId))
       .findAny()
       .ifPresentOrElse(openLoan -> {
         openLoan.setItemLost(true);
         openLoan.setItemClaimedReturned(false);
-      }, () -> logOpenLoanNotFound(eventName, eventId, userSummary.getUserId(), loanId));
+      }, () -> logOpenLoanNotFound(event, loanId));
   }
 
   private void updateUserSummary(UserSummary summary, LoanDueDateChangedEvent event) {
@@ -307,8 +302,12 @@ public class UserSummaryService {
       .ifPresentOrElse(openLoan -> {
         openLoan.setDueDate(event.getDueDate());
         openLoan.setRecall(event.getDueDateChangedByRecall());
-      }, () -> logOpenLoanNotFound(LOAN_DUE_DATE_CHANGED.name(), event.getId(), event.getUserId(),
-        event.getLoanId()));
+      }, () -> logOpenLoanNotFound(event, event.getLoanId()));
+  }
+
+  private void logOpenLoanNotFound(Event event, String loanId){
+    log.error("Event {}:{} is ignored. Open loan {} was not found for user {}",
+      getNameByEvent(event), event.getId(), loanId, event.getUserId());
   }
 
   private void updateUserSummary(UserSummary userSummary, FeeFineBalanceChangedEvent event) {
@@ -336,8 +335,7 @@ public class UserSummaryService {
   }
 
   private void updateUserSummary(UserSummary userSummary, LoanClosedEvent event) {
-    removeLoanFromUserSummary(userSummary, LOAN_CLOSED.name(), event.getId(), event.getUserId(),
-      event.getLoanId());
+    removeLoanFromUserSummary(userSummary, event, event.getLoanId());
   }
 
   private boolean feeFineIsClosed(FeeFineBalanceChangedEvent event) {
