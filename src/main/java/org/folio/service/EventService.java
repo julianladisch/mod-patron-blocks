@@ -2,6 +2,8 @@ package org.folio.service;
 
 import java.util.List;
 
+import org.folio.domain.Event;
+import org.folio.domain.EventType;
 import org.folio.okapi.common.GenericCompositeFuture;
 import org.folio.repository.EventRepository;
 import org.folio.rest.jaxrs.model.FeeFineBalanceChangedEvent;
@@ -57,32 +59,55 @@ public class EventService {
       FEE_FINE_BALANCE_CHANGED_EVENT_TABLE_NAME, FeeFineBalanceChangedEvent.class);
   }
 
+  public Future<String> save(Event event) {
+    EventType eventType = EventType.getByEvent(event);
+
+    switch (eventType) {
+    case ITEM_CHECKED_OUT:
+      return save((ItemCheckedOutEvent) event);
+    case ITEM_CHECKED_IN:
+      return save((ItemCheckedInEvent) event);
+    case ITEM_CLAIMED_RETURNED:
+      return save((ItemClaimedReturnedEvent) event);
+    case ITEM_DECLARED_LOST:
+      return save((ItemDeclaredLostEvent) event);
+    case ITEM_AGED_TO_LOST:
+      return save((ItemAgedToLostEvent) event);
+    case LOAN_DUE_DATE_CHANGED:
+      return save((LoanDueDateChangedEvent) event);
+    case FEE_FINE_BALANCE_CHANGED:
+      return save((FeeFineBalanceChangedEvent) event);
+    default:
+      throw new IllegalStateException("Unexpected value: " + eventType);
+    }
+  }
+
   public Future<String> save(ItemCheckedOutEvent event) {
-    return itemCheckedOutEventRepository.save(event, UuidHelper.randomId());
+    return itemCheckedOutEventRepository.save(event);
   }
 
   public Future<String> save(ItemCheckedInEvent event) {
-    return itemCheckedInEventRepository.save(event, UuidHelper.randomId());
+    return itemCheckedInEventRepository.save(event);
   }
 
   public Future<String> save(ItemClaimedReturnedEvent event) {
-    return itemClaimedReturnedEventRepository.save(event, UuidHelper.randomId());
+    return itemClaimedReturnedEventRepository.save(event);
   }
 
   public Future<String> save(ItemDeclaredLostEvent event) {
-    return itemDeclaredLostEventRepository.save(event, UuidHelper.randomId());
+    return itemDeclaredLostEventRepository.save(event);
   }
 
   public Future<String> save(ItemAgedToLostEvent event) {
-    return itemAgedToLostEventEventRepository.save(event, UuidHelper.randomId());
+    return itemAgedToLostEventEventRepository.save(event);
   }
 
   public Future<String> save(LoanDueDateChangedEvent event) {
-    return loanDueDateChangedEventRepository.save(event, UuidHelper.randomId());
+    return loanDueDateChangedEventRepository.save(event);
   }
 
   public Future<String> save(FeeFineBalanceChangedEvent event) {
-    return feeFineBalanceChangedEventRepository.save(event, UuidHelper.randomId());
+    return feeFineBalanceChangedEventRepository.save(event);
   }
 
   public Future<List<ItemCheckedOutEvent>> getItemCheckedOutEvents(String userId) {
@@ -100,6 +125,7 @@ public class EventService {
   public Future<List<ItemDeclaredLostEvent>> getItemDeclaredLostEvents(String userId) {
     return itemDeclaredLostEventRepository.getByUserId(userId);
   }
+
   public Future<List<ItemAgedToLostEvent>> getItemAgedToLostEvents(String userId) {
     return itemAgedToLostEventEventRepository.getByUserId(userId);
   }
@@ -123,12 +149,13 @@ public class EventService {
   }
 
   public Future<Void> removeAllEventsForUser(String tenantId, String userId) {
-    return GenericCompositeFuture.all(List.of(itemCheckedOutEventRepository.removeByUserId(tenantId, userId),
-      itemCheckedInEventRepository.removeByUserId(tenantId, userId),
-      itemClaimedReturnedEventRepository.removeByUserId(tenantId, userId),
-      itemDeclaredLostEventRepository.removeByUserId(tenantId, userId),
-      loanDueDateChangedEventRepository.removeByUserId(tenantId, userId),
-      feeFineBalanceChangedEventRepository.removeByUserId(tenantId, userId))
+    return GenericCompositeFuture.all(
+      List.of(itemCheckedOutEventRepository.removeByUserId(tenantId, userId),
+        itemCheckedInEventRepository.removeByUserId(tenantId, userId),
+        itemClaimedReturnedEventRepository.removeByUserId(tenantId, userId),
+        itemDeclaredLostEventRepository.removeByUserId(tenantId, userId),
+        loanDueDateChangedEventRepository.removeByUserId(tenantId, userId),
+        feeFineBalanceChangedEventRepository.removeByUserId(tenantId, userId))
     ).mapEmpty();
   }
 }

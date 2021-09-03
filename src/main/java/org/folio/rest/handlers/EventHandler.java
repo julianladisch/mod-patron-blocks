@@ -9,6 +9,7 @@ import org.apache.logging.log4j.Logger;
 import org.folio.domain.Event;
 import org.folio.domain.EventType;
 import org.folio.repository.UserSummaryRepository;
+import org.folio.rest.jaxrs.model.UserSummary;
 import org.folio.rest.persist.PostgresClient;
 import org.folio.service.EventService;
 import org.folio.service.UserSummaryService;
@@ -38,16 +39,24 @@ public abstract class EventHandler<E extends Event> {
   }
 
   public Future<String> handle(E event) {
-    return handle(event, false);
+    return eventService.save(event)
+      .compose(eventId -> updateUserSummary(event))
+      .onComplete(result -> logResult(result, event));
   }
 
-  /**
-   * Handle an event.
-   *
-   * @param event  the event to handle
-   * @return ID of a UserSummary affected by the processed event
-   */
-  public abstract Future<String> handle(E event, boolean skipUserSummaryRebuilding);
+  public Future<String> handleSkippingUserSummaryUpdate(E event) {
+    return eventService.save(event)
+      .onComplete(result -> logResult(result, event));
+  }
+
+  public Future<String> updateUserSummary(E event) {
+    return getUserSummary(event)
+      .compose(userSummary -> userSummaryService.updateUserSummaryWithEvent(userSummary, event));
+  }
+
+  protected Future<UserSummary> getUserSummary(E event) {
+    return userSummaryRepository.findByUserIdOrBuildNew(event.getUserId());
+  }
 
   protected void logResult(AsyncResult<String> result, E event) {
     String eventType = EventType.getNameByEvent(event);

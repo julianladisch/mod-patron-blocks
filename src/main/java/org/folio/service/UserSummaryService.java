@@ -12,7 +12,9 @@ import java.util.Arrays;
 import java.util.Comparator;
 import java.util.Date;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
@@ -33,12 +35,14 @@ import org.folio.rest.jaxrs.model.Metadata;
 import org.folio.rest.jaxrs.model.OpenFeeFine;
 import org.folio.rest.jaxrs.model.OpenLoan;
 import org.folio.rest.jaxrs.model.UserSummary;
+import org.folio.rest.persist.PgExceptionUtil;
 import org.folio.rest.persist.PostgresClient;
 import org.folio.util.AsyncProcessingContext;
 
 import io.vertx.core.Future;
 import lombok.AllArgsConstructor;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 import lombok.With;
 
 public class UserSummaryService {
@@ -46,6 +50,7 @@ public class UserSummaryService {
 
   private static final String FAILED_TO_REBUILD_USER_SUMMARY_ERROR_MESSAGE =
     "Failed to rebuild user summary";
+  private static final int MAX_NUMBER_OF_RETRIES_ON_VERSION_CONFLICT = 10;
   private static final List<String> LOST_ITEM_FEE_TYPE_IDS = Arrays.asList(
     FeeFineType.LOST_ITEM_FEE.getId(),
     FeeFineType.LOST_ITEM_PROCESSING_FEE.getId()
@@ -60,10 +65,48 @@ public class UserSummaryService {
   }
 
   public Future<UserSummary> getByUserId(String userId) {
-    return this.rebuild(userId)
-      .compose(userSummaryId -> userSummaryRepository.getByUserId(userId))
+    return userSummaryRepository.getByUserId(userId)
       .map(optionalUserSummary -> optionalUserSummary.orElseThrow(() ->
         new EntityNotFoundInDbException(format("User summary for user ID %s not found", userId))));
+  }
+
+  public Future<String> updateUserSummaryWithEvent(UserSummary userSummary, Event event) {
+    return recursivelyUpdateUserSummaryWithEvent(new UpdateRetryContext(userSummary), event);
+  }
+
+  private Future<String> recursivelyUpdateUserSummaryWithEvent(UpdateRetryContext ctx,
+    Event event) {
+
+    return updateAndStoreUserSummary(ctx.userSummary, event)
+      .recover(throwable -> {
+        log.error(throwable.getMessage());
+        if (PgExceptionUtil.isVersionConflict(throwable) && ctx.shouldRetryUpdate()) {
+          log.error("Failed to update user summary due to version conflict. User ID: {}. " +
+              "Attempt # {}", ctx.userSummary.getUserId(), ctx.attemptCounter.get());
+
+          return userSummaryRepository.findByUserIdOrBuildNew(ctx.userSummary.getUserId())
+            .compose(latestVersionUserSummary -> {
+              ctx.attemptCounter.incrementAndGet();
+              ctx.setUserSummary(latestVersionUserSummary);
+              return recursivelyUpdateUserSummaryWithEvent(ctx, event);
+            });
+        }
+        return Future.failedFuture(throwable);
+      });
+  }
+
+  private Future<String> updateAndStoreUserSummary(UserSummary userSummary, Event event) {
+    RebuildContext rebuildContext = new RebuildContext().withUserSummary(userSummary);
+    handleEvent(rebuildContext, event);
+
+    if (isNotEmpty(rebuildContext.userSummary)) {
+      return userSummaryRepository.upsert(rebuildContext.userSummary);
+    } else {
+      return userSummaryRepository.delete(
+        Objects.requireNonNull(rebuildContext.userSummary).getId())
+        .map(rebuildContext.userSummary.getId())
+        .otherwise(rebuildContext.userSummary.getId());
+    }
   }
 
   public Future<String> rebuild(String userId) {
@@ -136,8 +179,7 @@ public class UserSummaryService {
 
     if (isNotEmpty(ctx.userSummary)) {
       return userSummaryRepository.upsert(ctx.userSummary, ctx.userSummary.getId());
-    }
-    else {
+    } else {
       return userSummaryRepository.delete(ctx.userSummary.getId())
         .map(ctx.userSummary.getId())
         .otherwise(ctx.userSummary.getId());
@@ -153,9 +195,6 @@ public class UserSummaryService {
     }
 
     EventType eventType = EventType.getByEvent(event);
-
-    log.info(format("Processing event %s:%s (created at %s)", eventType.name(), event.getId(),
-      event.getMetadata().getCreatedDate()));
 
     switch (eventType) {
       case ITEM_CHECKED_OUT:
@@ -191,8 +230,7 @@ public class UserSummaryService {
       openLoans.add(new OpenLoan()
         .withLoanId(event.getLoanId())
         .withDueDate(event.getDueDate()));
-    }
-    else {
+    } else {
       log.error("Event {}:{} is ignored. Open loan {} already exists",
         ITEM_CHECKED_OUT.name(), event.getId(), event.getLoanId());
     }
@@ -275,7 +313,7 @@ public class UserSummaryService {
       .findFirst()
       .orElseGet(() -> {
         OpenFeeFine newFeeFine = new OpenFeeFine()
-          .withFeeFineId( event.getFeeFineId())
+          .withFeeFineId(event.getFeeFineId())
           .withFeeFineTypeId(event.getFeeFineTypeId())
           .withBalance(event.getBalance());
         openFeesFines.add(newFeeFine);
@@ -326,7 +364,7 @@ public class UserSummaryService {
     if (userSummary != null && userSummary.getOpenLoans() != null &&
       userSummary.getOpenFeesFines() != null) {
 
-        return userSummary.getOpenLoans().isEmpty() && userSummary.getOpenFeesFines().isEmpty();
+      return userSummary.getOpenLoans().isEmpty() && userSummary.getOpenFeesFines().isEmpty();
     }
 
     return true;
@@ -346,6 +384,21 @@ public class UserSummaryService {
     @Override
     protected String getName() {
       return "user-summary-rebuild-context";
+    }
+  }
+
+  private static class UpdateRetryContext {
+    @Setter
+    private UserSummary userSummary;
+
+    private final AtomicInteger attemptCounter = new AtomicInteger(1);
+
+    public UpdateRetryContext(UserSummary userSummary) {
+      this.userSummary = userSummary;
+    }
+
+    boolean shouldRetryUpdate() {
+      return attemptCounter.get() <= MAX_NUMBER_OF_RETRIES_ON_VERSION_CONFLICT;
     }
   }
 }
