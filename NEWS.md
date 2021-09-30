@@ -1,3 +1,9 @@
+## 1.4.0 2021-09-30
+* Increase `Maximum outstanding fee/fine balance` limit maximum value from 9999 to 999999 (MODPATBLK-92)
+* Use optimistic locking for UserSummary records to avoid race condition and improve performance (MODPATBLK-91)
+* Create LOAN_CLOSED event handler (MODPATBLK-97)
+* Save `Grace period` at the moment of checkout (MODPATBLK-93)
+
 ## 1.3.0 2021-06-14
 * Upgrade mod-pubsub-client to v2.3.0 (MODPATBLK-89)
 * Upgrade RMB to v33.0.0, update Vert.x to v4.1.0 (MODPATBLK-86)
