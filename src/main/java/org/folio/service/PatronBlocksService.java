@@ -79,7 +79,7 @@ public class PatronBlocksService {
   private AutomatedPatronBlocks calculateBlocks(BlocksCalculationContext ctx) {
     final AutomatedPatronBlocks blocks = new AutomatedPatronBlocks();
 
-    if (ctx.patronBlockLimits.isEmpty()) {
+    if (ctx.shouldCalculationBeSkipped()) {
       return blocks;
     }
 
@@ -120,10 +120,18 @@ public class PatronBlocksService {
   private Future<BlocksCalculationContext> addAllPatronBlockConditionsToContext(
     BlocksCalculationContext ctx) {
 
+    if (ctx.shouldCalculationBeSkipped()) {
+      return succeededFuture(ctx);
+    }
+
     return conditionsRepository.getAllWithDefaultLimit().map(ctx::withPatronBlockConditions);
   }
 
   private BlocksCalculationContext addOverdueMinutesToContext(BlocksCalculationContext ctx) {
+    if (ctx.shouldCalculationBeSkipped()) {
+      return ctx;
+    }
+
     return ctx.withOverdueMinutes(
       ctx.userSummary.getOpenLoans()
         .stream()
@@ -226,6 +234,10 @@ public class PatronBlocksService {
     @Override
     protected String getName() {
       return "blocks-calculation-context";
+    }
+
+    protected boolean shouldCalculationBeSkipped() {
+      return this.patronBlockLimits == null || this.patronBlockLimits.isEmpty();
     }
   }
 
