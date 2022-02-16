@@ -11,22 +11,16 @@ import static java.lang.String.format;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
 
-import java.io.FileReader;
-import java.io.IOException;
 import java.util.Base64;
 import java.util.Collections;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
-import org.apache.commons.lang3.tuple.Pair;
 import org.apache.http.entity.ContentType;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.apache.maven.model.Model;
-import org.apache.maven.model.io.xpp3.MavenXpp3Reader;
 import org.awaitility.Awaitility;
-import org.codehaus.plexus.util.xml.pull.XmlPullParserException;
 import org.folio.HttpStatus;
 import org.folio.postgres.testing.PostgresTesterContainer;
 import org.folio.rest.client.TenantClient;
@@ -36,6 +30,7 @@ import org.folio.rest.jaxrs.model.TenantJob;
 import org.folio.rest.persist.Criteria.Criterion;
 import org.folio.rest.persist.PostgresClient;
 import org.folio.rest.tools.utils.NetworkUtils;
+import org.folio.rest.utils.EventClient;
 import org.folio.rest.utils.OkapiClient;
 import org.folio.rest.utils.PomUtils;
 import org.junit.AfterClass;
@@ -79,6 +74,7 @@ public class TestBase {
   protected static OkapiClient okapiClient;
   protected static TenantClient tenantClient;
   protected static PostgresClient postgresClient;
+  protected static EventClient eventClient;
 
   protected static String jobId;
 
@@ -93,8 +89,8 @@ public class TestBase {
     vertx = Vertx.vertx();
     okapiClient = new OkapiClient(getMockedOkapiUrl(), OKAPI_TENANT, OKAPI_TOKEN);
     tenantClient = new TenantClient(getMockedOkapiUrl(), OKAPI_TENANT, OKAPI_TOKEN);
-
     PostgresClient.setPostgresTester(new PostgresTesterContainer());
+    eventClient = new EventClient(okapiClient);
 
     mockEndpoints();
 

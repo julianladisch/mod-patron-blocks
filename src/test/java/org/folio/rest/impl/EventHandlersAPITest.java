@@ -1,10 +1,7 @@
 package org.folio.rest.impl;
 
-import static java.util.Map.entry;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.apache.http.HttpStatus.SC_BAD_REQUEST;
-import static org.apache.http.HttpStatus.SC_NO_CONTENT;
-import static org.apache.http.HttpStatus.SC_UNPROCESSABLE_ENTITY;
 import static org.folio.repository.UserSummaryRepository.USER_SUMMARY_TABLE_NAME;
 import static org.folio.rest.utils.EntityBuilder.buildFeeFineBalanceChangedEvent;
 import static org.folio.rest.utils.EntityBuilder.buildItemAgedToLostEvent;
@@ -14,11 +11,9 @@ import static org.folio.rest.utils.EntityBuilder.buildItemClaimedReturnedEvent;
 import static org.folio.rest.utils.EntityBuilder.buildItemDeclaredLostEvent;
 import static org.folio.rest.utils.EntityBuilder.buildLoanDueDateChangedEvent;
 import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.fail;
 
 import java.math.BigDecimal;
 import java.util.Date;
-import java.util.Map;
 import java.util.Optional;
 
 import org.awaitility.Awaitility;
@@ -37,40 +32,12 @@ import org.junit.After;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
-import io.restassured.response.ValidatableResponse;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
 
 @RunWith(VertxUnitRunner.class)
 public class EventHandlersAPITest extends TestBase {
   public static final String USER_ID = randomId();
   public static final String INVALID_USER_ID = USER_ID + "xyz";
-  private static final String EVENT_HANDLERS_ROOT_URL = "/automated-patron-blocks/handlers/";
-
-  private static final String FEE_FINE_BALANCE_CHANGED_HANDLER_URL =
-    EVENT_HANDLERS_ROOT_URL + "fee-fine-balance-changed";
-  private static final String ITEM_CHECKED_OUT_HANDLER_URL =
-    EVENT_HANDLERS_ROOT_URL + "item-checked-out";
-  private static final String ITEM_CHECKED_IN_HANDLER_URL =
-    EVENT_HANDLERS_ROOT_URL + "item-checked-in";
-  private static final String ITEM_DECLARED_LOST_HANDLER_URL =
-    EVENT_HANDLERS_ROOT_URL + "item-declared-lost";
-  private static final String ITEM_AGED_TO_LOST_HANDLER_URL =
-    EVENT_HANDLERS_ROOT_URL + "item-aged-to-lost";
-  private static final String ITEM_CLAIMED_RETURNED_HANDLER_URL =
-    EVENT_HANDLERS_ROOT_URL + "item-claimed-returned";
-  private static final String LOAN_DUE_DATE_CHANGED_HANDLER_URL =
-    EVENT_HANDLERS_ROOT_URL + "loan-due-date-changed";
-
-  private static final Map<Class<? extends Event>, String> eventTypeToHandlerUrl =
-    Map.ofEntries(
-      entry(FeeFineBalanceChangedEvent.class, FEE_FINE_BALANCE_CHANGED_HANDLER_URL),
-      entry(ItemCheckedOutEvent.class, ITEM_CHECKED_OUT_HANDLER_URL),
-      entry(ItemCheckedInEvent.class, ITEM_CHECKED_IN_HANDLER_URL),
-      entry(ItemDeclaredLostEvent.class, ITEM_DECLARED_LOST_HANDLER_URL),
-      entry(ItemAgedToLostEvent.class, ITEM_AGED_TO_LOST_HANDLER_URL),
-      entry(ItemClaimedReturnedEvent.class, ITEM_CLAIMED_RETURNED_HANDLER_URL),
-      entry(LoanDueDateChangedEvent.class, LOAN_DUE_DATE_CHANGED_HANDLER_URL)
-    );
 
   private final UserSummaryRepository userSummaryRepository =
     new UserSummaryRepository(postgresClient);
@@ -89,28 +56,28 @@ public class EventHandlersAPITest extends TestBase {
   @Test
   public void shouldNotCreateUserSummary() {
     assertFalse(getUserSummary().isPresent());
-    sendEvent(createItemCheckedInEvent(), SC_NO_CONTENT);
-    sendEvent(createItemClaimedReturnedEvent(), SC_NO_CONTENT);
-    sendEvent(createItemDeclaredLostEvent(), SC_NO_CONTENT);
-    sendEvent(createItemAgedToLostEvent(), SC_NO_CONTENT);
-    sendEvent(createLoanDueDateChangedEvent(), SC_NO_CONTENT);
+    eventClient.sendEvent(createItemCheckedInEvent());
+    eventClient.sendEvent(createItemClaimedReturnedEvent());
+    eventClient.sendEvent(createItemDeclaredLostEvent());
+    eventClient.sendEvent(createItemAgedToLostEvent());
+    eventClient.sendEvent(createLoanDueDateChangedEvent());
     assertFalse(getUserSummary().isPresent());
   }
 
   @Test
   public void feeFineBalanceChangedEventValidationFails() {
-    sendEventAndVerifyValidationFailure(
+    eventClient.sendEventAndVerifyValidationFailure(
       createFeeFineBalanceChangedEvent().withUserId(INVALID_USER_ID));
   }
 
   @Test
   public void itemCheckedInEventProcessedSuccessfully() {
-    sendEvent(createItemCheckedInEvent(), SC_NO_CONTENT);
+    eventClient.sendEvent(createItemCheckedInEvent());
   }
 
   @Test
   public void itemCheckedInEventValidationFails() {
-    sendEventAndVerifyValidationFailure(
+    eventClient.sendEventAndVerifyValidationFailure(
       createItemCheckedInEvent().withUserId(INVALID_USER_ID));
   }
 
@@ -121,62 +88,62 @@ public class EventHandlersAPITest extends TestBase {
 
   @Test
   public void itemCheckedOutEventValidationFails() {
-    sendEventAndVerifyValidationFailure(
+    eventClient.sendEventAndVerifyValidationFailure(
       createItemCheckedOutEvent().withUserId(INVALID_USER_ID));
   }
 
   @Test
   public void loanDueDateChangedEventProcessedSuccessfully() {
-    sendEvent(createLoanDueDateChangedEvent(), SC_NO_CONTENT);
+    eventClient.sendEvent(createLoanDueDateChangedEvent());
   }
 
   @Test
   public void loanDueDateChangedEventValidationFails() {
-    sendEventAndVerifyValidationFailure(
+    eventClient.sendEventAndVerifyValidationFailure(
       createLoanDueDateChangedEvent().withUserId(INVALID_USER_ID));
   }
 
   @Test
   public void itemDeclaredLostEventProcessedSuccessfully() {
-    sendEvent(createItemDeclaredLostEvent(), SC_NO_CONTENT);
+    eventClient.sendEvent(createItemDeclaredLostEvent());
   }
 
   @Test
   public void itemDeclaredLostEventValidationFails() {
-    sendEventAndVerifyValidationFailure(
+    eventClient.sendEventAndVerifyValidationFailure(
       createItemDeclaredLostEvent().withUserId(INVALID_USER_ID));
   }
 
   @Test
   public void itemAgedToLostEventProcessedSuccessfully() {
-    sendEvent(createItemAgedToLostEvent(), SC_NO_CONTENT);
+    eventClient.sendEvent(createItemAgedToLostEvent());
   }
 
   @Test
   public void itemAgedToLostEventValidationFails() {
-    sendEventAndVerifyValidationFailure(
+    eventClient.sendEventAndVerifyValidationFailure(
       createItemAgedToLostEvent().withUserId(INVALID_USER_ID));
   }
 
   @Test
   public void itemClaimedReturnedEventProcessedSuccessfully() {
-    sendEvent(createItemClaimedReturnedEvent(), SC_NO_CONTENT);
+    eventClient.sendEvent(createItemClaimedReturnedEvent());
   }
 
   @Test
   public void itemClaimedReturnedEventValidationFails() {
-    sendEventAndVerifyValidationFailure(
+    eventClient.sendEventAndVerifyValidationFailure(
       createItemClaimedReturnedEvent().withUserId(INVALID_USER_ID));
   }
 
   @Test
   public void eventHandlingFailsWhenEventJsonIsInvalid() {
-    sendEvent("not json", FEE_FINE_BALANCE_CHANGED_HANDLER_URL, SC_BAD_REQUEST);
+    eventClient.sendEvent("not json", FeeFineBalanceChangedEvent.class, SC_BAD_REQUEST);
   }
 
   @Test
   public void loanDueDateChangedEventWithMissingRequiredDueDateProperty() {
-    sendEventAndVerifyValidationFailure(
+    eventClient.sendEventAndVerifyValidationFailure(
       createLoanDueDateChangedEvent().withDueDate(null));
   }
 
@@ -212,35 +179,11 @@ public class EventHandlersAPITest extends TestBase {
   private void sendEventAndVerifyThatUserSummaryWasCreated(Event event) {
     assertFalse(getUserSummary().isPresent());
 
-    sendEvent(event, SC_NO_CONTENT);
+    eventClient.sendEvent(event);
 
     Awaitility.await()
       .atMost(5, SECONDS)
       .until(() -> getUserSummary().isPresent());
-  }
-
-  private ValidatableResponse sendEventAndVerifyValidationFailure(Event event) {
-    return sendEvent(event, SC_UNPROCESSABLE_ENTITY);
-  }
-
-  private ValidatableResponse sendEvent(Event event, int expectedStatus) {
-    return sendEvent(toJson(event), getHandlerUrlForEvent(event), expectedStatus);
-  }
-
-  private ValidatableResponse sendEvent(String eventPayload, String handlerUrl, int expectedStatus) {
-    return okapiClient.post(handlerUrl, eventPayload)
-      .then()
-      .statusCode(expectedStatus);
-  }
-
-  private static String getHandlerUrlForEvent(Event event) {
-    final String eventHandlerUrl = eventTypeToHandlerUrl.get(event.getClass());
-
-    if (eventHandlerUrl == null) {
-      fail("Failed to resolve handler URL for event of type " + event.getClass().getSimpleName());
-    }
-
-    return eventHandlerUrl;
   }
 
   private Optional<UserSummary> getUserSummary() {
