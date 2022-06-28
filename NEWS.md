@@ -1,3 +1,9 @@
+## 1.6.0 2022-06-28
+* Do not remove loan from summary when FEE_FINE_BALANCE_CHANGED event is received (MODPATBLK-124)
+* Set `openLoan.itemLost` to false on LOAD_DUE_DATE_CHANGED event if due date changed by recall (MOTPATBLK-126)
+* Delete user summary when synchronization generates no events (MODPATBLK-129)
+* Update to RMB 34.0.0 (MODPATBLK-137)
+
 ## 1.5.0 2022-02-22
 * Update to RMB 33.1.1, upsert with optimistic locking (MODPATBLK-102)
 * Add raml description for period.json (MODPATBLK-103)
