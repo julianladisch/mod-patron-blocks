@@ -1,6 +1,7 @@
-## 1.7.0 IN-PROGRESS
+## 1.7.0 2022-10-18
 
 * Supports users interface version 15.1 16.0 (MODPATBLK-140)
+* Upgrade to RMB 35.0.0 and Vertx 4.3.3 (MODPATBLK-142)
 
 ## 1.6.0 2022-06-28
 * Do not remove loan from summary when FEE_FINE_BALANCE_CHANGED event is received (MODPATBLK-124)
