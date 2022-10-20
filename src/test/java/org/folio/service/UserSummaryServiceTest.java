@@ -5,6 +5,7 @@ import static org.folio.rest.utils.EntityBuilder.buildFeeFineBalanceChangedEvent
 import static org.folio.rest.utils.EntityBuilder.buildItemAgedToLostEvent;
 import static org.folio.rest.utils.EntityBuilder.buildItemCheckedOutEvent;
 import static org.folio.rest.utils.EntityBuilder.buildLoanDueDateChangedEvent;
+import static org.hamcrest.Matchers.is;
 import static org.joda.time.DateTime.now;
 
 import java.math.BigDecimal;
@@ -51,9 +52,11 @@ public class UserSummaryServiceTest extends TestBase {
 
     userSummaryService.updateUserSummaryWithEvent(userSummary, feeFineBalanceChangedEvent);
 
-    UserSummary updatedUserSummary = waitFor(userSummaryService.getByUserId(userId));
-    context.assertTrue(updatedUserSummary.getOpenFeesFines().stream()
-      .anyMatch(openFeeFine -> openFeeFine.getFeeFineId().equals(feeFineId)));
+    awaitUntil(() -> {
+      UserSummary updatedUserSummary = waitFor(userSummaryService.getByUserId(userId));
+      return updatedUserSummary.getOpenFeesFines().stream()
+          .anyMatch(openFeeFine -> openFeeFine.getFeeFineId().equals(feeFineId));
+    }, is(true));
   }
 
   @Test

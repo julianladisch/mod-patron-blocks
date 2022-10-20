@@ -8,12 +8,14 @@ import static com.github.tomakehurst.wiremock.client.WireMock.post;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlMatching;
 import static java.lang.String.format;
+import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
 
 import java.util.Base64;
 import java.util.Collections;
 import java.util.UUID;
+import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
@@ -33,6 +35,7 @@ import org.folio.rest.tools.utils.NetworkUtils;
 import org.folio.rest.utils.EventClient;
 import org.folio.rest.utils.OkapiClient;
 import org.folio.rest.utils.PomUtils;
+import org.hamcrest.Matcher;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -228,6 +231,10 @@ public class TestBase {
       .until(future::isComplete);
 
     return future.result();
+  }
+
+  protected static <T> void awaitUntil(Callable<T> supplier, Matcher<? super T> matcher) {
+    Awaitility.await().atMost(5, SECONDS).until(supplier, matcher);
   }
 
   protected static String toJson(Object event) {
