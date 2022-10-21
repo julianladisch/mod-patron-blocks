@@ -6,6 +6,7 @@ import static org.folio.rest.utils.EntityBuilder.buildItemAgedToLostEvent;
 import static org.folio.rest.utils.EntityBuilder.buildItemCheckedOutEvent;
 import static org.folio.rest.utils.EntityBuilder.buildLoanDueDateChangedEvent;
 import static org.joda.time.DateTime.now;
+import static org.awaitility.Awaitility.await;
 
 import java.math.BigDecimal;
 import java.util.Date;
@@ -51,9 +52,10 @@ public class UserSummaryServiceTest extends TestBase {
 
     userSummaryService.updateUserSummaryWithEvent(userSummary, feeFineBalanceChangedEvent);
 
-    UserSummary updatedUserSummary = waitFor(userSummaryService.getByUserId(userId));
-    context.assertTrue(updatedUserSummary.getOpenFeesFines().stream()
-      .anyMatch(openFeeFine -> openFeeFine.getFeeFineId().equals(feeFineId)));
+    await().until(() ->
+        waitFor(userSummaryService.getByUserId(userId))
+        .getOpenFeesFines().stream()
+        .anyMatch(openFeeFine -> openFeeFine.getFeeFineId().equals(feeFineId)));
   }
 
   @Test
