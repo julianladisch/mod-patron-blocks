@@ -17,9 +17,6 @@ import static org.folio.rest.utils.matcher.SynchronizationJobMatchers.synchroniz
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 import static org.joda.time.LocalDateTime.now;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-
 import java.util.Date;
 import java.util.List;
 
@@ -175,14 +172,12 @@ public class SynchronizationAPITests extends TestBase {
   @Test
   public void agedToLostEventShouldBeDeletedBeforeSynchronizationJobByUser() {
     eventClient.sendEvent(buildItemAgedToLostEvent(USER_ID, randomId()));
-    assertThat(waitFor(itemAgedToLostEventRepository.getByUserId(USER_ID)).size(), is(1));
+    awaitUntil(() -> waitFor(itemAgedToLostEventRepository.getByUserId(USER_ID)).size(), is(1));
     String syncJobId = createOpenSynchronizationJobByUser();
 
     runSynchronization();
 
-    Awaitility.await()
-      .atMost(5, SECONDS)
-      .until(() -> waitFor(itemAgedToLostEventRepository.getByUserId(USER_ID)).size(), is(0));
+    awaitUntil(() -> waitFor(itemAgedToLostEventRepository.getByUserId(USER_ID)).size(), is(0));
 
     checkSyncJob(syncJobId);
   }
