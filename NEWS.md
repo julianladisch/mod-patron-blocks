@@ -1,3 +1,7 @@
+## 1.7.1 2022-11-03
+
+* Upgrade pubsub, RMB, Vert.x for Nolana (MODPATBLK-149)
+
 ## 1.7.0 2022-10-18
 
 * Supports users interface version 15.1 16.0 (MODPATBLK-140)
