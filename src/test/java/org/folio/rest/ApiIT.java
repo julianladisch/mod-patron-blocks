@@ -34,7 +34,11 @@ import org.testcontainers.utility.DockerImageName;
  */
 public class ApiIT {
 
- private static final Logger LOGGER = LoggerFactory.getLogger(ApiIT.class);
+  private static final Logger LOGGER = LoggerFactory.getLogger(ApiIT.class);
+
+  private static final DockerImageName MOCKSERVER_IMAGE = DockerImageName
+      .parse("mockserver/mockserver")
+      .withTag("mockserver-" + MockServerClient.class.getPackage().getImplementationVersion());
 
   private static final Network network = Network.newNetwork();
 
@@ -62,7 +66,7 @@ public class ApiIT {
 
   @ClassRule
   public static final MockServerContainer okapi =
-    new MockServerContainer(DockerImageName.parse("mockserver/mockserver:mockserver-5.11.2"))
+    new MockServerContainer(MOCKSERVER_IMAGE)
     .withNetwork(network)
     .withNetworkAliases("okapi")
     .withExposedPorts(1080);
