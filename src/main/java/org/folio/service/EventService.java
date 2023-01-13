@@ -1,7 +1,11 @@
 package org.folio.service;
 
+import static org.folio.util.LogUtil.asJson;
+
 import java.util.List;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.folio.domain.Event;
 import org.folio.domain.EventType;
 import org.folio.okapi.common.GenericCompositeFuture;
@@ -20,6 +24,7 @@ import io.vertx.core.Future;
 
 public class EventService {
 
+  private static final Logger log = LogManager.getLogger(EventService.class);
   private static final String ITEM_CHECKED_OUT_EVENT_TABLE_NAME = "item_checked_out_event";
   private static final String ITEM_CHECKED_IN_EVENT_TABLE_NAME = "item_checked_in_event";
   private static final String ITEM_DECLARED_LOST_EVENT_TABLE_NAME = "item_declared_lost_event";
@@ -65,7 +70,11 @@ public class EventService {
   }
 
   public Future<String> save(Event event) {
+    log.debug("save:: parameters event: {}", () -> asJson(event));
+
     EventType eventType = EventType.getByEvent(event);
+
+    log.info("save:: event type: {}", eventType);
 
     switch (eventType) {
       case ITEM_CHECKED_OUT:
@@ -85,6 +94,7 @@ public class EventService {
       case LOAN_CLOSED:
         return save((LoanClosedEvent) event);
       default:
+        log.warn("save:: unknown event type: {}", eventType);
         throw new IllegalStateException("Unexpected value: " + eventType);
     }
   }

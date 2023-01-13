@@ -5,6 +5,7 @@ import static io.vertx.core.Future.succeededFuture;
 import static java.lang.String.format;
 import static java.util.stream.Collectors.toMap;
 import static org.folio.okapi.common.XOkapiHeaders.TENANT;
+import static org.folio.util.LogUtil.asJson;
 
 import java.util.List;
 import java.util.Map;
@@ -31,6 +32,7 @@ import org.folio.util.AsyncProcessingContext;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import lombok.AllArgsConstructor;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.With;
 
@@ -42,7 +44,7 @@ public class PatronBlocksService {
     "Failed to calculate overdue minutes: {}";
 
   private static final BinaryOperator<Integer> OVERDUE_MINUTES_MERGE_FUNCTION = (oldValue, newValue) -> {
-    log.warn("Two open loans with the same loanId found! Newest overdue minutes amount" +
+    log.info("Two open loans with the same loanId found. Overdue minutes of the newer loan" +
       " saved. Old value: {}, new value: {}", oldValue, newValue);
     return newValue;
   };
@@ -61,25 +63,31 @@ public class PatronBlocksService {
   }
 
   public Future<AutomatedPatronBlocks> getBlocksForUser(String userId) {
+    log.debug("getBlocksForUser:: parameters userId: {}", userId);
     return userSummaryService.getByUserId(userId)
       .map(userSummary -> new BlocksCalculationContext().withUserSummary(userSummary))
       .compose(this::getBlocksForSummary)
-      .otherwise(new AutomatedPatronBlocks());
+      .otherwise(new AutomatedPatronBlocks())
+      .onSuccess(result -> log.info("getBlocksForUser:: result: {}", () -> asJson(result)));
   }
 
   private Future<AutomatedPatronBlocks> getBlocksForSummary(BlocksCalculationContext ctx) {
+    log.debug("getBlocksForSummary:: parameters ctx: {}", () -> asJson(ctx));
     return succeededFuture(ctx)
       .compose(this::addUserGroupIdToContext)
       .compose(this::addPatronBlockLimitsToContext)
       .compose(this::addAllPatronBlockConditionsToContext)
       .map(this::addOverdueMinutesToContext)
-      .map(this::calculateBlocks);
+      .map(this::calculateBlocks)
+      .onSuccess(result -> log.info("getBlocksForSummary:: result: {}", () -> asJson(result)));
   }
 
   private AutomatedPatronBlocks calculateBlocks(BlocksCalculationContext ctx) {
+    log.debug("calculateBlocks:: parameters ctx: {}", () -> asJson(ctx));
     final AutomatedPatronBlocks blocks = new AutomatedPatronBlocks();
 
     if (ctx.shouldCalculationBeSkipped()) {
+      log.info("calculateBlocks:: skipping calculation");
       return blocks;
     }
 
@@ -92,21 +100,27 @@ public class PatronBlocksService {
       .filter(Objects::nonNull)
       .collect(Collectors.toList()));
 
+    log.info("calculateBlocks:: result: {}", () -> asJson(blocks));
     return blocks;
   }
 
   private Future<BlocksCalculationContext> addUserGroupIdToContext(BlocksCalculationContext ctx) {
+    log.debug("addUserGroupIdToContext:: parameters ctx: {}", () -> asJson(ctx));
     if (ctx.userSummary == null || ctx.userSummary.getUserId() == null) {
       ctx.logFailedValidationError("addUserGroupIdToContext");
       return failedFuture(DEFAULT_ERROR_MESSAGE);
     }
 
     return usersClient.findPatronGroupIdForUser(ctx.userSummary.getUserId())
-      .map(ctx::withUserGroupId);
+      .map(ctx::withUserGroupId)
+      .onSuccess(result -> log.info("addUserGroupIdToContext:: result: {}",
+        () -> asJson(result)));
   }
 
   private Future<BlocksCalculationContext> addPatronBlockLimitsToContext(
     BlocksCalculationContext ctx) {
+
+    log.debug("addPatronBlockLimitsToContext:: parameters ctx: {}", () -> asJson(ctx));
 
     if (ctx.userGroupId == null) {
       ctx.logFailedValidationError("addPatronBlockLimitsToContext");
@@ -114,48 +128,63 @@ public class PatronBlocksService {
     }
 
     return limitsRepository.findLimitsForPatronGroup(ctx.userGroupId)
-      .map(ctx::withPatronBlockLimits);
+      .map(ctx::withPatronBlockLimits)
+      .onSuccess(result -> log.info("addPatronBlockLimitsToContext:: result: {}",
+        () -> asJson(result)));
   }
 
   private Future<BlocksCalculationContext> addAllPatronBlockConditionsToContext(
     BlocksCalculationContext ctx) {
 
+    log.debug("addAllPatronBlockConditionsToContext:: parameters ctx: {}", () -> asJson(ctx));
+
     if (ctx.shouldCalculationBeSkipped()) {
+      log.info("addAllPatronBlockConditionsToContext:: skipping calculation");
       return succeededFuture(ctx);
     }
 
-    return conditionsRepository.getAllWithDefaultLimit().map(ctx::withPatronBlockConditions);
+    return conditionsRepository.getAllWithDefaultLimit().map(ctx::withPatronBlockConditions)
+      .onSuccess(result -> log.info("addAllPatronBlockConditionsToContext:: result: {}",
+        () -> asJson(result)));
   }
 
   private BlocksCalculationContext addOverdueMinutesToContext(BlocksCalculationContext ctx) {
+    log.debug("addOverdueMinutesToContext:: parameters ctx: {}", () -> asJson(ctx));
     if (ctx.shouldCalculationBeSkipped()) {
+      log.info("addOverdueMinutesToContext:: skipping calculation");
       return ctx;
     }
 
-    return ctx.withOverdueMinutes(
+    BlocksCalculationContext result = ctx.withOverdueMinutes(
       ctx.userSummary.getOpenLoans()
         .stream()
         .filter(PatronBlocksService::validateLoan)
         .collect(toMap(OpenLoan::getLoanId, OverduePeriodCalculator::calculateOverdueMinutes,
           OVERDUE_MINUTES_MERGE_FUNCTION)));
+    log.info("addOverdueMinutesToContext:: result: {}", () -> asJson(result));
+    return result;
   }
 
   private static boolean validateLoan(OpenLoan openLoan) {
+    log.debug("validateLoan:: parameters openLoan: {}", () -> asJson(openLoan));
     if (openLoan == null) {
-      log.error(OVERDUE_MINUTES_CALCULATION_ERROR_TEMPLATE, "openLoan is null");
+      log.warn(OVERDUE_MINUTES_CALCULATION_ERROR_TEMPLATE, "openLoan is null");
       return false;
     }
 
     if (openLoan.getDueDate() == null) {
-      log.error(OVERDUE_MINUTES_CALCULATION_ERROR_TEMPLATE, "due date is null");
+      log.warn(OVERDUE_MINUTES_CALCULATION_ERROR_TEMPLATE, "due date is null");
       return false;
     }
 
+    log.info("addOverdueMinutesToContext:: result: true");
     return true;
   }
 
   private BlocksCalculationContext addCurrentConditionToContext(
     BlocksCalculationContext ctx) {
+
+    log.debug("addCurrentConditionToContext:: parameters ctx: {}", () -> asJson(ctx));
 
     if (ctx.currentPatronBlockLimit == null ||
       ctx.currentPatronBlockLimit.getConditionId() == null) {
@@ -177,11 +206,16 @@ public class PatronBlocksService {
       return ctx;
     }
 
-    return ctx.withCurrentPatronBlockCondition(patronBlockCondition);
+    BlocksCalculationContext result = ctx.withCurrentPatronBlockCondition(patronBlockCondition);
+    log.info("addOverdueMinutesToContext:: result: {}", () -> asJson(result));
+    return result;
   }
 
   private BlocksCalculationContext addActionBlocksByLimitAndConditionToContext(
     BlocksCalculationContext ctx) {
+
+    log.debug("addActionBlocksByLimitAndConditionToContext:: parameters ctx: {}",
+      () -> asJson(ctx));
 
     if (ctx.userSummary == null || ctx.currentPatronBlockLimit == null ||
       ctx.currentPatronBlockCondition == null || ctx.overdueMinutes == null) {
@@ -200,27 +234,34 @@ public class PatronBlocksService {
       Boolean.TRUE.equals(patronBlockCondition.getBlockRenewals()),
       Boolean.TRUE.equals(patronBlockCondition.getBlockRequests()));
 
-    return ctx.withCurrentActionBlocks(
+    BlocksCalculationContext result = ctx.withCurrentActionBlocks(
       ActionBlocks.and(actionBlocksByLimit, actionBlocksByCondition));
+    log.info("addActionBlocksByLimitAndConditionToContext:: result: {}",
+      () -> asJson(result));
+    return result;
   }
 
   private AutomatedPatronBlock createBlockForLimit(BlocksCalculationContext ctx) {
+    log.debug("createBlockForLimit:: parameters ctx: {}", () -> asJson(ctx));
     if (ctx.currentPatronBlockCondition == null || ctx.currentActionBlocks == null) {
       ctx.logFailedValidationError("createBlockForLimit");
       return null;
     }
 
-    return new AutomatedPatronBlock()
+    AutomatedPatronBlock result = new AutomatedPatronBlock()
       .withPatronBlockConditionId(ctx.currentPatronBlockCondition.getId())
       .withBlockBorrowing(ctx.currentActionBlocks.getBlockBorrowing())
       .withBlockRenewals(ctx.currentActionBlocks.getBlockRenewals())
       .withBlockRequests(ctx.currentActionBlocks.getBlockRequests())
       .withMessage(ctx.currentPatronBlockCondition.getMessage());
+    log.info("createBlockForLimit:: result: {}", () -> asJson(result));
+    return result;
   }
 
   @With
   @AllArgsConstructor
   @NoArgsConstructor(force = true)
+  @Getter
   private static class BlocksCalculationContext extends AsyncProcessingContext {
     final UserSummary userSummary;
     final String userGroupId;

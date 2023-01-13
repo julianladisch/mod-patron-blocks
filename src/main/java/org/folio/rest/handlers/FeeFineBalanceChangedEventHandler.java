@@ -1,6 +1,7 @@
 package org.folio.rest.handlers;
 
 import static java.lang.String.format;
+import static org.folio.util.LogUtil.asJson;
 
 import java.util.Map;
 
@@ -24,12 +25,15 @@ public class FeeFineBalanceChangedEventHandler extends EventHandler<FeeFineBalan
 
   @Override
   protected Future<UserSummary> getUserSummary(FeeFineBalanceChangedEvent event) {
+    log.debug("getUserSummary:: parameters event: {}", () -> asJson(event));
     return event.getUserId() != null
       ? userSummaryRepository.findByUserIdOrBuildNew(event.getUserId())
-      : findSummaryByFeeFineIdOrFail(event.getFeeFineId());
+      : findSummaryByFeeFineIdOrFail(event.getFeeFineId())
+      .onSuccess(r -> log.info("getUserSummary:: result: {}", () -> asJson(r)));
   }
 
   private Future<UserSummary> findSummaryByFeeFineIdOrFail(String feeFineId) {
+    log.debug("getUserSummary:: parameters feeFineId: {}", feeFineId);
     return userSummaryRepository.findByFeeFineId(feeFineId)
       .map(summary -> summary.orElseThrow(() -> new EntityNotFoundException(
         format("User summary with fee/fine %s was not found, event is ignored", feeFineId))));
