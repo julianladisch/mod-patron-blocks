@@ -1,6 +1,10 @@
-## 1.7.1 2022-11-03
-
-* Upgrade pubsub, RMB, Vert.x for Nolana (MODPATBLK-149)
+## 1.8.0 2023-02-20
+* Logging improvement (MODPATBLK-122)
+* Upgrade testcontainers-bom to 1.17.6 and mockserver to 5.14.0 to get arm64 support (MODPATBLK-141)
+* Fix sporadic test failures caused by async race condition (MODPATBLK-148)
+* Upgrade RMB to 35.0.1, Vert.x to 4.3.4 and mod-pubsub-client from Morning Glory 2.6.1 to Nolana 2.7.0 (MODPATBLK-149)
+* Logging improvement - check log4j configuration, upgrade to log4j2 (MODPATBLK-150)
+* Upgrade scala-library to 2.13.10 fixing Remote Code Execution and spring-beans to 5.2.22.RELEASE fixing Spring4Shell Remote Code Execution (MODPATBLK-152)
 
 ## 1.7.0 2022-10-18
 
