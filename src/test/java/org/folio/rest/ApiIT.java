@@ -111,8 +111,9 @@ public class ApiIT {
     when().
       get(location + "?wait=30000").
     then().
-      statusCode(200).
-      body("complete", is(true));
+      statusCode(200).  // getting job record succeeds
+      body("complete", is(true)).  // job is complete
+      body("error", is(nullValue()));  // job has succeeded without error
   }
 
   @Test
