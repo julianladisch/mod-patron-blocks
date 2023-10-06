@@ -4,6 +4,7 @@ import static io.restassured.RestAssured.given;
 import static io.restassured.RestAssured.when;
 import static org.awaitility.Awaitility.await;
 import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.nullValue;
 import static org.hamcrest.Matchers.startsWith;
 import static org.mockserver.model.HttpRequest.request;
 import static org.mockserver.model.HttpResponse.response;
@@ -111,8 +112,9 @@ public class ApiIT {
     when().
       get(location + "?wait=30000").
     then().
-      statusCode(200).
-      body("complete", is(true));
+      statusCode(200).  // getting job record succeeds
+      body("complete", is(true)).  // job is complete
+      body("error", is(nullValue()));  // job has succeeded without error
   }
 
   @Test
